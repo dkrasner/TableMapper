@@ -2,8 +2,8 @@ import * as path from "https://deno.land/std@0.135.0/path/mod.ts";
 import { readableStreamFromReader } from "https://deno.land/std@0.135.0/streams/mod.ts";
 
 let portVal = 8080;
-if(Deno.args[0]){
-    portVal = parseInt(Deno.args[0]);
+if (Deno.args[0]) {
+  portVal = parseInt(Deno.args[0]);
 }
 
 console.log(portVal);

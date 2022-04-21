@@ -2,11 +2,12 @@
 <html>
     <head>
         <title>Jackson Lewis</title>
+        <script type="module" src="./ap-sheet/src/GridSheet.js"></script>
+        <script type="module" src="./ap-sheet/src/SheetCell.js"></script>
     </head>
-    <script src="app.bundle.js"></script>
     <body>
-    <div id="main">
-        <h1 style="color:red">Deno Web Application</h1>
+        <my-grid class="spreadsheet" id="table" rows="12" columns="3" expands="true">
+        </my-grid>
     </div>
     </body>
 </html>
