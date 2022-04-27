@@ -1,0 +1,27 @@
+{
+  "name": "tablemapper",
+  "version": "1.0.0",
+  "description": "A csv, sheet mapping and conversion environment",
+  "main": "app.bundle.js",
+  "scripts": {
+    "test": "npm-test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dkrasner/TableMapper.git"
+  },
+  "keywords": [
+    "csv",
+    "sheet",
+    "conversion"
+  ],
+  "author": "",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/dkrasner/TableMapper/issues"
+  },
+  "homepage": "https://github.com/dkrasner/TableMapper#readme",
+  "dependencies": {
+    "express": "^4.17.3"
+  }
+}
