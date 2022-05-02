@@ -1,3 +1,30 @@
-body {
-    background-color: #f2f2f2;
+#main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
+
+#source-target-area {
+    display: flex;
+    flex-direction:row;
+}
+
+#source-target-area > div {
+    width: 50%;
+}
+
+#source-target-area #source {
+    background-color: aliceblue;
+    margin-right: 5px;
+}
+
+#source-target-area #target {
+    background-color: lightblue;
+    margin-right: 5px;
+}
+
+#editor {
+    background-color: cornsilk;
+    margin-top: 50px;
+}
+
