@@ -61,10 +61,11 @@ function runCommand(commandData){
     const name = commandData[0];
     const source = commandData[1];
     const target = commandData[2];
+    const arg = commandData[3];
 
     const command = commandRegistry[name];
     if(command){
-        command(source, target);
+        command(source, target, arg);
     } else {
         alert(`"${name}" is not a known command`);
     }
@@ -122,7 +123,7 @@ const commandRegistry = {
     "copy" : _onCopyCommand,
 }
 
-function _onCopyCommand(source, target){
+function _onCopyCommand(source, target, arg){
     console.log(`going to copy ${source} to ${target}`);
     const sourceSheet = document.getElementById("source");
     const targetSheet = document.getElementById("target");
@@ -137,7 +138,12 @@ function _onCopyCommand(source, target){
     let targetY = targetOriginY;
     while (currentX <= sourceCornerX){
         while(currentY <= sourceCornerY){
-            const value = sourceSheet.dataFrame.getAt([currentX, currentY]);
+            let value = sourceSheet.dataFrame.getAt([currentX, currentY]);
+            // the presence of an arg tell us that we should apply it to the string
+            // in the JS way
+            if(arg){
+                value = eval(`'${value}'.${arg}`);
+            }
             targetSheet.dataFrame.putAt([targetX, targetY], value);
             currentY += 1;
             targetY += 1;
