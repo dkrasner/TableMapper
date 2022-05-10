@@ -50,11 +50,17 @@ class System extends Object {
     }
 
     setupEditor(parent){
+        // TODO: I think editor should really sublcass the sheet
         const editor = document.createElement("div");
         editor.setAttribute("id", "editor-area");
+        const editorBar = document.createElement("div");
+        editorBar.classList.add("bar");
+        editorBar.textContent = "Editor";
+        editor.appendChild(editorBar);
         // setup initial editor location
         // setup mouse move for the editor
-        editor.addEventListener("mousedown", (event) => {
+        editorBar.addEventListener("mousedown", (event) => {
+            event.stopPropagation();
             const shiftX = event.clientX - editor.getBoundingClientRect().left;
             const shiftY = event.clientY - editor.getBoundingClientRect().top;
             function move(event){
@@ -62,7 +68,7 @@ class System extends Object {
                 editor.style.setProperty("top", event.pageY - shiftY + 'px');
             }
             document.addEventListener("mousemove", move);
-            editor.addEventListener("mouseup", () => {
+            editorBar.addEventListener("mouseup", () => {
                 document.removeEventListener("mousemove", move);
             });
         });

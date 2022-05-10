@@ -1,7 +1,16 @@
+:root {
+    --palette-beige: #FBE8A6;
+    --palette-blue: #303C6C;
+    --palette-lightblue: #B4DFE5;
+    --palette-cyan: #D2FDFF;
+    --palette-orange: #F4976C;
+}
+
 #main {
     display: flex;
     flex-direction: column;
     align-items: center;
+    color: var(--palette-black);
 }
 
 #source-target-area {
@@ -14,22 +23,34 @@
 }
 
 #source-target-area #source {
-    background-color: aliceblue;
+    background-color: var(--palette-cyan);
     margin-right: 5px;
 }
 
 #source-target-area #target {
-    background-color: lightblue;
+    background-color: var(--palette-lightblue);
     margin-right: 5px;
 }
 
 #editor {
-    background-color: cornsilk;
+    background-color: var(--palette-beige);
 }
 
 #editor-area {
     position: absolute;
-    padding: 5px;
-    background-color: black;
+    padding: 3px;
+    background-color: var(--palette-orange);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    border-radius: 5px;
+}
+
+#editor-area .bar {
     cursor: grab;
+    width: 100%;
+    text-align: center;
+    font-size: 20px;
+    font-weight: bold;
+    padding: 2px;
 }
