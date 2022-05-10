@@ -27,16 +27,23 @@ class CallStack extends Object {
     }
 
     runCommand(commandData){
-        // assume commandData[0] is name
-        // assume commandData[1] is source coordinates
-        // assume commandData[2] is target coordinates
-        // the rest are additional function args
+        // assume commandData[0] is source coordinates
+        // assume commandData[1] is target coordinates
+        // assume commandData[2] is option pre-copy process function
+        // the rest are additional optional function args
         const command = this.commandRegistry[commandData[0]]; // name
         if(command){
-            command(commandData[1], commandData[2], ...commandData.slice(3));
+            command(commandData[0], commandData[1], ...commandData.slice(2));
         } else {
-            // TODO need something better here!
-            alert(`"${name}" is not a known command`);
+            // commands always copy data from one place to another
+            // if the command is not present in the commandRegistry
+            // we assume it's a 'raw' JS string method to be evaluted
+            // TODO: this is insanely dangerous
+            // NOTE: we are assuming that there no additional args passed to the
+            // JS string method
+            this.commandRegistry["default"](
+                commandData[0], commandData[1], commandData[2]
+            );
         }
     }
 
@@ -63,7 +70,7 @@ class CallStack extends Object {
         const editor = document.getElementById("editor");
         this.callStack = [];
         let rowNotEmpty = true;
-        let rowIndex = 0;
+        let rowIndex = 1; // first row is labels
         while(rowNotEmpty){
             let colNotEmpty = true;
             let colIndex = 0;

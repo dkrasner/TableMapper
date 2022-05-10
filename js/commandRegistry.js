@@ -5,11 +5,16 @@
   */
 
 const commandRegistry = {
-    "copy" : _onCopyCommand,
+    default: _onDefault,
 }
 
 /* the commands */
-function _onCopyCommand(source, target, arg){
+
+
+/* The copy function take a pre-copy/preprocessing function
+   argument which is run on the values before they are copied
+   */
+function _copy(source, target, preProcessFunc){
     console.log(`going to copy ${source} to ${target}`);
     const sourceSheet = document.getElementById("source");
     const targetSheet = document.getElementById("target");
@@ -27,8 +32,9 @@ function _onCopyCommand(source, target, arg){
             let value = sourceSheet.dataFrame.getAt([currentX, currentY]);
             // the presence of an arg tell us that we should apply it to the string
             // in the JS way
-            if(arg){
-                value = eval(`'${value}'.${arg}`);
+            if(preProcessFunc){
+                // value = eval(`'${value}'.${arg}`);
+                value = preProcessFunc(value);
             }
             targetSheet.dataFrame.putAt([targetX, targetY], value);
             currentY += 1;
@@ -38,6 +44,17 @@ function _onCopyCommand(source, target, arg){
         currentY = sourceOriginY;
         targetX += 1;
         targetY = targetOriginY;
+    }
+}
+
+function _onDefault(source, target, func){
+    if(func){
+        // TODO: this is insanely dangerous
+        _copy(source, target, (value) => {
+            return eval(`'${value}'.${func}`)
+        })
+    } else {
+        _copy(source, target)
     }
 }
 

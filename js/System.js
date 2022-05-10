@@ -18,6 +18,7 @@ class System extends Object {
         // bind methods
         this.setup = this.setup.bind(this);
         this.setupInterface = this.setupInterface.bind(this);
+        this.setupEditor = this.setupEditor.bind(this);
         this.keydownHandler = this.keydownHandler.bind(this);
     }
 
@@ -40,16 +41,40 @@ class System extends Object {
         sourceAndTarget.appendChild(source);
         sourceAndTarget.appendChild(target);
 
-        setupSheet(source, "source");
-        setupSheet(target, "target", true);
-        const editor = document.createElement("div");
-        editor.setAttribute("id", "editor-area");
-        const editorSheet = setupSheet(editor, "editor", true);
-        // TODO: take this out later
-        prepopulateEditor(editorSheet);
-        main.appendChild(editor);
+        setupSheet(source, "source", false, 5, 50);
+        setupSheet(target, "target", true, 5, 50);
+
+        this.setupEditor(main);
 
         document.addEventListener("keydown", this.keydownHandler);
+    }
+
+    setupEditor(parent){
+        const editor = document.createElement("div");
+        editor.setAttribute("id", "editor-area");
+        // setup initial editor location
+        // setup mouse move for the editor
+        editor.addEventListener("mousedown", (event) => {
+            const shiftX = event.clientX - editor.getBoundingClientRect().left;
+            const shiftY = event.clientY - editor.getBoundingClientRect().top;
+            function move(event){
+                editor.style.setProperty("left", event.pageX - shiftX + 'px');
+                editor.style.setProperty("top", event.pageY - shiftY + 'px');
+            }
+            document.addEventListener("mousemove", move);
+            editor.addEventListener("mouseup", () => {
+                document.removeEventListener("mousemove", move);
+            });
+        });
+        const editorSheet = setupSheet(editor, "editor", true, 5, 10);
+        // TODO: take this out later
+        prepopulateEditor(editorSheet);
+        parent.appendChild(editor);
+        // first row is named and locked
+        editorSheet.dataFrame.putAt([0, 0], "source");
+        editorSheet.dataFrame.putAt([1, 0], "target");
+        editorSheet.dataFrame.putAt([2, 0], "function");
+        editorSheet.setAttribute("lockedrows", 1);
     }
 
     keydownHandler(event){
@@ -63,11 +88,11 @@ class System extends Object {
     }
 }
 
-function setupSheet(parent, type, clear){
+function setupSheet(parent, type, clear, numCols, numRows){
     const sheet = document.createElement("my-grid");
     sheet.setAttribute("id", type);
-    sheet.setAttribute("columns", 5);
-    sheet.setAttribute("rows", 20);
+    sheet.setAttribute("columns", numCols);
+    sheet.setAttribute("rows", numRows);
     if(clear){
         sheet.dataFrame.clear();
     }
@@ -77,12 +102,10 @@ function setupSheet(parent, type, clear){
 
 // helper so I don't have to populate the editor sheet by hand each time
 function prepopulateEditor(editor){
-    editor.dataFrame.store["0,0"] = "copy";
-    editor.dataFrame.store["1,0"] = "(2,0):(2,10)";
-    editor.dataFrame.store["2,0"] = "(3,0)";
-    editor.dataFrame.store["0,1"] = "copy";
-    editor.dataFrame.store["1,1"] = "(0,2):(3,4)";
-    editor.dataFrame.store["2,1"] = "(0,3)";
+    editor.dataFrame.store["0,1"] = "(2,0):(2,10)";
+    editor.dataFrame.store["1,1"] = "(3,0)";
+    editor.dataFrame.store["0,2"] = "(0,2):(3,4)";
+    editor.dataFrame.store["1,2"] = "(0,3)";
 }
 
 export {

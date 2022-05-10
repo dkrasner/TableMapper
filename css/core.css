@@ -25,6 +25,11 @@
 
 #editor {
     background-color: cornsilk;
-    margin-top: 50px;
 }
 
+#editor-area {
+    position: absolute;
+    padding: 5px;
+    background-color: black;
+    cursor: grab;
+}
