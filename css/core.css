@@ -14,6 +14,7 @@
 }
 
 #source-target-area {
+    width: 100%;
     display: flex;
     flex-direction:row;
 }

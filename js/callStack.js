@@ -31,9 +31,11 @@ class CallStack extends Object {
         // assume commandData[1] is target coordinates
         // assume commandData[2] is option pre-copy process function
         // the rest are additional optional function args
-        const command = this.commandRegistry[commandData[0]]; // name
+        const command = this.commandRegistry[commandData[2]]; // name
         if(command){
-            command(commandData[0], commandData[1], ...commandData.slice(2));
+            // note the spread operator for args stars with index=3, since
+            // index=2 is the command name
+            command(commandData[0], commandData[1], ...commandData.slice(3));
         } else {
             // commands always copy data from one place to another
             // if the command is not present in the commandRegistry

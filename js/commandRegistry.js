@@ -6,6 +6,7 @@
 
 const commandRegistry = {
     default: _onDefault,
+    replace: _onReplace
 }
 
 /* the commands */
@@ -36,7 +37,7 @@ function _copy(source, target, preProcessFunc){
                 // value = eval(`'${value}'.${arg}`);
                 value = preProcessFunc(value);
             }
-            targetSheet.dataFrame.putAt([targetX, targetY], value);
+            targetSheet.dataFrame.putAt([targetX, targetY], value, false);
             currentY += 1;
             targetY += 1;
         }
@@ -45,6 +46,33 @@ function _copy(source, target, preProcessFunc){
         targetX += 1;
         targetY = targetOriginY;
     }
+    targetSheet.render();
+}
+
+/* a string.replace() like function which takes
+   a dictionary of values (passed in as a string
+   "key1:value2; key2;value2"); later on it will take
+   a reference to another sheet containing the k-v's
+   */
+function _onReplace(source, target, dict){
+    // split into key:val's
+    dict = dict.split(";");
+    _copy(source, target, (item) => {
+        dict.forEach((kv) => {
+            // split the key and value and clean up
+            let [k, v] = kv.split(":");
+            k = k.trim();
+            v= v.trim();
+            const regex = new RegExp(k);
+            // if we match return the new value
+            // NOTE: the convention here is that the last match
+            // returns and previous are effectively ignored
+            if(regex.test(item)){
+                item = item.replace(regex, v);
+            }
+        })
+        return item;
+    })
 }
 
 function _onDefault(source, target, func){
