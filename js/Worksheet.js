@@ -30,6 +30,10 @@ const templateString = `
     padding: 2px;
 
 }
+
+my-grid {
+    background-color: var(--palette-beige);
+}
 </style>
 <div id="header-bar">THE BAR</div>
 <my-grid columns=5 rows=10></my-grid>
@@ -40,7 +44,7 @@ class Worksheet extends HTMLElement {
         super();
         this.template = document.createElement('template');
         this.template.innerHTML = templateString;
-        this.attachShadow({mode: 'open'});
+        this.attachShadow({mode: 'open', delegatesFocus: true});
         this.shadowRoot.appendChild(
             this.template.content.cloneNode(true)
         );
@@ -52,6 +56,7 @@ class Worksheet extends HTMLElement {
     }
 
     connectedCallback(){
+        this.setAttribute("tabindex", -1);
         // add event listeners
         const bar = this.shadowRoot.querySelector('#header-bar');
         bar.addEventListener("mousedown", this.onMouseDownInBar);
