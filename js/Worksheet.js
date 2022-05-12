@@ -19,6 +19,9 @@ const templateString = `
     flex-direction: column;
     align-items: center;
     border-radius: 5px;
+    z-index: 1;
+    overflow: hidden; /* to make resize work */
+    resize: both;
 }
 
 #header-bar {
@@ -33,10 +36,18 @@ const templateString = `
 
 my-grid {
     background-color: var(--palette-beige);
+    z-index: 3;
+}
+
+#sheet-container{
+    width: 100%;
+    height: 100%;
 }
 </style>
 <div id="header-bar">THE BAR</div>
-<my-grid columns=5 rows=10></my-grid>
+<div id="sheet-container">
+    <my-grid expands=true columns=5 rows=10></my-grid>
+</div>
 `;
 
 class Worksheet extends HTMLElement {
@@ -56,7 +67,6 @@ class Worksheet extends HTMLElement {
     }
 
     connectedCallback(){
-        this.setAttribute("tabindex", -1);
         // add event listeners
         const bar = this.shadowRoot.querySelector('#header-bar');
         bar.addEventListener("mousedown", this.onMouseDownInBar);
@@ -66,15 +76,14 @@ class Worksheet extends HTMLElement {
         // remove event listeners
         const bar = this.shadowRoot.querySelector('#header-bar');
         bar.removeEventListener("mousedown", this.onMouseDownInBar);
-
     }
 
-    onMouseDownInBar(event){
+    onMouseDownInBar(){
         document.addEventListener('mousemove', this.onMouseMoveInBar);
         document.addEventListener('mouseup', this.onMouseUpAfterDrag);
     }
 
-    onMouseUpAfterDrag(event){
+    onMouseUpAfterDrag(){
         document.removeEventListener('mouseup', this.onMouseUpAfterDrag);
         document.removeEventListener('mousemove', this.onMouseMoveInBar);
     }
