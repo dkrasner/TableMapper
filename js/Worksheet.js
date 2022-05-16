@@ -8,6 +8,21 @@
    **/
 
 
+// icons
+const eraserIcon = `
+<svg xmlns="http://www.w3.org/2000/svg" id="erase" class="icon icon-tabler icon-tabler-eraser" width="44" height="44" viewBox="0 0 24 24" stroke-width="1.5" stroke="#2c3e50" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M19 19h-11l-4 -4a1 1 0 0 1 0 -1.41l10 -10a1 1 0 0 1 1.41 0l5 5a1 1 0 0 1 0 1.41l-9 9" />
+  <line x1="18" y1="12.3" x2="11.7" y2="6" />
+</svg>`;
+
+const deleteIcon = `
+<svg xmlns="http://www.w3.org/2000/svg" id="delete" class="icon icon-tabler icon-tabler-square-x" width="44" height="44" viewBox="0 0 24 24" stroke-width="1.5" stroke="#2c3e50" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <rect x="4" y="4" width="16" height="16" rx="2" />
+  <path d="M10 10l4 4m0 -4l-4 4" />
+</svg>`;
+
 // Simple grid-based sheet component
 const templateString = `
 <style>
@@ -30,8 +45,13 @@ const templateString = `
     text-align: center;
     font-size: 20px;
     font-weight: bold;
-    padding: 2px;
-
+    padding-left: 4px;
+    padding-right: 4px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 #header-bar > span {
@@ -60,6 +80,12 @@ const templateString = `
 #header-bar > input.show {
     display: inline-flex;
     align-items: center;
+}
+
+svg {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
 }
 
 my-grid {
@@ -138,8 +164,10 @@ my-grid {
 
 </style>
 <div id="header-bar">
+    ${deleteIcon}
     <span>A worksheet</span>
     <input></input>
+    ${eraserIcon}
 </div>
 <div id="sheet-container">
     <my-grid expands=true columns=5 rows=10></my-grid>
@@ -178,6 +206,8 @@ class Worksheet extends HTMLElement {
         this.onNameDblClick = this.onNameDblClick.bind(this);
         this.onNameKeydown = this.onNameKeydown.bind(this);
         this.updateName = this.updateName.bind(this);
+        this.onErase = this.onErase.bind(this);
+        this.onDelete = this.onDelete.bind(this);
     }
 
     connectedCallback(){
@@ -187,6 +217,8 @@ class Worksheet extends HTMLElement {
 
         const bar = this.shadowRoot.querySelector('#header-bar');
         const name = bar.querySelector('span');
+        const eraseButton = bar.querySelector("#erase");
+        const deleteButton = bar.querySelector("#delete");
 
         // set the name to default
         this.updateName("The worksheet");
@@ -194,6 +226,8 @@ class Worksheet extends HTMLElement {
         // add event listeners
         bar.addEventListener("mousedown", this.onMouseDownInBar);
         name.addEventListener("dblclick", this.onNameDblClick);
+        eraseButton.addEventListener("click", this.onErase);
+        deleteButton.addEventListener("click", this.onDelete);
     }
 
     disconnectedCallback(){
@@ -272,6 +306,17 @@ class Worksheet extends HTMLElement {
         this.updateName(newName);
         //input.removeEventListener('blur', this.handleInputBlur);
         // input.blur();
+    }
+
+    onDelete(){
+        const msg = `Are you sure you want to delete ${this.name}?`;
+        if(window.confirm(msg)){
+            this.remove();
+        }
+    }
+
+    onErase(){
+        this.shadowRoot.querySelector("my-grid").dataFrame.clear();
     }
 }
 
