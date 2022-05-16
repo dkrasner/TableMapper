@@ -34,6 +34,34 @@ const templateString = `
 
 }
 
+#header-bar > span {
+    padding: 3px;
+    cursor: pointer;
+    background-color: transparent;
+}
+
+#header-bar > span.hide {
+    display: none;
+}
+
+#header-bar > input {
+    display: none;
+    border: inherit;
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: inherit;
+    text-align: inherit;
+    background-color: transparent;
+    color: inherit;
+    padding: 0px;
+    outline: none !important;
+}
+
+#header-bar > input.show {
+    display: inline-flex;
+    align-items: center;
+}
+
 my-grid {
     background-color: var(--palette-beige);
     z-index: 3;
@@ -109,7 +137,10 @@ my-grid {
 }
 
 </style>
-<div id="header-bar">THE BAR</div>
+<div id="header-bar">
+    <span>A worksheet</span>
+    <input></input>
+</div>
 <div id="sheet-container">
     <my-grid expands=true columns=5 rows=10></my-grid>
 </div>
@@ -135,19 +166,34 @@ class Worksheet extends HTMLElement {
         // generate a random palette for the worksheet
         this.palette = paletteCombinations[Math.floor(Math.random() * paletteCombinations.length)];
 
+        // name for the worksheet. Note: this is the name found in the bar area
+        // and also in the this.name attribute for querying and listening for changes
+        this.name = "";
+        this.isEditingName = false;
+
         // bind methods
         this.onMouseMoveInBar = this.onMouseMoveInBar.bind(this);
         this.onMouseDownInBar = this.onMouseDownInBar.bind(this);
         this.onMouseUpAfterDrag = this.onMouseUpAfterDrag.bind(this);
+        this.onNameDblClick = this.onNameDblClick.bind(this);
+        this.onNameKeydown = this.onNameKeydown.bind(this);
+        this.updateName = this.updateName.bind(this);
     }
 
     connectedCallback(){
         // set the palette
         this.style.backgroundColor = this.palette.this;
         this.shadowRoot.querySelector('my-grid').style.backgroundColor = this.palette.sheet;
-        // add event listeners
+
         const bar = this.shadowRoot.querySelector('#header-bar');
+        const name = bar.querySelector('span');
+
+        // set the name to default
+        this.updateName("The worksheet");
+
+        // add event listeners
         bar.addEventListener("mousedown", this.onMouseDownInBar);
+        name.addEventListener("dblclick", this.onNameDblClick);
     }
 
     disconnectedCallback(){
@@ -175,7 +221,58 @@ class Worksheet extends HTMLElement {
         this.style.setProperty("left", newLeft + 'px');
     }
 
+    onNameDblClick(){
+        if(!this.isEditingName){
+            this.startEditingName();
+        }
+    }
 
+    onNameKeydown(event){
+        if(event.key == "Enter"){
+            event.preventDefault();
+            event.stopPropagation();
+            this.stopEditingName();
+        }
+    }
+
+    updateName(name){
+        const bar = this.shadowRoot.querySelector('#header-bar');
+        const nameSpan = bar.querySelector('span');
+
+        this.name = name;
+        this.setAttribute("name", name);
+        nameSpan.textContent = this.name;
+    }
+
+    startEditingName(){
+        this.isEditingName = true;
+        const bar = this.shadowRoot.querySelector('#header-bar');
+        const nameSpan = bar.querySelector('span');
+        nameSpan.classList.add("hide");
+        const input = bar.querySelector('input');
+        input.classList.add('show');
+        input.value = this.name;
+        input.addEventListener('keydown', this.onNameKeydown);
+        // input.addEventListener('blur', this.handleInputBlur);
+        input.focus();
+    }
+
+    stopEditingName(){
+        this.isEditingName = false;
+        const bar = this.shadowRoot.querySelector('#header-bar');
+        const input = bar.querySelector('input');
+        const nameSpan = bar.querySelector('span');
+        nameSpan.classList.remove("hide");
+        input.removeEventListener('keydown', this.onNameKeydown);
+        input.classList.remove('show');
+        let newName = input.value;
+        if(!newName){
+            newName = "A worksheet";
+        }
+        this.updateName(newName);
+        //input.removeEventListener('blur', this.handleInputBlur);
+        // input.blur();
+    }
 }
 
 window.customElements.define("work-sheet", Worksheet);
