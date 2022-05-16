@@ -73,7 +73,7 @@ const templateString = `
     text-align: inherit;
     background-color: transparent;
     color: inherit;
-    padding: 0px;
+    padding: 3px;
     outline: none !important;
 }
 
@@ -237,6 +237,15 @@ class Worksheet extends HTMLElement {
     }
 
     onMouseDownInBar(){
+        // dispatch an event to put the sheet in focus
+        const event = new CustomEvent(
+            'newSheetFocus',
+            {
+                bubbles: true,
+                detail: {target: this}
+            }
+        );
+        this.dispatchEvent(event);
         document.addEventListener('mousemove', this.onMouseMoveInBar);
         document.addEventListener('mouseup', this.onMouseUpAfterDrag);
     }
