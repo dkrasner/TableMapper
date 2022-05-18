@@ -5,26 +5,12 @@
   * UI, auth, events, etc
   */
 
-//import CallStack from './callStack.js'
-import commandRegistry from './commandRegistry.js'
+import icons from './utils/icons.js';
 
-
-// adding a sheet button (NOTE: should be moved to an app wide icon store)
-
-const sheetIcon = `
-<svg xmlns="http://www.w3.org/2000/svg" id="sheet" class="icon icon-tabler icon-tabler-table" width="44" height="44" viewBox="0 0 24 24" stroke-width="1.5" stroke="#2c3e50" fill="none" stroke-linecap="round" stroke-linejoin="round">
-  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-  <rect x="4" y="4" width="16" height="16" rx="2" />
-  <line x1="4" y1="10" x2="20" y2="10" />
-  <line x1="10" y1="4" x2="10" y2="20" />
-</svg>`;
 
 class System extends Object {
     constructor(){
         super();
-        this.allSheets = [];
-        this.callStack;
-        this.commandRegistry = commandRegistry;
 
         // bind methods
         this.setup = this.setup.bind(this);
@@ -36,10 +22,9 @@ class System extends Object {
     /* setup interface and services */
     setup(){
         const template = document.createElement("template");
-        template.innerHTML = sheetIcon;
+        template.innerHTML = icons.sheet;
         const addSheetButton = template.content.childNodes[1];
         document.body.appendChild(addSheetButton);
-        // this.callStack = new CallStack(editor, this.commandRegistry);
 
         // event listeners
         addSheetButton.addEventListener("click", this.addNewWorksheet);
@@ -48,7 +33,6 @@ class System extends Object {
 
     addNewWorksheet(){
         const newSheet = document.createElement("work-sheet");
-        this.allSheets.push(sheet);
         document.body.appendChild(newSheet);
     }
 

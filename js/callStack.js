@@ -69,7 +69,6 @@ class CallStack extends Object {
 
     buildCallStack(){
         // get all the rows with script data
-        const editor = document.getElementById("editor");
         this.callStack = [];
         let rowNotEmpty = true;
         let rowIndex = 1; // first row is labels
@@ -78,10 +77,15 @@ class CallStack extends Object {
             let colIndex = 0;
             const row = [];
             while(colNotEmpty){
-                if(editor.dataFrame.store[`${colIndex},${rowIndex}`]){
-                    const value = editor.dataFrame.store[`${colIndex},${rowIndex}`];
+                if(this.editor.dataFrame.store[`${colIndex},${rowIndex}`]){
+                    const value = this.editor.dataFrame.store[`${colIndex},${rowIndex}`];
                     row.push(value);
                     colIndex += 1;
+                    // put in a safety escape in case this is run on a non editor sheet
+                    if(colIndex > 10){
+                        alert("There are no commands to run in this sheet");
+                        return;
+                    }
                 } else {
                     colNotEmpty = false;
                     if(colIndex == 0){

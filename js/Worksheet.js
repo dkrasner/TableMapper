@@ -7,21 +7,9 @@
    * being done.
    **/
 
-
-// icons
-const eraserIcon = `
-<svg xmlns="http://www.w3.org/2000/svg" id="erase" class="icon icon-tabler icon-tabler-eraser" width="44" height="44" viewBox="0 0 24 24" stroke-width="1.5" stroke="#2c3e50" fill="none" stroke-linecap="round" stroke-linejoin="round">
-  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-  <path d="M19 19h-11l-4 -4a1 1 0 0 1 0 -1.41l10 -10a1 1 0 0 1 1.41 0l5 5a1 1 0 0 1 0 1.41l-9 9" />
-  <line x1="18" y1="12.3" x2="11.7" y2="6" />
-</svg>`;
-
-const deleteIcon = `
-<svg xmlns="http://www.w3.org/2000/svg" id="delete" class="icon icon-tabler icon-tabler-square-x" width="44" height="44" viewBox="0 0 24 24" stroke-width="1.5" stroke="#2c3e50" fill="none" stroke-linecap="round" stroke-linejoin="round">
-  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-  <rect x="4" y="4" width="16" height="16" rx="2" />
-  <path d="M10 10l4 4m0 -4l-4 4" />
-</svg>`;
+import CallStack from './callStack.js'
+import commandRegistry from './commandRegistry.js'
+import icons from './utils/icons.js';
 
 // Simple grid-based sheet component
 const templateString = `
@@ -58,6 +46,9 @@ const templateString = `
     padding: 3px;
     cursor: pointer;
     background-color: transparent;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 #header-bar > span.hide {
@@ -73,7 +64,10 @@ const templateString = `
     text-align: inherit;
     background-color: transparent;
     color: inherit;
-    padding: 3px;
+    padding-top: 3px;
+    padding-bottom: 3px;
+    padding-right: 5px;
+    padding-left: 5px;
     outline: none !important;
 }
 
@@ -82,6 +76,16 @@ const templateString = `
     align-items: center;
 }
 
+#footer-bar {
+    width: 100%;
+    padding-left: 3px;
+    padding-right: 4px;
+    padding-top: 5px;
+    padding-bottom: 2px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
 svg {
     width: 20px;
     height: 20px;
@@ -164,14 +168,27 @@ my-grid {
 
 </style>
 <div id="header-bar">
-    ${deleteIcon}
+    ${icons.remove}
     <span>A worksheet</span>
     <input></input>
-    ${eraserIcon}
+    <span>
+        ${icons.run}
+        ${icons.eraser}
+    </span>
 </div>
 <div id="sheet-container">
     <my-grid expands=true columns=5 rows=10></my-grid>
 </div>
+<div id="footer-bar">
+    <span id="sources">
+    </span>
+    <span id="targets">
+        <span id="e-link">
+            ${icons.externalLink}
+        </span>
+    </span>
+</div>
+
 `;
 
 // a few palette combo options for the sheet + bar area
@@ -191,52 +208,89 @@ class Worksheet extends HTMLElement {
             this.template.content.cloneNode(true)
         );
 
+        // a randomly generated UUID
+        this.id;
+
+        // the current callStack and available commandis
+        this.callStack;
+        this.commandRegistry = commandRegistry;
+
+        // source and target sheets
+        this.sources = [];
+        this.targets = [];
+
         // generate a random palette for the worksheet
         this.palette = paletteCombinations[Math.floor(Math.random() * paletteCombinations.length)];
 
-        // name for the worksheet. Note: this is the name found in the bar area
+        // name for the worksheet. Note: this is the name found in the header area
         // and also in the this.name attribute for querying and listening for changes
         this.name = "";
         this.isEditingName = false;
 
         // bind methods
-        this.onMouseMoveInBar = this.onMouseMoveInBar.bind(this);
-        this.onMouseDownInBar = this.onMouseDownInBar.bind(this);
+        this.addASource = this.addASource.bind(this);
+        this.removeASource = this.removeASource.bind(this);
+        this.addATarget = this.addATarget.bind(this);
+        this.removeATarget = this.removeATarget.bind(this);
+        this.onMouseMoveInHeader = this.onMouseMoveInHeader.bind(this);
+        this.onMouseDownInHeader = this.onMouseDownInHeader.bind(this);
         this.onMouseUpAfterDrag = this.onMouseUpAfterDrag.bind(this);
         this.onNameDblClick = this.onNameDblClick.bind(this);
         this.onNameKeydown = this.onNameKeydown.bind(this);
         this.updateName = this.updateName.bind(this);
         this.onErase = this.onErase.bind(this);
         this.onDelete = this.onDelete.bind(this);
+        this.onRun = this.onRun.bind(this);
+        this.onExternalLinkDragStart = this.onExternalLinkDragStart.bind(this);
+        this.onExternalLinkDragOver = this.onExternalLinkDragOver.bind(this);
+        this.onExternalLinkDrop = this.onExternalLinkDrop.bind(this);
     }
 
     connectedCallback(){
+        // set the id; NOTE: at the moment this is a random UUID
+        this.setAttribute("id",  window.crypto.randomUUID());
+        // for the moment every sheet has a CallStack which might or might not
+        // make sense moving fwd
+        // NOTE: it's the GridSheet in the shadow which (potentially) contains the commands
+        // that is passed as the editor to CallStack
+        this.callStack = new CallStack(this.shadowRoot.querySelector('my-grid'), this.commandRegistry);
+
         // set the palette
         this.style.backgroundColor = this.palette.this;
         this.shadowRoot.querySelector('my-grid').style.backgroundColor = this.palette.sheet;
 
-        const bar = this.shadowRoot.querySelector('#header-bar');
-        const name = bar.querySelector('span');
-        const eraseButton = bar.querySelector("#erase");
-        const deleteButton = bar.querySelector("#delete");
+        const header = this.shadowRoot.querySelector('#header-bar');
+        const name = header.querySelector('span');
+        const eraseButton = header.querySelector("#erase");
+        const deleteButton = header.querySelector("#remove");
+        const runButton = header.querySelector("#run");
+        const footer = this.shadowRoot.querySelector('#footer-bar');
+        // for drag & drop to work we need to select the span parent of the svg
+        const externalLinkButton = footer.querySelector("#e-link");
+        externalLinkButton.setAttribute("title", "drag and drop onto a sheet to link");
 
         // set the name to default
         this.updateName("The worksheet");
 
         // add event listeners
-        bar.addEventListener("mousedown", this.onMouseDownInBar);
+        header.addEventListener("mousedown", this.onMouseDownInHeader);
         name.addEventListener("dblclick", this.onNameDblClick);
         eraseButton.addEventListener("click", this.onErase);
         deleteButton.addEventListener("click", this.onDelete);
+        runButton.addEventListener("click", this.onRun);
+        externalLinkButton.setAttribute("draggable", true);
+        externalLinkButton.addEventListener("dragstart", this.onExternalLinkDragStart);
+        this.addEventListener("dragover", this.onExternalLinkDragOver);
+        this.addEventListener("drop", this.onExternalLinkDrop);
     }
 
     disconnectedCallback(){
         // remove event listeners
-        const bar = this.shadowRoot.querySelector('#header-bar');
-        bar.removeEventListener("mousedown", this.onMouseDownInBar);
+        const header = this.shadowRoot.querySelector('#header-bar');
+        header.removeEventListener("mousedown", this.onMouseDownInHeader);
     }
 
-    onMouseDownInBar(){
+    onMouseDownInHeader(){
         // dispatch an event to put the sheet in focus
         const event = new CustomEvent(
             'newSheetFocus',
@@ -246,16 +300,16 @@ class Worksheet extends HTMLElement {
             }
         );
         this.dispatchEvent(event);
-        document.addEventListener('mousemove', this.onMouseMoveInBar);
+        document.addEventListener('mousemove', this.onMouseMoveInHeader);
         document.addEventListener('mouseup', this.onMouseUpAfterDrag);
     }
 
     onMouseUpAfterDrag(){
         document.removeEventListener('mouseup', this.onMouseUpAfterDrag);
-        document.removeEventListener('mousemove', this.onMouseMoveInBar);
+        document.removeEventListener('mousemove', this.onMouseMoveInHeader);
     }
 
-    onMouseMoveInBar(event){
+    onMouseMoveInHeader(event){
         const currentLeft = this.getBoundingClientRect().left;
         const currentTop = this.getBoundingClientRect().top;
         const newTop = currentTop + event.movementY;
@@ -279,8 +333,8 @@ class Worksheet extends HTMLElement {
     }
 
     updateName(name){
-        const bar = this.shadowRoot.querySelector('#header-bar');
-        const nameSpan = bar.querySelector('span');
+        const header = this.shadowRoot.querySelector('#header-bar');
+        const nameSpan = header.querySelector('span');
 
         this.name = name;
         this.setAttribute("name", name);
@@ -289,10 +343,10 @@ class Worksheet extends HTMLElement {
 
     startEditingName(){
         this.isEditingName = true;
-        const bar = this.shadowRoot.querySelector('#header-bar');
-        const nameSpan = bar.querySelector('span');
+        const header = this.shadowRoot.querySelector('#header-bar');
+        const nameSpan = header.querySelector('span');
         nameSpan.classList.add("hide");
-        const input = bar.querySelector('input');
+        const input = header.querySelector('input');
         input.classList.add('show');
         input.value = this.name;
         input.addEventListener('keydown', this.onNameKeydown);
@@ -302,9 +356,9 @@ class Worksheet extends HTMLElement {
 
     stopEditingName(){
         this.isEditingName = false;
-        const bar = this.shadowRoot.querySelector('#header-bar');
-        const input = bar.querySelector('input');
-        const nameSpan = bar.querySelector('span');
+        const header = this.shadowRoot.querySelector('#header-bar');
+        const input = header.querySelector('input');
+        const nameSpan = header.querySelector('span');
         nameSpan.classList.remove("hide");
         input.removeEventListener('keydown', this.onNameKeydown);
         input.classList.remove('show');
@@ -326,6 +380,92 @@ class Worksheet extends HTMLElement {
 
     onErase(){
         this.shadowRoot.querySelector("my-grid").dataFrame.clear();
+    }
+
+    onRun(){
+        this.callStack.runAll();
+    }
+
+    onExternalLinkDragStart(event){
+        event.dataTransfer.setData("id", this.id);
+        event.dataTransfer.setData("name", this.name);
+        event.dataTransfer.effectAllowed = "link";
+    }
+
+    onExternalLinkDragOver(event){
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "link";
+        console.log("drag over");
+    }
+
+    onExternalLinkDrop(event){
+        event.preventDefault();
+        // add the source
+        const sourceId = event.dataTransfer.getData("id")
+        const sourceName = event.dataTransfer.getData("name")
+        this.addASource(sourceId, sourceName);
+        // now tell the source to add me as a target
+        // TODO: maybe all of this source/target adding/removing should be
+        // handled with custom events...?
+        const sourceSheet = document.getElementById(sourceId);
+        sourceSheet.addATarget(this.id, this.name);
+    }
+
+    addASource(id, name){
+        if(this.sources.length >= 1){
+            alert("only one source allowed at the moment");
+            return;
+        }
+        if(this.sources.indexOf(id) != -1){
+            alert(`${id} already added`);
+            return;
+        }
+        this.sources.push(id);
+        // add an icon with data about the source to the footer
+        const template = document.createElement("template");
+        template.innerHTML = icons.sheetImport;
+        const sourceIcon = template.content.childNodes[0];
+        const sourceSpan = document.createElement("span");
+        sourceSpan.appendChild(sourceIcon);
+        const footer = this.shadowRoot.querySelector('#footer-bar');
+        const sources = footer.querySelector('#sources');
+        sourceSpan.setAttribute("data-source-id", id);
+        sourceSpan.setAttribute("title", `source: ${name} (${id})`);
+        sources.appendChild(sourceSpan);
+        return id;
+    }
+
+    removeASource(id){
+        this.sources.filter((item) => {return item != id});
+    }
+
+    addATarget(id, name){
+        if(this.targets.length >= 1){
+            alert("only one target allowed at the moment");
+            return;
+        }
+        if(this.targets.indexOf(id) != -1){
+            alert(`${id} already added`);
+            return;
+        }
+        this.targets.push(id);
+        // add an icon with data about the target to the footer
+        const template = document.createElement("template");
+        template.innerHTML = icons.sheetExport;
+        const targetIcon = template.content.childNodes[0];
+        const targetSpan = document.createElement("span");
+        targetSpan.appendChild(targetIcon);
+        const footer = this.shadowRoot.querySelector('#footer-bar');
+        const targets = footer.querySelector('#targets');
+        targetSpan.setAttribute("data-target-id", id);
+        targetSpan.setAttribute("title", `target: ${name} (${id})`);
+        const externalLinkButton = footer.querySelector("#e-link");
+        targets.insertBefore(targetSpan, externalLinkButton);
+        return id;
+    }
+
+    removeATarget(id){
+        this.targets.filter((item) => {return item != id});
     }
 }
 
