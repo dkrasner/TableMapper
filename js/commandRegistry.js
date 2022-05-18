@@ -57,36 +57,42 @@ function _copy(source, target, preProcessFunc){
    "key1:value2; key2;value2"); later on it will take
    a reference to another sheet containing the k-v's
    */
-function _onReplace(source, target, dict){
+function _onReplace(source, targets, dict){
     // split into key:val's
     dict = dict.split(";");
-    _copy(source, target, (item) => {
-        dict.forEach((kv) => {
-            // split the key and value and clean up
-            let [k, v] = kv.split(":");
-            k = k.trim();
-            v= v.trim();
-            const regex = new RegExp(k);
-            // if we match return the new value
-            // NOTE: the convention here is that the last match
-            // returns and previous are effectively ignored
-            if(regex.test(item)){
-                item = item.replace(regex, v);
-            }
+    // TODO: is this really the way we want to handle multiple targets?
+    targets.split("|").forEach((target) => {
+        _copy(source, target, (item) => {
+            dict.forEach((kv) => {
+                // split the key and value and clean up
+                let [k, v] = kv.split(":");
+                k = k.trim();
+                v= v.trim();
+                const regex = new RegExp(k);
+                // if we match return the new value
+                // NOTE: the convention here is that the last match
+                // returns and previous are effectively ignored
+                if(regex.test(item)){
+                    item = item.replace(regex, v);
+                }
+            })
+            return item;
         })
-        return item;
-    })
+    });
 }
 
-function _onDefault(source, target, func){
-    if(func){
-        // TODO: this is insanely dangerous
-        _copy(source, target, (value) => {
-            return eval(`'${value}'.${func}`)
-        })
-    } else {
-        _copy(source, target)
-    }
+function _onDefault(source, targets, func){
+    // TODO: is this really the way we want to handle multiple targets?
+    targets.split("|").forEach((target) => {
+        if(func){
+            // TODO: this is insanely dangerous
+            _copy(source, target, (value) => {
+                return eval(`'${value}'.${func}`)
+            })
+        } else {
+            _copy(source, target)
+        }
+    });
 }
 
 /* utilities */

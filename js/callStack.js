@@ -50,8 +50,8 @@ class CallStack extends Object {
     }
 
     runNext(sources, targets){
-        if(sources.length > 1 || targets.length > 1){
-            alert("I don't know how to run commands on multiple sources or targets!");
+        if(sources.length > 1){
+            alert("I don't know how to run commands with multiple sources!");
             return;
         }
         this.buildCallStack(sources, targets);
@@ -65,8 +65,8 @@ class CallStack extends Object {
     }
 
     runAll(sources, targets){
-        if(sources.length > 1 || targets.length > 1){
-            alert("I don't know how to run commands on multiple sources or targets!");
+        if(sources.length > 1){
+            alert("I don't know how to run commands with multiple sources!");
             return;
         }
         this.buildCallStack(sources, targets);
@@ -78,13 +78,12 @@ class CallStack extends Object {
     buildCallStack(sources, targets){
         // get all the rows with script data
         // NOTE: we assume that data in column 0 is the source
-        // and data in column 1 is the target
+        // and data in column 1 is the targets
         // we use the google sheets convention to signal a sheet reference:
         // Sheet_ref!CELL_DATA
         // if not reference is present we add the sources and targets reference provided
         // TODO: for now assume that there is only one source and target
         const source = sources[0];
-        const target = targets[0];
         this.callStack = [];
         let rowNotEmpty = true;
         let rowIndex = 0;
@@ -103,7 +102,9 @@ class CallStack extends Object {
                     }
                     if(colIndex == 1){
                         if(!value.match("!")){
-                            value = `${target}!${value}`;
+                            value = targets.map((item) => {
+                                return `${item}!${value}`
+                            }).join("|");
                         }
                     }
                     row.push(value);

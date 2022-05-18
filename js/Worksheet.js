@@ -412,10 +412,6 @@ class Worksheet extends HTMLElement {
     }
 
     addASource(id, name){
-        if(this.sources.length >= 1){
-            alert("only one source allowed at the moment");
-            return;
-        }
         if(this.sources.indexOf(id) != -1){
             alert(`${id} already added`);
             return;
@@ -440,10 +436,6 @@ class Worksheet extends HTMLElement {
     }
 
     addATarget(id, name){
-        if(this.targets.length >= 1){
-            alert("only one target allowed at the moment");
-            return;
-        }
         if(this.targets.indexOf(id) != -1){
             alert(`${id} already added`);
             return;
