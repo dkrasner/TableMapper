@@ -383,7 +383,7 @@ class Worksheet extends HTMLElement {
     }
 
     onRun(){
-        this.callStack.runAll();
+        this.callStack.runAll(this.sources, this.targets);
     }
 
     onExternalLinkDragStart(event){

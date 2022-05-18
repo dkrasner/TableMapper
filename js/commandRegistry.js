@@ -17,12 +17,15 @@ const commandRegistry = {
    */
 function _copy(source, target, preProcessFunc){
     console.log(`going to copy ${source} to ${target}`);
-    const sourceSheet = document.getElementById("source");
-    const targetSheet = document.getElementById("target");
-    const [sourceOrigin, sourceCorner] = source.split(":");
+    const [sourceSheetId, sourceCoords] = source.split("!");
+    // TODO: we should get some higher level ways for worksheet to interact with the underlying my-grid
+    const sourceSheet = document.getElementById(sourceSheetId).shadowRoot.querySelector("my-grid");
+    const [targetSheetId, targetCoords] = target.split("!");
+    const targetSheet = document.getElementById(targetSheetId).shadowRoot.querySelector("my-grid");
+    const [sourceOrigin, sourceCorner] = sourceCoords.split(":");
     const [sourceOriginX, sourceOriginY] = parseCoordinates(sourceOrigin);
     const [sourceCornerX, sourceCornerY] = parseCoordinates(sourceCorner);
-    const [targetOriginX, targetOriginY] = parseCoordinates(target);
+    const [targetOriginX, targetOriginY] = parseCoordinates(targetCoords);
     // iterate over the coordinates and fill in target sheet data values
     let currentX = sourceOriginX;
     let currentY = sourceOriginY;

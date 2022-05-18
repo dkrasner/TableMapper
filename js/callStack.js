@@ -49,8 +49,12 @@ class CallStack extends Object {
         }
     }
 
-    runNext(){
-        this.buildCallStack();
+    runNext(sources, targets){
+        if(sources.length > 1 || targets.length > 1){
+            alert("I don't know how to run commands on multiple sources or targets!");
+            return;
+        }
+        this.buildCallStack(sources, targets);
         if(this.COUNTER < this.callStack.length){
             const commandData = this.callStack[this.COUNTER];
             this.runCommand(commandData);
@@ -60,25 +64,48 @@ class CallStack extends Object {
         }
     }
 
-    runAll(){
-        this.buildCallStack();
+    runAll(sources, targets){
+        if(sources.length > 1 || targets.length > 1){
+            alert("I don't know how to run commands on multiple sources or targets!");
+            return;
+        }
+        this.buildCallStack(sources, targets);
         this.callStack.forEach((commandData) => {
             this.runCommand(commandData);
         })
     }
 
-    buildCallStack(){
+    buildCallStack(sources, targets){
         // get all the rows with script data
+        // NOTE: we assume that data in column 0 is the source
+        // and data in column 1 is the target
+        // we use the google sheets convention to signal a sheet reference:
+        // Sheet_ref!CELL_DATA
+        // if not reference is present we add the sources and targets reference provided
+        // TODO: for now assume that there is only one source and target
+        const source = sources[0];
+        const target = targets[0];
         this.callStack = [];
         let rowNotEmpty = true;
-        let rowIndex = 1; // first row is labels
+        let rowIndex = 0;
         while(rowNotEmpty){
             let colNotEmpty = true;
             let colIndex = 0;
             const row = [];
             while(colNotEmpty){
                 if(this.editor.dataFrame.store[`${colIndex},${rowIndex}`]){
-                    const value = this.editor.dataFrame.store[`${colIndex},${rowIndex}`];
+                    let value = this.editor.dataFrame.store[`${colIndex},${rowIndex}`];
+                    // check to see if we need to add source and target data
+                    if(colIndex == 0){
+                        if(!value.match("!")){
+                            value = `${source}!${value}`;
+                        }
+                    }
+                    if(colIndex == 1){
+                        if(!value.match("!")){
+                            value = `${target}!${value}`;
+                        }
+                    }
                     row.push(value);
                     colIndex += 1;
                     // put in a safety escape in case this is run on a non editor sheet
