@@ -5,51 +5,45 @@
   * UI, auth, events, etc
   */
 
-import CallStack from './callStack.js'
-import commandRegistry from './commandRegistry.js'
+import icons from './utils/icons.js';
 
 
 class System extends Object {
     constructor(){
         super();
-        this.callStack;
-        this.commandRegistry = commandRegistry;
 
         // bind methods
         this.setup = this.setup.bind(this);
-        this.setupInterface = this.setupInterface.bind(this);
         this.keydownHandler = this.keydownHandler.bind(this);
+        this.addNewWorksheet = this.addNewWorksheet.bind(this);
+        this.onNewSheetFocus = this.onNewSheetFocus.bind(this);
     }
 
     /* setup interface and services */
     setup(){
-        this.setupInterface();
-        const editor = document.getElementById("editor");
-        this.callStack = new CallStack(editor, this.commandRegistry);
+        const template = document.createElement("template");
+        template.innerHTML = icons.sheet;
+        const addSheetButton = template.content.childNodes[1];
+        document.body.appendChild(addSheetButton);
+
+        // event listeners
+        addSheetButton.addEventListener("click", this.addNewWorksheet);
+        document.addEventListener("newSheetFocus", this.onNewSheetFocus);
     }
 
-    setupInterface(){
-        const main = document.getElementById("main");
-        const sourceAndTarget = document.createElement("div");
-        sourceAndTarget.setAttribute("id", "source-target-area");
+    addNewWorksheet(){
+        const newSheet = document.createElement("work-sheet");
+        document.body.appendChild(newSheet);
+    }
 
-        main.appendChild(sourceAndTarget);
-
-        const source = document.createElement("div");
-        const target = document.createElement("div");
-        sourceAndTarget.appendChild(source);
-        sourceAndTarget.appendChild(target);
-
-        setupSheet(source, "source");
-        setupSheet(target, "target", true);
-        const editor = document.createElement("div");
-        editor.setAttribute("id", "editor-area");
-        const editorSheet = setupSheet(editor, "editor", true);
-        // TODO: take this out later
-        prepopulateEditor(editorSheet);
-        main.appendChild(editor);
-
-        document.addEventListener("keydown", this.keydownHandler);
+    onNewSheetFocus(event){
+        // set the z-index to 1 for all sheets
+        // and set z-index to 2 for the target sheet
+        // TODO: we'll have to do this better
+        document.querySelectorAll("work-sheet").forEach((sheet) => {
+            sheet.style.setProperty("z-index", 1);
+        })
+        event.target.style.setProperty("z-index", 2);
     }
 
     keydownHandler(event){
@@ -63,26 +57,15 @@ class System extends Object {
     }
 }
 
-function setupSheet(parent, type, clear){
-    const sheet = document.createElement("my-grid");
-    sheet.setAttribute("id", type);
-    sheet.setAttribute("columns", 5);
-    sheet.setAttribute("rows", 20);
-    if(clear){
-        sheet.dataFrame.clear();
-    }
-    parent.appendChild(sheet);
-    return sheet;
-}
 
 // helper so I don't have to populate the editor sheet by hand each time
 function prepopulateEditor(editor){
-    editor.dataFrame.store["0,0"] = "copy";
-    editor.dataFrame.store["1,0"] = "(2,0):(2,10)";
-    editor.dataFrame.store["2,0"] = "(3,0)";
-    editor.dataFrame.store["0,1"] = "copy";
-    editor.dataFrame.store["1,1"] = "(0,2):(3,4)";
-    editor.dataFrame.store["2,1"] = "(0,3)";
+    editor.dataFrame.store["0,1"] = "(2,0):(2,10)";
+    editor.dataFrame.store["1,1"] = "(3,0)";
+    editor.dataFrame.store["2,1"] = "replace";
+    editor.dataFrame.store["3,1"] = "1:ONE; 2:TWO";
+    editor.dataFrame.store["0,2"] = "(0,2):(3,4)";
+    editor.dataFrame.store["1,2"] = "(0,3)";
 }
 
 export {

@@ -1,30 +1,23 @@
+:root {
+    --palette-beige: #FBE8A6;
+    --palette-blue: #303C6C;
+    --palette-lightblue: #B4DFE5;
+    --palette-cyan: #D2FDFF;
+    --palette-orange: #F4976C;
+}
+
 #main {
     display: flex;
     flex-direction: column;
     align-items: center;
+    color: var(--palette-black);
 }
 
-#source-target-area {
-    display: flex;
-    flex-direction:row;
+svg#sheet {
+    cursor: pointer;
 }
 
-#source-target-area > div {
-    width: 50%;
+svg#sheet:hover{
+    width: 50px;
+    height:50px;
 }
-
-#source-target-area #source {
-    background-color: aliceblue;
-    margin-right: 5px;
-}
-
-#source-target-area #target {
-    background-color: lightblue;
-    margin-right: 5px;
-}
-
-#editor {
-    background-color: cornsilk;
-    margin-top: 50px;
-}
-
