@@ -215,10 +215,6 @@ class Worksheet extends HTMLElement {
         this.callStack;
         this.commandRegistry = commandRegistry;
 
-        // source and target sheets
-        this.sources = [];
-        this.targets = [];
-
         // generate a random palette for the worksheet
         this.palette = paletteCombinations[Math.floor(Math.random() * paletteCombinations.length)];
 
@@ -255,6 +251,10 @@ class Worksheet extends HTMLElement {
         // that is passed as the editor to CallStack
         this.callStack = new CallStack(this.shadowRoot.querySelector('my-grid'), this.commandRegistry);
 
+        // set the sources and targets to ""
+        this.setAttribute("sources", "");
+        this.setAttribute("targets", "");
+
         // set the palette
         this.style.backgroundColor = this.palette.this;
         this.shadowRoot.querySelector('my-grid').style.backgroundColor = this.palette.sheet;
@@ -287,7 +287,21 @@ class Worksheet extends HTMLElement {
     disconnectedCallback(){
         // remove event listeners
         const header = this.shadowRoot.querySelector('#header-bar');
-        header.removeEventListener("mousedown", this.onMouseDownInHeader);
+        const name = header.querySelector('span');
+        const eraseButton = header.querySelector("#erase");
+        const deleteButton = header.querySelector("#remove");
+        const runButton = header.querySelector("#run");
+        const footer = this.shadowRoot.querySelector('#footer-bar');
+        // for drag & drop to work we need to select the span parent of the svg
+        const externalLinkButton = footer.querySelector("#e-link");
+        header.addEventListener("mousedown", this.onMouseDownInHeader);
+        name.addEventListener("dblclick", this.onNameDblClick);
+        eraseButton.addEventListener("click", this.onErase);
+        deleteButton.addEventListener("click", this.onDelete);
+        runButton.addEventListener("click", this.onRun);
+        externalLinkButton.addEventListener("dragstart", this.onExternalLinkDragStart);
+        this.addEventListener("dragover", this.onExternalLinkDragOver);
+        this.addEventListener("drop", this.onExternalLinkDrop);
     }
 
     onMouseDownInHeader(){
@@ -383,7 +397,7 @@ class Worksheet extends HTMLElement {
     }
 
     onRun(){
-        this.callStack.runAll(this.sources, this.targets);
+        this.callStack.runAll(this.getAttribute("sources"), this.getAttribute("targets"));
     }
 
     onExternalLinkDragStart(event){
@@ -412,11 +426,13 @@ class Worksheet extends HTMLElement {
     }
 
     addASource(id, name){
-        if(this.sources.indexOf(id) != -1){
+        const sources = this._attributeToList("sources");
+        if(sources.indexOf(id) != -1){
             alert(`${id} already added`);
             return;
         }
-        this.sources.push(id);
+        sources.push(id);
+        this.setAttribute("sources", sources);
         // add an icon with data about the source to the footer
         const template = document.createElement("template");
         template.innerHTML = icons.sheetImport;
@@ -424,23 +440,27 @@ class Worksheet extends HTMLElement {
         const sourceSpan = document.createElement("span");
         sourceSpan.appendChild(sourceIcon);
         const footer = this.shadowRoot.querySelector('#footer-bar');
-        const sources = footer.querySelector('#sources');
+        const sourcesArea = footer.querySelector('#sources');
         sourceSpan.setAttribute("data-source-id", id);
         sourceSpan.setAttribute("title", `source: ${name} (${id})`);
-        sources.appendChild(sourceSpan);
+        sourcesArea.appendChild(sourceSpan);
         return id;
     }
 
     removeASource(id){
-        this.sources.filter((item) => {return item != id});
+        const sources = this._attributeToList("sources");
+        sources.filter((item) => {return item != id});
+        this.setAttribute("sources", sources);
     }
 
     addATarget(id, name){
-        if(this.targets.indexOf(id) != -1){
+        const targets = this._attributeToList("targets");
+        if(targets.indexOf(id) != -1){
             alert(`${id} already added`);
             return;
         }
-        this.targets.push(id);
+        targets.push(id);
+        this.setAttribute("targets", targets);
         // add an icon with data about the target to the footer
         const template = document.createElement("template");
         template.innerHTML = icons.sheetExport;
@@ -448,16 +468,31 @@ class Worksheet extends HTMLElement {
         const targetSpan = document.createElement("span");
         targetSpan.appendChild(targetIcon);
         const footer = this.shadowRoot.querySelector('#footer-bar');
-        const targets = footer.querySelector('#targets');
+        const targetsArea = footer.querySelector('#targets');
         targetSpan.setAttribute("data-target-id", id);
         targetSpan.setAttribute("title", `target: ${name} (${id})`);
         const externalLinkButton = footer.querySelector("#e-link");
-        targets.insertBefore(targetSpan, externalLinkButton);
+        targetsArea.insertBefore(targetSpan, externalLinkButton);
         return id;
     }
 
     removeATarget(id){
-        this.targets.filter((item) => {return item != id});
+        const targets = this._attributeToList("targets");
+        targets.filter((item) => {return item != id});
+        this.setAttribute("targets", targets);
+    }
+
+    /**
+      * Convert a DOM element attribute to a list
+      */
+    _attributeToList(name){
+        let attr = this.getAttribute(name);
+        if(!attr){
+            attr = [];
+        } else {
+            attr = attr.split(",");
+        }
+        return attr;
     }
 }
 
