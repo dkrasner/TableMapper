@@ -168,7 +168,7 @@ my-grid {
 
 </style>
 <div id="header-bar">
-    ${icons.remove}
+    ${icons.trash}
     <span>A worksheet</span>
     <input></input>
     <span>
@@ -184,7 +184,7 @@ my-grid {
     </span>
     <span id="targets">
         <span id="e-link">
-            ${icons.externalLink}
+            ${icons.link}
         </span>
     </span>
 </div>
@@ -224,10 +224,11 @@ class Worksheet extends HTMLElement {
         this.isEditingName = false;
 
         // bind methods
-        this.addASource = this.addASource.bind(this);
-        this.removeASource = this.removeASource.bind(this);
-        this.addATarget = this.addATarget.bind(this);
-        this.removeATarget = this.removeATarget.bind(this);
+        this.addSource = this.addSource.bind(this);
+        this.removeSource = this.removeSource.bind(this);
+        this.addTarget = this.addTarget.bind(this);
+        this.removeTarget = this.removeTarget.bind(this);
+        this.removeLink = this.removeLink.bind(this);
         this.onMouseMoveInHeader = this.onMouseMoveInHeader.bind(this);
         this.onMouseDownInHeader = this.onMouseDownInHeader.bind(this);
         this.onMouseUpAfterDrag = this.onMouseUpAfterDrag.bind(this);
@@ -262,7 +263,7 @@ class Worksheet extends HTMLElement {
         const header = this.shadowRoot.querySelector('#header-bar');
         const name = header.querySelector('span');
         const eraseButton = header.querySelector("#erase");
-        const deleteButton = header.querySelector("#remove");
+        const deleteButton = header.querySelector("#trash");
         const runButton = header.querySelector("#run");
         const footer = this.shadowRoot.querySelector('#footer-bar');
         // for drag & drop to work we need to select the span parent of the svg
@@ -289,7 +290,7 @@ class Worksheet extends HTMLElement {
         const header = this.shadowRoot.querySelector('#header-bar');
         const name = header.querySelector('span');
         const eraseButton = header.querySelector("#erase");
-        const deleteButton = header.querySelector("#remove");
+        const deleteButton = header.querySelector("#trash");
         const runButton = header.querySelector("#run");
         const footer = this.shadowRoot.querySelector('#footer-bar');
         // for drag & drop to work we need to select the span parent of the svg
@@ -417,15 +418,15 @@ class Worksheet extends HTMLElement {
         // add the source
         const sourceId = event.dataTransfer.getData("id")
         const sourceName = event.dataTransfer.getData("name")
-        this.addASource(sourceId, sourceName);
+        this.addSource(sourceId, sourceName);
         // now tell the source to add me as a target
         // TODO: maybe all of this source/target adding/removing should be
         // handled with custom events...?
         const sourceSheet = document.getElementById(sourceId);
-        sourceSheet.addATarget(this.id, this.name);
+        sourceSheet.addTarget(this.id, this.name);
     }
 
-    addASource(id, name){
+    addSource(id, name){
         const sources = this._attributeToList("sources");
         if(sources.indexOf(id) != -1){
             alert(`${id} already added`);
@@ -434,26 +435,24 @@ class Worksheet extends HTMLElement {
         sources.push(id);
         this.setAttribute("sources", sources);
         // add an icon with data about the source to the footer
-        const template = document.createElement("template");
-        template.innerHTML = icons.sheetImport;
-        const sourceIcon = template.content.childNodes[0];
-        const sourceSpan = document.createElement("span");
-        sourceSpan.appendChild(sourceIcon);
+        const sourceSpan = this._createSourceTargetIconSpan("source", id, name);
         const footer = this.shadowRoot.querySelector('#footer-bar');
         const sourcesArea = footer.querySelector('#sources');
-        sourceSpan.setAttribute("data-source-id", id);
-        sourceSpan.setAttribute("title", `source: ${name} (${id})`);
         sourcesArea.appendChild(sourceSpan);
         return id;
     }
 
-    removeASource(id){
-        const sources = this._attributeToList("sources");
-        sources.filter((item) => {return item != id});
+    removeSource(id){
+        let sources = this._attributeToList("sources");
+        sources = sources.filter((item) => {return item != id});
         this.setAttribute("sources", sources);
+        // remove the source link
+        const footer = this.shadowRoot.querySelector("#footer-bar");
+        const linkContainer = footer.querySelector('#sources');
+        linkContainer.querySelectorAll(`[data-id='${id}']`).forEach((item) => {item.remove()});
     }
 
-    addATarget(id, name){
+    addTarget(id, name){
         const targets = this._attributeToList("targets");
         if(targets.indexOf(id) != -1){
             alert(`${id} already added`);
@@ -462,24 +461,46 @@ class Worksheet extends HTMLElement {
         targets.push(id);
         this.setAttribute("targets", targets);
         // add an icon with data about the target to the footer
-        const template = document.createElement("template");
-        template.innerHTML = icons.sheetExport;
-        const targetIcon = template.content.childNodes[0];
-        const targetSpan = document.createElement("span");
-        targetSpan.appendChild(targetIcon);
+        const targetSpan = this._createSourceTargetIconSpan("target", id, name);
         const footer = this.shadowRoot.querySelector('#footer-bar');
         const targetsArea = footer.querySelector('#targets');
-        targetSpan.setAttribute("data-target-id", id);
-        targetSpan.setAttribute("title", `target: ${name} (${id})`);
         const externalLinkButton = footer.querySelector("#e-link");
         targetsArea.insertBefore(targetSpan, externalLinkButton);
         return id;
     }
 
-    removeATarget(id){
-        const targets = this._attributeToList("targets");
-        targets.filter((item) => {return item != id});
+    removeTarget(id){
+        let targets = this._attributeToList("targets");
+        targets = targets.filter((item) => {return item != id});
         this.setAttribute("targets", targets);
+        // remove the target link
+        const footer = this.shadowRoot.querySelector("#footer-bar");
+        const linkContainer = footer.querySelector('#targets');
+        linkContainer.querySelectorAll(`[data-id='${id}']`).forEach((item) => {item.remove()});
+    }
+
+    removeLink(event){
+        event.preventDefault();
+        event.stopPropagation();
+        // remove the link and
+        // tell the corresponding target worksheets to remove the link
+        // TODO: maybe this should all be handled with custom events
+        const id = event.target.getAttribute("data-id");
+        const worksheet = document.getElementById(id);
+        // NOTE: it's possible that the worksheet is null (for example it was
+        // deleted earlier). In this case we should ignore, although TODO this should
+        // all be better handled in a uniform model
+        if(event.target.getAttribute("data-type") == "source"){
+            this.removeSource(id);
+            if(worksheet){
+                worksheet.removeTarget(this.id);
+            }
+        } else {
+            this.removeTarget(id);
+            if(worksheet){
+                worksheet.removeSource(this.id);
+            }
+        }
     }
 
     /**
@@ -493,6 +514,44 @@ class Worksheet extends HTMLElement {
             attr = attr.split(",");
         }
         return attr;
+    }
+
+    /**
+      * Create a DOM element from an SVG string
+      * and wrap it in a span
+      */
+    _createSourceTargetIconSpan(type, id, name){
+        const template = document.createElement("template");
+        let iconString;
+        if(type == "source"){
+            iconString = icons.sheetImport;
+        } else {
+            iconString = icons.sheetExport;
+        }
+        template.innerHTML = iconString;
+        const iconSVG = template.content.childNodes[0];
+        const iconSpan = document.createElement("span");
+        iconSpan.appendChild(iconSVG);
+        iconSpan.setAttribute("data-type", type);
+        iconSpan.setAttribute("data-id", id);
+        iconSpan.setAttribute("title", `${type}: ${name} (${id})`);
+        // overlay the unlink icon
+        template.innerHTML = icons.unlink;
+        const unlinkSVG = template.content.childNodes[0];
+        unlinkSVG.setAttribute("data-type", type);
+        unlinkSVG.setAttribute("data-id", id);
+        unlinkSVG.style.display = 'none';
+        unlinkSVG.addEventListener("click", this.removeLink);
+        iconSpan.appendChild(unlinkSVG);
+        iconSpan.addEventListener("mouseover", () => {
+            unlinkSVG.style.display = "inherit";
+            iconSVG.style.display = "none";
+        })
+        iconSpan.addEventListener("mouseleave", () => {
+            unlinkSVG.style.display = "none";
+            iconSVG.style.display = "inherit";
+        })
+        return iconSpan;
     }
 }
 
