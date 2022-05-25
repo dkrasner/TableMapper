@@ -42,20 +42,19 @@ const templateString = `
     align-items: center;
 }
 
-#header-bar > span {
+#header-bar > #title > span {
     padding: 3px;
-    cursor: pointer;
     background-color: transparent;
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
 
-#header-bar > span.hide {
+#header-bar > #title > span.hide {
     display: none;
 }
 
-#header-bar > input {
+#header-bar > #title > input {
     display: none;
     border: inherit;
     font-family: inherit;
@@ -71,7 +70,7 @@ const templateString = `
     outline: none !important;
 }
 
-#header-bar > input.show {
+#header-bar > #title > input.show {
     display: inline-flex;
     align-items: center;
 }
@@ -86,10 +85,15 @@ const templateString = `
     justify-content: space-between;
     align-items: center;
 }
+
+span[data-clickable="true"]{
+    cursor: pointer;
+}
+
 svg {
     width: 20px;
     height: 20px;
-    cursor: pointer;
+    pointer-events: none;
 }
 
 my-grid {
@@ -168,22 +172,30 @@ my-grid {
 
 </style>
 <div id="header-bar">
-    ${icons.trash}
-    <span>A worksheet</span>
-    <input></input>
+    <span data-clickable=true id="trash">
+        ${icons.trash}
+    </span>
+    <span data-clickable=true id="title">
+        <span>A worksheet</span>
+        <input></input>
+    </span>
     <span>
-        ${icons.run}
-        ${icons.eraser}
+        <span data-clickable=true id="run">
+            ${icons.run}
+        </span>
+        <span data-clickable=true id="erase">
+            ${icons.eraser}
+        </span>
     </span>
 </div>
 <div id="sheet-container">
-    <my-grid expands=true columns=5 rows=10></my-grid>
+    <my-grid expands="both" columns=5 rows=10></my-grid>
 </div>
 <div id="footer-bar">
     <span id="sources">
     </span>
     <span id="targets">
-        <span id="e-link">
+        <span data-clickable=true id="e-link">
             ${icons.link}
         </span>
     </span>
@@ -261,7 +273,7 @@ class Worksheet extends HTMLElement {
         this.shadowRoot.querySelector('my-grid').style.backgroundColor = this.palette.sheet;
 
         const header = this.shadowRoot.querySelector('#header-bar');
-        const name = header.querySelector('span');
+        const name = header.querySelector('#title');
         const eraseButton = header.querySelector("#erase");
         const deleteButton = header.querySelector("#trash");
         const runButton = header.querySelector("#run");
@@ -349,7 +361,7 @@ class Worksheet extends HTMLElement {
 
     updateName(name){
         const header = this.shadowRoot.querySelector('#header-bar');
-        const nameSpan = header.querySelector('span');
+        const nameSpan = header.querySelector('#title > span');
 
         this.name = name;
         this.setAttribute("name", name);
@@ -359,7 +371,7 @@ class Worksheet extends HTMLElement {
     startEditingName(){
         this.isEditingName = true;
         const header = this.shadowRoot.querySelector('#header-bar');
-        const nameSpan = header.querySelector('span');
+        const nameSpan = header.querySelector('#title > span');
         nameSpan.classList.add("hide");
         const input = header.querySelector('input');
         input.classList.add('show');
@@ -373,7 +385,7 @@ class Worksheet extends HTMLElement {
         this.isEditingName = false;
         const header = this.shadowRoot.querySelector('#header-bar');
         const input = header.querySelector('input');
-        const nameSpan = header.querySelector('span');
+        const nameSpan = header.querySelector('#title > span');
         nameSpan.classList.remove("hide");
         input.removeEventListener('keydown', this.onNameKeydown);
         input.classList.remove('show');
@@ -398,6 +410,9 @@ class Worksheet extends HTMLElement {
     }
 
     onRun(){
+        if(!this.getAttribute("sources") || this.getAttribute("targets")){
+            alert("You must have both sources and targets set to run!");
+        }
         this.callStack.runAll(this.getAttribute("sources"), this.getAttribute("targets"));
     }
 
@@ -480,8 +495,9 @@ class Worksheet extends HTMLElement {
     }
 
     removeLink(event){
-        event.preventDefault();
         event.stopPropagation();
+        event.preventDefault();
+        console.log(event.target);
         // remove the link and
         // tell the corresponding target worksheets to remove the link
         // TODO: maybe this should all be handled with custom events
@@ -518,40 +534,57 @@ class Worksheet extends HTMLElement {
 
     /**
       * Create a DOM element from an SVG string
-      * and wrap it in a span
+      * for both the source/target icon as well as the
+      * unlink icon. Adds event listeners for mousenter and
+      * mouseleave.
       */
     _createSourceTargetIconSpan(type, id, name){
-        const template = document.createElement("template");
+        // make a reference to the source/target sheet
+        // to update css on hover
+        const sheet = document.getElementById(id);
         let iconString;
         if(type == "source"){
             iconString = icons.sheetImport;
         } else {
             iconString = icons.sheetExport;
         }
-        template.innerHTML = iconString;
-        const iconSVG = template.content.childNodes[0];
+        const icon = this._createIconSpanFromString(iconString);
         const iconSpan = document.createElement("span");
-        iconSpan.appendChild(iconSVG);
+        iconSpan.appendChild(icon);
         iconSpan.setAttribute("data-type", type);
         iconSpan.setAttribute("data-id", id);
         iconSpan.setAttribute("title", `${type}: ${name} (${id})`);
         // overlay the unlink icon
-        template.innerHTML = icons.unlink;
-        const unlinkSVG = template.content.childNodes[0];
-        unlinkSVG.setAttribute("data-type", type);
-        unlinkSVG.setAttribute("data-id", id);
-        unlinkSVG.style.display = 'none';
-        unlinkSVG.addEventListener("click", this.removeLink);
-        iconSpan.appendChild(unlinkSVG);
+        const unlinkIcon = this._createIconSpanFromString(icons.unlink);
+        unlinkIcon.setAttribute("data-type", type);
+        unlinkIcon.setAttribute("data-id", id);
+        unlinkIcon.style.display = 'none';
+        iconSpan.addEventListener("click", this.removeLink);
+        iconSpan.appendChild(unlinkIcon);
         iconSpan.addEventListener("mouseover", () => {
-            unlinkSVG.style.display = "inherit";
-            iconSVG.style.display = "none";
+            unlinkIcon.style.display = "inherit";
+            icon.style.display = "none";
+            sheet.style.outline = "solid var(--palette-blue)";
         })
         iconSpan.addEventListener("mouseleave", () => {
-            unlinkSVG.style.display = "none";
-            iconSVG.style.display = "inherit";
+            unlinkIcon.style.display = "none";
+            icon.style.display = "inherit";
+            sheet.style.outline = "initial";
         })
         return iconSpan;
+    }
+
+    /**
+      * I create a span element with svg element child from a svg string
+      */
+    _createIconSpanFromString(iconString){
+        const template = document.createElement("template");
+        template.innerHTML = iconString;
+        const iconSVG = template.content.childNodes[0];
+        const span = document.createElement("span");
+        span.appendChild(iconSVG);
+        span.setAttribute("data-clickable", true);
+        return span;
     }
 }
 
