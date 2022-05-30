@@ -96,6 +96,10 @@ svg {
     pointer-events: none;
 }
 
+input[type="file"]{
+    display: none
+}
+
 my-grid {
     background-color: var(--palette-beige);
     z-index: 3;
@@ -172,8 +176,15 @@ my-grid {
 
 </style>
 <div id="header-bar">
-    <span data-clickable=true id="trash">
-        ${icons.trash}
+    <span>
+        <span data-clickable=true id="trash">
+            ${icons.trash}
+        </span>
+        <label id="upload">
+            <input type="file" accept=".csv,.xlsx,.xls",/>
+            ${icons.fileUpload}
+        </label>
+        <input type="file">
     </span>
     <span data-clickable=true id="title">
         <span>A worksheet</span>
@@ -248,6 +259,7 @@ class Worksheet extends HTMLElement {
         this.onNameKeydown = this.onNameKeydown.bind(this);
         this.updateName = this.updateName.bind(this);
         this.onErase = this.onErase.bind(this);
+        this.onUpload = this.onUpload.bind(this);
         this.onDelete = this.onDelete.bind(this);
         this.onRun = this.onRun.bind(this);
         this.onExternalLinkDragStart = this.onExternalLinkDragStart.bind(this);
@@ -276,11 +288,18 @@ class Worksheet extends HTMLElement {
         const name = header.querySelector('#title');
         const eraseButton = header.querySelector("#erase");
         const deleteButton = header.querySelector("#trash");
+        const uploadButton = header.querySelector("#upload");
         const runButton = header.querySelector("#run");
         const footer = this.shadowRoot.querySelector('#footer-bar');
         // for drag & drop to work we need to select the span parent of the svg
         const externalLinkButton = footer.querySelector("#e-link");
+
+        // set icon titles for hover over
+        eraseButton.setAttribute("title", "clear sheet values");
+        deleteButton.setAttribute("title", "delete this sheet");
+        runButton.setAttribute("title", "run the commands");
         externalLinkButton.setAttribute("title", "drag and drop onto a sheet to link");
+        uploadButton.setAttribute("title", "upload a sheet");
 
         // set the name to default
         this.updateName("The worksheet");
@@ -290,6 +309,7 @@ class Worksheet extends HTMLElement {
         name.addEventListener("dblclick", this.onNameDblClick);
         eraseButton.addEventListener("click", this.onErase);
         deleteButton.addEventListener("click", this.onDelete);
+        uploadButton.addEventListener("change", this.onUpload);
         runButton.addEventListener("click", this.onRun);
         externalLinkButton.setAttribute("draggable", true);
         externalLinkButton.addEventListener("dragstart", this.onExternalLinkDragStart);
@@ -303,6 +323,7 @@ class Worksheet extends HTMLElement {
         const name = header.querySelector('span');
         const eraseButton = header.querySelector("#erase");
         const deleteButton = header.querySelector("#trash");
+        const uploadButton = header.querySelector("#upload");
         const runButton = header.querySelector("#run");
         const footer = this.shadowRoot.querySelector('#footer-bar');
         // for drag & drop to work we need to select the span parent of the svg
@@ -311,10 +332,11 @@ class Worksheet extends HTMLElement {
         name.addEventListener("dblclick", this.onNameDblClick);
         eraseButton.addEventListener("click", this.onErase);
         deleteButton.addEventListener("click", this.onDelete);
+        uploadButton.removeEventListener("change", this.onUpload);
         runButton.addEventListener("click", this.onRun);
         externalLinkButton.addEventListener("dragstart", this.onExternalLinkDragStart);
-        this.addEventListener("dragover", this.onExternalLinkDragOver);
-        this.addEventListener("drop", this.onExternalLinkDrop);
+        this.removeEventListener("dragover", this.onExternalLinkDragOver);
+        this.removeEventListenere("drop", this.onExternalLinkDrop);
     }
 
     onMouseDownInHeader(){
@@ -407,6 +429,43 @@ class Worksheet extends HTMLElement {
 
     onErase(){
         this.shadowRoot.querySelector("my-grid").dataFrame.clear();
+    }
+
+    onUpload(event){
+        const fileList = event.target.files; 
+        if(fileList.length > 1){
+            alert("Please select one file for upload");
+            return;
+        }
+        const file = fileList[0];
+        if(file.type != "text/csv"){
+            alert("I can only handle csv files at the moment - sorry");
+            return;
+        }
+        const reader = new FileReader();
+        reader.addEventListener("error", (e) => {
+            console.error(e);
+            alert("An error occurred reading this file");
+            return;
+        })
+        reader.addEventListener("load", () => {
+            const text = reader.result;
+            // first clear the sheet then fill with new values
+            const sheet = this.shadowRoot.querySelector("my-grid");
+            sheet.dataFrame.clear();
+            let rowCounter = 0;
+            let columnCounter = 0;
+            text.split("\r\n").forEach((row) => {
+                row.split(",").forEach((value) => {
+                    sheet.dataFrame.putAt([columnCounter, rowCounter], value, false);
+                    columnCounter += 1;
+                })
+                rowCounter += 1;
+                columnCounter = 0;
+            });
+            sheet.render(); // render values at the end
+        })
+        reader.readAsText(file);
     }
 
     onRun(){
