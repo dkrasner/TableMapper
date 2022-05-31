@@ -50,8 +50,8 @@ const templateString = `
     align-items: center;
 }
 
-#header-bar > #title > span.hide {
-    display: none;
+.hide {
+    display: none!important;
 }
 
 #header-bar > #title > input {
@@ -111,6 +111,25 @@ my-grid {
 }
 
 
+.overlay{
+    position: absolute;
+    height: 100%;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-content: center;
+    align-items: center;
+    flex-direction: column;
+    opacity: 1;
+    background-color: var(--palette-blue);
+    opacity: .3;
+}
+
+.overlay > svg{
+    width: 20%;
+    height: 20%;
+    stroke-width: 2;
+}
 .spreadsheet.editing-cell .view-cell:not(.editing) {
     opacity: 0.2;
     transition: opacity 0.2s linear;
@@ -211,6 +230,9 @@ my-grid {
         </span>
     </span>
 </div>
+<div class="overlay hide">
+    ${icons.link}
+</div>
 
 `;
 
@@ -263,8 +285,9 @@ class Worksheet extends HTMLElement {
         this.onDelete = this.onDelete.bind(this);
         this.onRun = this.onRun.bind(this);
         this.onExternalLinkDragStart = this.onExternalLinkDragStart.bind(this);
-        this.onExternalLinkDragOver = this.onExternalLinkDragOver.bind(this);
-        this.onExternalLinkDrop = this.onExternalLinkDrop.bind(this);
+        this.onDragOver = this.onDragOver.bind(this);
+        this.onDragLeave = this.onDragLeave.bind(this);
+        this.onDrop = this.onDrop.bind(this);
     }
 
     connectedCallback(){
@@ -313,8 +336,9 @@ class Worksheet extends HTMLElement {
         runButton.addEventListener("click", this.onRun);
         externalLinkButton.setAttribute("draggable", true);
         externalLinkButton.addEventListener("dragstart", this.onExternalLinkDragStart);
-        this.addEventListener("dragover", this.onExternalLinkDragOver);
-        this.addEventListener("drop", this.onExternalLinkDrop);
+        this.addEventListener("dragover", this.onDragOver);
+        this.addEventListener("dragleave", this.onDragLeave);
+        this.addEventListener("drop", this.onDrop);
     }
 
     disconnectedCallback(){
@@ -335,8 +359,9 @@ class Worksheet extends HTMLElement {
         uploadButton.removeEventListener("change", this.onUpload);
         runButton.addEventListener("click", this.onRun);
         externalLinkButton.addEventListener("dragstart", this.onExternalLinkDragStart);
-        this.removeEventListener("dragover", this.onExternalLinkDragOver);
-        this.removeEventListenere("drop", this.onExternalLinkDrop);
+        this.removeEventListener("dragover", this.onDragOver);
+        this.addEventListener("dragleave", this.onDragLeave);
+        this.removeEventListenere("drop", this.onDrop);
     }
 
     onMouseDownInHeader(){
@@ -466,6 +491,8 @@ class Worksheet extends HTMLElement {
             sheet.render(); // render values at the end
         })
         reader.readAsText(file);
+        // set the name of the sheet to the file name; TODO: do we want this?
+        this.updateName(file.name);
     }
 
     onRun(){
@@ -478,26 +505,60 @@ class Worksheet extends HTMLElement {
     onExternalLinkDragStart(event){
         event.dataTransfer.setData("id", this.id);
         event.dataTransfer.setData("name", this.name);
-        event.dataTransfer.effectAllowed = "link";
+        event.dataTransfer.setData("worksheet-link", true);
+        event.dataTransfer.effectAllowed = "all";
     }
 
-    onExternalLinkDragOver(event){
+    onDragOver(event){
+        event.stopPropagation();
         event.preventDefault();
-        event.dataTransfer.dropEffect = "link";
-        console.log("drag over");
+        const overlay = this.shadowRoot.querySelector(".overlay");
+        // NOTE: dataTransfer payload can disappear in the debugger - fun!
+        // Also detecting whether a drop event is file drop is not consistent across browsers
+        // and is touchy in general
+        if(event.dataTransfer.types.indexOf("Files") != -1 || event.dataTransfer.getData("worksheet-link")){
+            overlay.classList.remove("hide");
+            event.dataTransfer.dropEffect = "link";
+            let iconString = icons.link;
+            if(event.dataTransfer.types.indexOf("Files") != -1 ){
+                event.dataTransfer.dropEffect = "copy";
+                iconString = icons.fileUpload;
+            }
+            const template = document.createElement("template");
+            template.innerHTML = iconString;
+            const iconSVG = template.content.childNodes[0];
+            overlay.replaceChildren(iconSVG);
+        }
     }
 
-    onExternalLinkDrop(event){
+    onDragLeave(event){
+        event.stopPropagation();
         event.preventDefault();
-        // add the source
-        const sourceId = event.dataTransfer.getData("id")
-        const sourceName = event.dataTransfer.getData("name")
-        this.addSource(sourceId, sourceName);
-        // now tell the source to add me as a target
-        // TODO: maybe all of this source/target adding/removing should be
-        // handled with custom events...?
-        const sourceSheet = document.getElementById(sourceId);
-        sourceSheet.addTarget(this.id, this.name);
+        const overlay = this.shadowRoot.querySelector(".overlay");
+        overlay.classList.add("hide");
+    }
+
+    onDrop(event){
+        event.stopPropagation();
+        event.preventDefault();
+        const overlay = this.shadowRoot.querySelector(".overlay");
+        overlay.classList.add("hide");
+        if(event.dataTransfer.getData("worksheet-link")){
+            // add the source
+            const sourceId = event.dataTransfer.getData("id")
+            const sourceName = event.dataTransfer.getData("name")
+            this.addSource(sourceId, sourceName);
+            // now tell the source to add me as a target
+            // TODO: maybe all of this source/target adding/removing should be
+            // handled with custom events...?
+            const sourceSheet = document.getElementById(sourceId);
+            sourceSheet.addTarget(this.id, this.name);
+        } else if(event.dataTransfer.files){
+            // set the event.target.files to the dataTransfer.files
+            // since that is what this.onUpload() expects
+            event.target.files = event.dataTransfer.files;
+            this.onUpload(event);
+        }
     }
 
     addSource(id, name){
