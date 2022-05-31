@@ -361,7 +361,7 @@ class Worksheet extends HTMLElement {
         externalLinkButton.addEventListener("dragstart", this.onExternalLinkDragStart);
         this.removeEventListener("dragover", this.onDragOver);
         this.addEventListener("dragleave", this.onDragLeave);
-        this.removeEventListenere("drop", this.onDrop);
+        this.removeEventListener("drop", this.onDrop);
     }
 
     onMouseDownInHeader(){
@@ -420,7 +420,7 @@ class Worksheet extends HTMLElement {
         const header = this.shadowRoot.querySelector('#header-bar');
         const nameSpan = header.querySelector('#title > span');
         nameSpan.classList.add("hide");
-        const input = header.querySelector('input');
+        const input = header.querySelector('#title > input');
         input.classList.add('show');
         input.value = this.name;
         input.addEventListener('keydown', this.onNameKeydown);
@@ -431,7 +431,7 @@ class Worksheet extends HTMLElement {
     stopEditingName(){
         this.isEditingName = false;
         const header = this.shadowRoot.querySelector('#header-bar');
-        const input = header.querySelector('input');
+        const input = header.querySelector('#title > input');
         const nameSpan = header.querySelector('#title > span');
         nameSpan.classList.remove("hide");
         input.removeEventListener('keydown', this.onNameKeydown);
@@ -496,10 +496,13 @@ class Worksheet extends HTMLElement {
     }
 
     onRun(){
-        if(!this.getAttribute("sources") || this.getAttribute("targets")){
+        if(!this.getAttribute("sources") || !this.getAttribute("targets")){
             alert("You must have both sources and targets set to run!");
         }
-        this.callStack.runAll(this.getAttribute("sources"), this.getAttribute("targets"));
+        this.callStack.runAll(
+            this.getAttribute("sources").split(","),
+            this.getAttribute("targets").split(",")
+        );
     }
 
     onExternalLinkDragStart(event){
