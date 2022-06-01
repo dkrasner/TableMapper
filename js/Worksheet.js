@@ -7,20 +7,22 @@
    * being done.
    **/
 
-import CallStack from './callStack.js'
-import commandRegistry from './commandRegistry.js'
+import CallStack from './callStack.js';
+import commandRegistry from './commandRegistry.js';
 import icons from './utils/icons.js';
 
 // Simple grid-based sheet component
 const templateString = `
 <style>
+* { box-sizing: border-box; }
 :host {
     position: absolute;
     padding: 3px;
     background-color: var(--palette-orange);
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: stretch;
+    justify-content: stretch;
     border-radius: 5px;
     z-index: 1;
     overflow: hidden; /* to make resize work */
@@ -84,6 +86,7 @@ const templateString = `
     display: flex;
     justify-content: space-between;
     align-items: center;
+    border-top: 1px solid black;
 }
 
 span[data-clickable="true"]{
@@ -102,8 +105,8 @@ my-grid {
 }
 
 #sheet-container{
-    width: 100%;
-    height: 100%;
+    flex: 1;
+    overflow: auto;
 }
 
 
