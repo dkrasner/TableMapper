@@ -50,8 +50,8 @@ const templateString = `
     align-items: center;
 }
 
-#header-bar > #title > span.hide {
-    display: none;
+.hide {
+    display: none!important;
 }
 
 #header-bar > #title > input {
@@ -96,6 +96,10 @@ svg {
     pointer-events: none;
 }
 
+input[type="file"]{
+    display: none
+}
+
 my-grid {
     background-color: var(--palette-beige);
     z-index: 3;
@@ -107,6 +111,25 @@ my-grid {
 }
 
 
+.overlay{
+    position: absolute;
+    height: 100%;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-content: center;
+    align-items: center;
+    flex-direction: column;
+    opacity: 1;
+    background-color: var(--palette-blue);
+    opacity: .3;
+}
+
+.overlay > svg{
+    width: 20%;
+    height: 20%;
+    stroke-width: 2;
+}
 .spreadsheet.editing-cell .view-cell:not(.editing) {
     opacity: 0.2;
     transition: opacity 0.2s linear;
@@ -172,8 +195,15 @@ my-grid {
 
 </style>
 <div id="header-bar">
-    <span data-clickable=true id="trash">
-        ${icons.trash}
+    <span>
+        <span data-clickable=true id="trash">
+            ${icons.trash}
+        </span>
+        <label id="upload">
+            <input type="file" accept=".csv,.xlsx,.xls",/>
+            ${icons.fileUpload}
+        </label>
+        <input type="file">
     </span>
     <span data-clickable=true id="title">
         <span>A worksheet</span>
@@ -199,6 +229,9 @@ my-grid {
             ${icons.link}
         </span>
     </span>
+</div>
+<div class="overlay hide">
+    ${icons.link}
 </div>
 
 `;
@@ -248,11 +281,13 @@ class Worksheet extends HTMLElement {
         this.onNameKeydown = this.onNameKeydown.bind(this);
         this.updateName = this.updateName.bind(this);
         this.onErase = this.onErase.bind(this);
+        this.onUpload = this.onUpload.bind(this);
         this.onDelete = this.onDelete.bind(this);
         this.onRun = this.onRun.bind(this);
         this.onExternalLinkDragStart = this.onExternalLinkDragStart.bind(this);
-        this.onExternalLinkDragOver = this.onExternalLinkDragOver.bind(this);
-        this.onExternalLinkDrop = this.onExternalLinkDrop.bind(this);
+        this.onDragOver = this.onDragOver.bind(this);
+        this.onDragLeave = this.onDragLeave.bind(this);
+        this.onDrop = this.onDrop.bind(this);
     }
 
     connectedCallback(){
@@ -276,11 +311,18 @@ class Worksheet extends HTMLElement {
         const name = header.querySelector('#title');
         const eraseButton = header.querySelector("#erase");
         const deleteButton = header.querySelector("#trash");
+        const uploadButton = header.querySelector("#upload");
         const runButton = header.querySelector("#run");
         const footer = this.shadowRoot.querySelector('#footer-bar');
         // for drag & drop to work we need to select the span parent of the svg
         const externalLinkButton = footer.querySelector("#e-link");
+
+        // set icon titles for hover over
+        eraseButton.setAttribute("title", "clear sheet values");
+        deleteButton.setAttribute("title", "delete this sheet");
+        runButton.setAttribute("title", "run the commands");
         externalLinkButton.setAttribute("title", "drag and drop onto a sheet to link");
+        uploadButton.setAttribute("title", "upload a sheet");
 
         // set the name to default
         this.updateName("The worksheet");
@@ -290,11 +332,13 @@ class Worksheet extends HTMLElement {
         name.addEventListener("dblclick", this.onNameDblClick);
         eraseButton.addEventListener("click", this.onErase);
         deleteButton.addEventListener("click", this.onDelete);
+        uploadButton.addEventListener("change", this.onUpload);
         runButton.addEventListener("click", this.onRun);
         externalLinkButton.setAttribute("draggable", true);
         externalLinkButton.addEventListener("dragstart", this.onExternalLinkDragStart);
-        this.addEventListener("dragover", this.onExternalLinkDragOver);
-        this.addEventListener("drop", this.onExternalLinkDrop);
+        this.addEventListener("dragover", this.onDragOver);
+        this.addEventListener("dragleave", this.onDragLeave);
+        this.addEventListener("drop", this.onDrop);
     }
 
     disconnectedCallback(){
@@ -303,6 +347,7 @@ class Worksheet extends HTMLElement {
         const name = header.querySelector('span');
         const eraseButton = header.querySelector("#erase");
         const deleteButton = header.querySelector("#trash");
+        const uploadButton = header.querySelector("#upload");
         const runButton = header.querySelector("#run");
         const footer = this.shadowRoot.querySelector('#footer-bar');
         // for drag & drop to work we need to select the span parent of the svg
@@ -311,10 +356,12 @@ class Worksheet extends HTMLElement {
         name.addEventListener("dblclick", this.onNameDblClick);
         eraseButton.addEventListener("click", this.onErase);
         deleteButton.addEventListener("click", this.onDelete);
+        uploadButton.removeEventListener("change", this.onUpload);
         runButton.addEventListener("click", this.onRun);
         externalLinkButton.addEventListener("dragstart", this.onExternalLinkDragStart);
-        this.addEventListener("dragover", this.onExternalLinkDragOver);
-        this.addEventListener("drop", this.onExternalLinkDrop);
+        this.removeEventListener("dragover", this.onDragOver);
+        this.addEventListener("dragleave", this.onDragLeave);
+        this.removeEventListener("drop", this.onDrop);
     }
 
     onMouseDownInHeader(){
@@ -373,7 +420,7 @@ class Worksheet extends HTMLElement {
         const header = this.shadowRoot.querySelector('#header-bar');
         const nameSpan = header.querySelector('#title > span');
         nameSpan.classList.add("hide");
-        const input = header.querySelector('input');
+        const input = header.querySelector('#title > input');
         input.classList.add('show');
         input.value = this.name;
         input.addEventListener('keydown', this.onNameKeydown);
@@ -384,7 +431,7 @@ class Worksheet extends HTMLElement {
     stopEditingName(){
         this.isEditingName = false;
         const header = this.shadowRoot.querySelector('#header-bar');
-        const input = header.querySelector('input');
+        const input = header.querySelector('#title > input');
         const nameSpan = header.querySelector('#title > span');
         nameSpan.classList.remove("hide");
         input.removeEventListener('keydown', this.onNameKeydown);
@@ -409,36 +456,112 @@ class Worksheet extends HTMLElement {
         this.shadowRoot.querySelector("my-grid").dataFrame.clear();
     }
 
+    onUpload(event){
+        const fileList = event.target.files; 
+        if(fileList.length > 1){
+            alert("Please select one file for upload");
+            return;
+        }
+        const file = fileList[0];
+        if(file.type != "text/csv"){
+            alert("I can only handle csv files at the moment - sorry");
+            return;
+        }
+        const reader = new FileReader();
+        reader.addEventListener("error", (e) => {
+            console.error(e);
+            alert("An error occurred reading this file");
+            return;
+        })
+        reader.addEventListener("load", () => {
+            const text = reader.result;
+            // first clear the sheet then fill with new values
+            const sheet = this.shadowRoot.querySelector("my-grid");
+            sheet.dataFrame.clear();
+            let rowCounter = 0;
+            let columnCounter = 0;
+            text.split("\r\n").forEach((row) => {
+                row.split(",").forEach((value) => {
+                    sheet.dataFrame.putAt([columnCounter, rowCounter], value, false);
+                    columnCounter += 1;
+                })
+                rowCounter += 1;
+                columnCounter = 0;
+            });
+            sheet.render(); // render values at the end
+        })
+        reader.readAsText(file);
+        // set the name of the sheet to the file name; TODO: do we want this?
+        this.updateName(file.name);
+    }
+
     onRun(){
-        if(!this.getAttribute("sources") || this.getAttribute("targets")){
+        if(!this.getAttribute("sources") || !this.getAttribute("targets")){
             alert("You must have both sources and targets set to run!");
         }
-        this.callStack.runAll(this.getAttribute("sources"), this.getAttribute("targets"));
+        this.callStack.runAll(
+            this.getAttribute("sources").split(","),
+            this.getAttribute("targets").split(",")
+        );
     }
 
     onExternalLinkDragStart(event){
         event.dataTransfer.setData("id", this.id);
         event.dataTransfer.setData("name", this.name);
-        event.dataTransfer.effectAllowed = "link";
+        event.dataTransfer.setData("worksheet-link", true);
+        event.dataTransfer.effectAllowed = "all";
     }
 
-    onExternalLinkDragOver(event){
+    onDragOver(event){
+        event.stopPropagation();
         event.preventDefault();
-        event.dataTransfer.dropEffect = "link";
-        console.log("drag over");
+        const overlay = this.shadowRoot.querySelector(".overlay");
+        // NOTE: dataTransfer payload can disappear in the debugger - fun!
+        // Also detecting whether a drop event is file drop is not consistent across browsers
+        // and is touchy in general
+        if(event.dataTransfer.types.indexOf("Files") != -1 || event.dataTransfer.getData("worksheet-link")){
+            overlay.classList.remove("hide");
+            event.dataTransfer.dropEffect = "link";
+            let iconString = icons.link;
+            if(event.dataTransfer.types.indexOf("Files") != -1 ){
+                event.dataTransfer.dropEffect = "copy";
+                iconString = icons.fileUpload;
+            }
+            const template = document.createElement("template");
+            template.innerHTML = iconString;
+            const iconSVG = template.content.childNodes[0];
+            overlay.replaceChildren(iconSVG);
+        }
     }
 
-    onExternalLinkDrop(event){
+    onDragLeave(event){
+        event.stopPropagation();
         event.preventDefault();
-        // add the source
-        const sourceId = event.dataTransfer.getData("id")
-        const sourceName = event.dataTransfer.getData("name")
-        this.addSource(sourceId, sourceName);
-        // now tell the source to add me as a target
-        // TODO: maybe all of this source/target adding/removing should be
-        // handled with custom events...?
-        const sourceSheet = document.getElementById(sourceId);
-        sourceSheet.addTarget(this.id, this.name);
+        const overlay = this.shadowRoot.querySelector(".overlay");
+        overlay.classList.add("hide");
+    }
+
+    onDrop(event){
+        event.stopPropagation();
+        event.preventDefault();
+        const overlay = this.shadowRoot.querySelector(".overlay");
+        overlay.classList.add("hide");
+        if(event.dataTransfer.getData("worksheet-link")){
+            // add the source
+            const sourceId = event.dataTransfer.getData("id")
+            const sourceName = event.dataTransfer.getData("name")
+            this.addSource(sourceId, sourceName);
+            // now tell the source to add me as a target
+            // TODO: maybe all of this source/target adding/removing should be
+            // handled with custom events...?
+            const sourceSheet = document.getElementById(sourceId);
+            sourceSheet.addTarget(this.id, this.name);
+        } else if(event.dataTransfer.files){
+            // set the event.target.files to the dataTransfer.files
+            // since that is what this.onUpload() expects
+            event.target.files = event.dataTransfer.files;
+            this.onUpload(event);
+        }
     }
 
     addSource(id, name){
