@@ -7,8 +7,8 @@
    * being done.
    **/
 
-import CallStack from './callStack.js'
-import commandRegistry from './commandRegistry.js'
+import CallStack from './callStack.js';
+import commandRegistry from './commandRegistry.js';
 import icons from './utils/icons.js';
 
 // Simple grid-based sheet component
@@ -19,8 +19,8 @@ const templateString = `
     padding: 3px;
     background-color: var(--palette-orange);
     display: flex;
+    align-items: stretch;
     flex-direction: column;
-    align-items: center;
     border-radius: 5px;
     z-index: 1;
     overflow: hidden; /* to make resize work */
@@ -105,9 +105,8 @@ my-grid {
     z-index: 3;
 }
 
-#sheet-container{
-    width: 100%;
-    height: 100%;
+#sheet-container {
+    flex: 1;
 }
 
 
