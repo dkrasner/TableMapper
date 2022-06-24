@@ -103,10 +103,12 @@ input[type="file"]{
 my-grid {
     background-color: var(--palette-beige);
     z-index: 3;
+    width: max-content; 
 }
 
 #sheet-container {
     flex: 1;
+    overflow: auto;
 }
 
 
