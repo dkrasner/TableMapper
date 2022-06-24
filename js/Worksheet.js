@@ -108,7 +108,7 @@ my-grid {
 
 #sheet-container {
     flex: 1;
-    overflow: auto;
+    overflow: hidden;
 }
 
 
