@@ -4,13 +4,23 @@
         <title>TableMapper</title>
         <link rel="stylesheet" type="text/css" href="./css/core.css">
         <link rel="stylesheet" type="text/css" href="./css/sheet.css">
+        <script src="./webdav.bundle.js"></script>
         <script type="module" src="./ap-sheet/src/GridSheet.js"></script>
         <script type="module" src="./ap-sheet/src/SheetCell.js"></script>
+        <script type="module" src="./js/file-list/FileList.js"></script>
         <script type="module" src="./js/Worksheet.js"></script>
         <script type="module" src="./js/main.js"></script>
     </head>
     <body>
         <div id="main"/>
+        <file-list></file-list>
     </div>
+    <script>
+     document.addEventListener('DOMContentLoaded', () => {
+         let fileList = document.querySelector('file-list');
+         fileList.client = window.DAVClient;
+         fileList.fetch();
+     });
+    </script>
     </body>
 </html>
