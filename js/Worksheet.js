@@ -17,7 +17,6 @@ const templateString = `
 :host {
     position: absolute;
     padding: 3px;
-    background-color: var(--palette-orange);
     display: flex;
     align-items: stretch;
     flex-direction: column;
@@ -25,6 +24,8 @@ const templateString = `
     z-index: 1;
     overflow: hidden; /* to make resize work */
     resize: both;
+    --bg-color: var(--palette-lightblue);
+    --sheet-bg-color: var(--palette-cyan);
 }
 
 #header-bar {
@@ -237,12 +238,6 @@ my-grid {
 
 `;
 
-// a few palette combo options for the sheet + bar area
-const paletteCombinations = [
-    {this: 'var(--palette-orange)', sheet: 'var(--palette-beige)'},
-    {this: 'var(--palette-lightblue)', sheet: 'var(--palette-cyan)'},
-    {this: 'var(--palette-cyan)', sheet: 'var(--palette-lightblue)'},
-]
 
 class Worksheet extends HTMLElement {
     constructor(){
@@ -262,7 +257,6 @@ class Worksheet extends HTMLElement {
         this.commandRegistry = commandRegistry;
 
         // generate a random palette for the worksheet
-        this.palette = paletteCombinations[Math.floor(Math.random() * paletteCombinations.length)];
 
         // name for the worksheet. Note: this is the name found in the header area
         // and also in the this.name attribute for querying and listening for changes
@@ -305,8 +299,8 @@ class Worksheet extends HTMLElement {
         this.setAttribute("targets", "");
 
         // set the palette
-        this.style.backgroundColor = this.palette.this;
-        this.shadowRoot.querySelector('my-grid').style.backgroundColor = this.palette.sheet;
+        this.style.backgroundColor = "var(--bg-color)";
+        this.shadowRoot.querySelector('my-grid').style.backgroundColor = "var(--sheet-bg-color)";
 
         const header = this.shadowRoot.querySelector('#header-bar');
         const name = header.querySelector('#title');
