@@ -92,6 +92,18 @@ const templateString = `
     align-items: center;
 }
 
+#footer-bar > span {
+    display: flex;
+}
+
+#footer-bar > * > * {
+    padding: 3px;
+    background-color: transparent;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
 span[data-clickable="true"]{
     cursor: pointer;
 }
@@ -209,12 +221,6 @@ my-grid {
         <input></input>
     </span>
     <span id="header-right">
-        <span data-clickable=true id="run">
-            ${icons.run}
-        </span>
-        <span data-clickable=true id="erase">
-            ${icons.eraser}
-        </span>
     </span>
 </div>
 <div id="sheet-container">
@@ -226,9 +232,6 @@ my-grid {
     <span id="footer-middle">
     </span>
     <span id="footer-right">
-        <span data-clickable=true id="e-link">
-            ${icons.link}
-        </span>
     </span>
 </div>
 <div class="overlay hide">
@@ -305,19 +308,13 @@ class Worksheet extends HTMLElement {
 
         this.addToHeader(this.trashButton(), "left");
         this.addToHeader(this.uploadButton(), "left");
+        this.addToHeader(this.eraseButton(), "right");
+        this.addToHeader(this.runButton(), "right");
+        this.addToFooter(this.linkButton(), "right");
         const header = this.shadowRoot.querySelector('#header-bar');
         const name = header.querySelector('#title');
-        const eraseButton = header.querySelector("#erase");
-        const runButton = header.querySelector("#run");
-        const footer = this.shadowRoot.querySelector('#footer-bar');
-        // for drag & drop to work we need to select the span parent of the svg
-        const externalLinkButton = footer.querySelector("#e-link");
 
         // set icon titles for hover over
-        eraseButton.setAttribute("title", "clear sheet values");
-        runButton.setAttribute("title", "run the commands");
-        externalLinkButton.setAttribute("title", "drag and drop onto a sheet to link");
-        uploadButton.setAttribute("title", "upload a sheet");
 
         // set the name to default
         this.updateName("The worksheet");
@@ -325,10 +322,6 @@ class Worksheet extends HTMLElement {
         // add event listeners
         header.addEventListener("mousedown", this.onMouseDownInHeader);
         name.addEventListener("dblclick", this.onNameDblClick);
-        eraseButton.addEventListener("click", this.onErase);
-        runButton.addEventListener("click", this.onRun);
-        externalLinkButton.setAttribute("draggable", true);
-        externalLinkButton.addEventListener("dragstart", this.onExternalLinkDragStart);
         this.addEventListener("dragover", this.onDragOver);
         this.addEventListener("dragleave", this.onDragLeave);
         this.addEventListener("drop", this.onDrop);
@@ -338,16 +331,8 @@ class Worksheet extends HTMLElement {
         // remove event listeners
         const header = this.shadowRoot.querySelector('#header-bar');
         const name = header.querySelector('span');
-        const eraseButton = header.querySelector("#erase");
-        const runButton = header.querySelector("#run");
-        const footer = this.shadowRoot.querySelector('#footer-bar');
-        // for drag & drop to work we need to select the span parent of the svg
-        const externalLinkButton = footer.querySelector("#e-link");
         header.addEventListener("mousedown", this.onMouseDownInHeader);
         name.addEventListener("dblclick", this.onNameDblClick);
-        eraseButton.addEventListener("click", this.onErase);
-        runButton.addEventListener("click", this.onRun);
-        externalLinkButton.addEventListener("dragstart", this.onExternalLinkDragStart);
         this.removeEventListener("dragover", this.onDragOver);
         this.addEventListener("dragleave", this.onDragLeave);
         this.removeEventListener("drop", this.onDrop);
@@ -357,23 +342,31 @@ class Worksheet extends HTMLElement {
        element: DOM element
        location: str (one of "left", "right")
     */
-    addToHeader(element, location){
+    addToHeader(element, location, prepend=false){
         const header = this.shadowRoot.querySelector('#header-bar');
         const parent = header.querySelector(`#header-${location}`);
-        parent.appendChild(element);
+        if(prepend){
+            parent.prepend(element);
+        } else {
+            parent.append(element);
+        }
     }
 
     /* I add an element to the footer.
        element: DOM element
        location: str (one of "left", "right", "middle")
        */
-    addToFooter(element, location){
+    addToFooter(element, location, prepend=false){
         const footer = this.shadowRoot.querySelector('#footer-bar');
         const parent = footer.querySelector(`#footer-${location}`);
-        parent.appendChild(element);
+        if(prepend){
+            parent.prepend(element);
+        } else {
+            parent.append(element);
+        }
     }
 
-    /* default header buttons */
+    /* default header/footer buttons */
     trashButton(){
         const svg = createIconSVGFromString(icons.trash);
         const button = document.createElement("span");
@@ -390,12 +383,46 @@ class Worksheet extends HTMLElement {
         const input = document.createElement("input");
         input.setAttribute("type", "file");
         input.setAttribute("accept", ".csv,.xlsx,.xls");
+        input.setAttribute("title", "upload a sheet");
         const svg = createIconSVGFromString(icons.fileUpload);
         label.appendChild(input);
         label.appendChild(svg);
         label.addEventListener("change", this.onUpload);
         return label;
     }
+
+    eraseButton(){
+        const svg = createIconSVGFromString(icons.eraser);
+        const button = document.createElement("span");
+        button.appendChild(svg);
+        button.addEventListener("click", this.onErase);
+        button.setAttribute("title", "clear values");
+        button.setAttribute("data-clickable", true);
+        return button;
+    }
+
+    runButton(){
+        const svg = createIconSVGFromString(icons.run);
+        const button = document.createElement("span");
+        button.appendChild(svg);
+        button.addEventListener("click", this.onRun);
+        button.setAttribute("title", "run commands");
+        button.setAttribute("data-clickable", true);
+        return button;
+    }
+
+    linkButton(){
+        const svg = createIconSVGFromString(icons.link);
+        const button = document.createElement("span");
+        button.appendChild(svg);
+        button.setAttribute("title", "drag and drop onto a sheet to link");
+        button.setAttribute("id", "e-link");
+        button.setAttribute("data-clickable", true);
+        button.setAttribute("draggable", true);
+        button.addEventListener("dragstart", this.onExternalLinkDragStart);
+        return button;
+    }
+
     onMouseDownInHeader(){
         // dispatch an event to put the sheet in focus
         const event = new CustomEvent(
@@ -606,9 +633,7 @@ class Worksheet extends HTMLElement {
         this.setAttribute("sources", sources);
         // add an icon with data about the source to the footer
         const sourceSpan = this._createSourceTargetIconSpan("source", id, name);
-        const footer = this.shadowRoot.querySelector('#footer-bar');
-        const sourcesArea = footer.querySelector('#footer-left');
-        sourcesArea.appendChild(sourceSpan);
+        this.addToFooter(sourceSpan, "left");
         return id;
     }
 
@@ -632,10 +657,7 @@ class Worksheet extends HTMLElement {
         this.setAttribute("targets", targets);
         // add an icon with data about the target to the footer
         const targetSpan = this._createSourceTargetIconSpan("target", id, name);
-        const footer = this.shadowRoot.querySelector('#footer-bar');
-        const targetsArea = footer.querySelector('#footer-right');
-        const externalLinkButton = footer.querySelector("#e-link");
-        targetsArea.insertBefore(targetSpan, externalLinkButton);
+        this.addToFooter(targetSpan, "right", true);
         return id;
     }
 
