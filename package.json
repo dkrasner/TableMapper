@@ -1,5 +1,5 @@
 {
-  "name": "tablemapper",
+  "name": "worksheet",
   "version": "1.0.0",
   "description": "A csv, sheet mapping and conversion environment",
   "main": "./dist/worksheet.bundle.js",
@@ -10,7 +10,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/dkrasner/TableMapper.git"
+    "url": "git+https://github.com/dkrasner/worksheet.git"
   },
   "keywords": [
     "csv",
@@ -20,9 +20,9 @@
   "author": "Daniel Krasner",
   "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/dkrasner/TableMapper/issues"
+    "url": "https://github.com/dkrasner/worksheet/issues"
   },
-  "homepage": "https://github.com/dkrasner/TableMapper#readme",
+  "homepage": "https://github.com/dkrasner/worksheet#readme",
   "dependencies": {
     "@peculiar/webcrypto": "^1.4.0",
     "chai": "^4.3.6",
@@ -37,5 +37,10 @@
   },
   "directories": {
     "example": "examples"
+  },
+  "devDependencies": {
+    "chai": "^4.3.6",
+    "esm": "^3.2.25",
+    "mocha": "^10.0.0"
   }
 }

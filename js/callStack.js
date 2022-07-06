@@ -8,7 +8,7 @@
 
 
 class CallStack extends Object {
-    constructor(editor, commandRegistry){
+    constructor(editor, commandRegistry, interpreter){
         super();
 
         // an ap-sheet 'editor' element
@@ -16,14 +16,34 @@ class CallStack extends Object {
 
         this.commandRegistry = commandRegistry;
 
-        this.classStack = [];
-        this.COUNTER = 0;
+        this.interpreter = interpreter;
+        this.stack = [];
+        this.COUNTER = -1;
 
         // bind methods
+        this.step = this.step.bind(this);
+        this.execute = this.execute.bind(this);
         this.runNext = this.runNext.bind(this);
         this.runAll = this.runAll.bind(this);
         this.runCommand = this.runCommand.bind(this);
         this.buildCallStack = this.buildCallStack.bind(this);
+    }
+
+    step(){
+        if(this.COUNTER == this.stack.length - 1){
+            this.COUNTER = -1;
+        } else {
+            this.COUNTER += 1;
+        }
+    }
+
+    execute(){
+        if(this.COUNTER == -1){
+            throw new Error("End Of Stack");
+        }
+        const entry = this.stack[this.COUNTER]
+        const executable = this.interpreter.interpret(entry)
+        return executable();
     }
 
     runCommand(commandData){
