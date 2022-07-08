@@ -6,7 +6,7 @@
   */
 
 import icons from './utils/icons.js';
-
+import * as worksheet from './worksheet.js';
 
 class System extends Object {
     constructor(){

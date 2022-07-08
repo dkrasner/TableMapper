@@ -11,6 +11,7 @@ import CallStack from './callStack.js';
 import commandRegistry from './commandRegistry.js';
 import icons from './utils/icons.js';
 import createIconSVGFromString from './utils/helpers.js';
+import CSVParser from 'papaparse';
 
 // Simple grid-based sheet component
 const templateString = `
@@ -224,7 +225,7 @@ my-grid {
     </span>
 </div>
 <div id="sheet-container">
-    <my-grid expands="both" columns=5 rows=10></my-grid>
+    <my-grid id="ap-sheet" expands="both" columns=5 rows=10></my-grid>
 </div>
 <div id="footer-bar">
     <span id="footer-left">
@@ -234,6 +235,7 @@ my-grid {
     <span id="footer-right">
     </span>
 </div>
+<input id="file-input" type="file"/>
 <div class="overlay hide">
     ${icons.link}
 </div>
@@ -287,6 +289,13 @@ class Worksheet extends HTMLElement {
         this.onDragOver = this.onDragOver.bind(this);
         this.onDragLeave = this.onDragLeave.bind(this);
         this.onDrop = this.onDrop.bind(this);
+
+        // Bound private event handlers
+        this.handleFileInputChange = this.handleFileInputChange.bind(this);
+
+        // Bound serialization methods
+        this.toCSV = this.toCSV.bind(this);
+        this.fromCSV = this.fromCSV.bind(this);
     }
 
     connectedCallback(){
@@ -296,15 +305,12 @@ class Worksheet extends HTMLElement {
         // make sense moving fwd
         // NOTE: it's the GridSheet in the shadow which (potentially) contains the commands
         // that is passed as the editor to CallStack
-        this.callStack = new CallStack(this.shadowRoot.querySelector('my-grid'), this.commandRegistry);
+        this.callStack = new CallStack(this.sheet, this.commandRegistry);
 
         // set the sources and targets to ""
         this.setAttribute("sources", "");
         this.setAttribute("targets", "");
 
-        // set the palette
-        this.style.backgroundColor = "var(--bg-color)";
-        this.shadowRoot.querySelector('my-grid').style.backgroundColor = "var(--sheet-bg-color)";
 
         this.addToHeader(this.trashButton(), "left");
         this.addToHeader(this.uploadButton(), "left");
@@ -325,18 +331,30 @@ class Worksheet extends HTMLElement {
         this.addEventListener("dragover", this.onDragOver);
         this.addEventListener("dragleave", this.onDragLeave);
         this.addEventListener("drop", this.onDrop);
+        let fileInput = this.shadowRoot.getElementById('file-input');
+        fileInput.addEventListener('change', this.handleFileInputChange);
+
+        // Stash a reference to the underlying ap-sheet
+        this.sheet = this.shadowRoot.getElementById('ap-sheet');
+
+        // set the palette
+        this.style.backgroundColor = "var(--bg-color)";
+        this.sheet.style.backgroundColor = "var(--sheet-bg-color)";
     }
 
     disconnectedCallback(){
         // remove event listeners
         const header = this.shadowRoot.querySelector('#header-bar');
         const name = header.querySelector('span');
+        let fileInput = this.shadowRoot.getElementById('file-input');
         header.addEventListener("mousedown", this.onMouseDownInHeader);
         name.addEventListener("dblclick", this.onNameDblClick);
         this.removeEventListener("dragover", this.onDragOver);
         this.addEventListener("dragleave", this.onDragLeave);
         this.removeEventListener("drop", this.onDrop);
+        fileInput.removeEventListener("change", this.handleFileInputChange);
     }
+    
 
     /* I add an element to the header.
        element: DOM element
@@ -512,7 +530,7 @@ class Worksheet extends HTMLElement {
     }
 
     onErase(){
-        this.shadowRoot.querySelector("my-grid").dataFrame.clear();
+        this.sheet.dataFrame.clear();
     }
 
     onUpload(event){
@@ -531,24 +549,23 @@ class Worksheet extends HTMLElement {
             console.error(e);
             alert("An error occurred reading this file");
             return;
-        })
+        });
         reader.addEventListener("load", () => {
             const text = reader.result;
             // first clear the sheet then fill with new values
-            const sheet = this.shadowRoot.querySelector("my-grid");
-            sheet.dataFrame.clear();
+            this.sheet.dataFrame.clear();
             let rowCounter = 0;
             let columnCounter = 0;
             text.split("\r\n").forEach((row) => {
                 row.split(",").forEach((value) => {
-                    sheet.dataFrame.putAt([columnCounter, rowCounter], value, false);
+                    this.sheet.dataFrame.putAt([columnCounter, rowCounter], value, false);
                     columnCounter += 1;
-                })
+                });
                 rowCounter += 1;
                 columnCounter = 0;
             });
-            sheet.render(); // render values at the end
-        })
+            this.sheet.render(); // render values at the end
+        });
         reader.readAsText(file);
         // set the name of the sheet to the file name; TODO: do we want this?
         this.updateName(file.name);
@@ -607,8 +624,8 @@ class Worksheet extends HTMLElement {
         overlay.classList.add("hide");
         if(event.dataTransfer.getData("worksheet-link")){
             // add the source
-            const sourceId = event.dataTransfer.getData("id")
-            const sourceName = event.dataTransfer.getData("name")
+            const sourceId = event.dataTransfer.getData("id");
+            const sourceName = event.dataTransfer.getData("name");
             this.addSource(sourceId, sourceName);
             // now tell the source to add me as a target
             // TODO: maybe all of this source/target adding/removing should be
@@ -644,7 +661,7 @@ class Worksheet extends HTMLElement {
         // remove the source link
         const footer = this.shadowRoot.querySelector("#footer-bar");
         const linkContainer = footer.querySelector('#footer-left');
-        linkContainer.querySelectorAll(`[data-id='${id}']`).forEach((item) => {item.remove()});
+        linkContainer.querySelectorAll(`[data-id='${id}']`).forEach((item) => {item.remove();});
     }
 
     addTarget(id, name){
@@ -668,7 +685,7 @@ class Worksheet extends HTMLElement {
         // remove the target link
         const footer = this.shadowRoot.querySelector("#footer-bar");
         const linkContainer = footer.querySelector('#footer-right');
-        linkContainer.querySelectorAll(`[data-id='${id}']`).forEach((item) => {item.remove()});
+        linkContainer.querySelectorAll(`[data-id='${id}']`).forEach((item) => {item.remove();});
     }
 
     removeLink(event){
@@ -742,15 +759,46 @@ class Worksheet extends HTMLElement {
             unlinkIcon.style.display = "inherit";
             icon.style.display = "none";
             sheet.style.outline = "solid var(--palette-blue)";
-        })
+        });
         iconSpan.addEventListener("mouseleave", () => {
             unlinkIcon.style.display = "none";
             icon.style.display = "inherit";
             sheet.style.outline = "initial";
-        })
+        });
         return iconSpan;
     }
 
+    handleFileInputChange(event){
+        let file = event.target.files[0];
+        let reader = new FileReader();
+        reader.addEventListener('load', loadEv => {
+            this.fromCSV(loadEv.target.result);
+        });
+        reader.readAsText(file);
+    }
+
+    fromCSV(aString){
+        let data = CSVParser.parse(aString).data;
+        if(data){
+            this.sheet.dataFrame.clear();
+            this.sheet.dataFrame.corner.x = data[0].length - 1;
+            this.sheet.dataFrame.corner.y = data.length - 1;
+            this.sheet.dataFrame.loadFromArray(data);
+            this.sheet.render();
+        }
+    }
+
+    toCSV(){
+        let data = this.sheet.dataFrame.getDataArrayForFrame(
+            this.sheet.dataFrame
+        );
+        return CSVParser.unparse(data);
+    }
 }
 
 window.customElements.define("work-sheet", Worksheet);
+
+export {
+    Worksheet,
+    Worksheet as default
+};

@@ -2,9 +2,11 @@
   "name": "tablemapper",
   "version": "1.0.0",
   "description": "A csv, sheet mapping and conversion environment",
-  "main": "app.bundle.js",
+  "main": "./dist/worksheet.bundle.js",
+  "type": "module",
   "scripts": {
-    "test": "npm-test"
+    "test": "./node_modules/mocha/bin/mocha.js --require ./tests/preload.js ./tests/*-tests.js",
+    "build": "./node_modules/webpack/bin/webpack.js"
   },
   "repository": {
     "type": "git",
@@ -22,10 +24,18 @@
   },
   "homepage": "https://github.com/dkrasner/TableMapper#readme",
   "dependencies": {
-    "express": "^4.17.3"
+    "@peculiar/webcrypto": "^1.4.0",
+    "chai": "^4.3.6",
+    "express": "^4.17.3",
+    "jsdom": "^20.0.0",
+    "jsdom-global": "^3.0.2",
+    "mocha": "^10.0.0",
+    "papaparse": "^5.3.2",
+    "resize-observer-polyfill": "^1.5.1",
+    "webpack": "^5.73.0",
+    "webpack-cli": "^4.10.0"
   },
   "directories": {
     "example": "examples"
-  },
-  "devDependencies": {}
+  }
 }
