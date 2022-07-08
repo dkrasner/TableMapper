@@ -235,7 +235,6 @@ my-grid {
     <span id="footer-right">
     </span>
 </div>
-<input id="file-input" type="file"/>
 <div class="overlay hide">
     ${icons.link}
 </div>
@@ -283,15 +282,13 @@ class Worksheet extends HTMLElement {
         this.updateName = this.updateName.bind(this);
         this.onErase = this.onErase.bind(this);
         this.onUpload = this.onUpload.bind(this);
+        this.onDownload = this.onDownload.bind(this);
         this.onDelete = this.onDelete.bind(this);
         this.onRun = this.onRun.bind(this);
         this.onExternalLinkDragStart = this.onExternalLinkDragStart.bind(this);
         this.onDragOver = this.onDragOver.bind(this);
         this.onDragLeave = this.onDragLeave.bind(this);
         this.onDrop = this.onDrop.bind(this);
-
-        // Bound private event handlers
-        this.handleFileInputChange = this.handleFileInputChange.bind(this);
 
         // Bound serialization methods
         this.toCSV = this.toCSV.bind(this);
@@ -314,6 +311,7 @@ class Worksheet extends HTMLElement {
 
         this.addToHeader(this.trashButton(), "left");
         this.addToHeader(this.uploadButton(), "left");
+        this.addToHeader(this.downloadButton(), "left");
         this.addToHeader(this.eraseButton(), "right");
         this.addToHeader(this.runButton(), "right");
         this.addToFooter(this.linkButton(), "right");
@@ -331,8 +329,6 @@ class Worksheet extends HTMLElement {
         this.addEventListener("dragover", this.onDragOver);
         this.addEventListener("dragleave", this.onDragLeave);
         this.addEventListener("drop", this.onDrop);
-        let fileInput = this.shadowRoot.getElementById('file-input');
-        fileInput.addEventListener('change', this.handleFileInputChange);
 
         // Stash a reference to the underlying ap-sheet
         this.sheet = this.shadowRoot.getElementById('ap-sheet');
@@ -346,13 +342,11 @@ class Worksheet extends HTMLElement {
         // remove event listeners
         const header = this.shadowRoot.querySelector('#header-bar');
         const name = header.querySelector('span');
-        let fileInput = this.shadowRoot.getElementById('file-input');
         header.addEventListener("mousedown", this.onMouseDownInHeader);
         name.addEventListener("dblclick", this.onNameDblClick);
         this.removeEventListener("dragover", this.onDragOver);
         this.addEventListener("dragleave", this.onDragLeave);
         this.removeEventListener("drop", this.onDrop);
-        fileInput.removeEventListener("change", this.handleFileInputChange);
     }
     
 
@@ -407,6 +401,16 @@ class Worksheet extends HTMLElement {
         label.appendChild(svg);
         label.addEventListener("change", this.onUpload);
         return label;
+    }
+
+    downloadButton(){
+        const svg = createIconSVGFromString(icons.fileDownload);
+        const button = document.createElement("span");
+        button.appendChild(svg);
+        button.addEventListener("click", this.onDownload);
+        button.setAttribute("title", "Download locally as CSV");
+        button.setAttribute("data-clickable", true);
+        return button;
     }
 
     eraseButton(){
@@ -534,41 +538,34 @@ class Worksheet extends HTMLElement {
     }
 
     onUpload(event){
-        const fileList = event.target.files; 
-        if(fileList.length > 1){
-            alert("Please select one file for upload");
-            return;
-        }
-        const file = fileList[0];
-        if(file.type != "text/csv"){
-            alert("I can only handle csv files at the moment - sorry");
-            return;
-        }
-        const reader = new FileReader();
+        let file = event.target.files[0];
+        let reader = new FileReader();
+        reader.addEventListener('load', loadEv => {
+            this.fromCSV(loadEv.target.result);
+        });
         reader.addEventListener("error", (e) => {
             console.error(e);
             alert("An error occurred reading this file");
             return;
         });
-        reader.addEventListener("load", () => {
-            const text = reader.result;
-            // first clear the sheet then fill with new values
-            this.sheet.dataFrame.clear();
-            let rowCounter = 0;
-            let columnCounter = 0;
-            text.split("\r\n").forEach((row) => {
-                row.split(",").forEach((value) => {
-                    this.sheet.dataFrame.putAt([columnCounter, rowCounter], value, false);
-                    columnCounter += 1;
-                });
-                rowCounter += 1;
-                columnCounter = 0;
-            });
-            this.sheet.render(); // render values at the end
-        });
+
+        // Will trigger the reader.load event
         reader.readAsText(file);
         // set the name of the sheet to the file name; TODO: do we want this?
         this.updateName(file.name);
+    }
+
+    onDownload(event){
+        let csv = this.toCSV();
+        let anchor = document.createElement('a');
+        anchor.style.display = "none";
+        let blob = new Blob([csv], {type: 'text/csv'});
+        let url = window.URL.createObjectURL(blob);
+        anchor.href = url;
+        anchor.download = `${this.name}.csv`;
+        document.body.append(anchor);
+        anchor.click();
+        window.URL.revokeObjectURL(url);
     }
 
     onRun(){
@@ -769,12 +766,7 @@ class Worksheet extends HTMLElement {
     }
 
     handleFileInputChange(event){
-        let file = event.target.files[0];
-        let reader = new FileReader();
-        reader.addEventListener('load', loadEv => {
-            this.fromCSV(loadEv.target.result);
-        });
-        reader.readAsText(file);
+        
     }
 
     fromCSV(aString){
