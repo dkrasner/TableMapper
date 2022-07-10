@@ -765,10 +765,6 @@ class Worksheet extends HTMLElement {
         return iconSpan;
     }
 
-    handleFileInputChange(event){
-        
-    }
-
     fromCSV(aString){
         let data = CSVParser.parse(aString).data;
         if(data){

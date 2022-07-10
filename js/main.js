@@ -1,10 +1,7 @@
 /* Main */
+import { Worksheet } from "./Worksheet.js";
 
-import System from './System.js';
-
-
-const system = new System();
-
-document.addEventListener('DOMContentLoaded', () => {
-    system.setup();
-});
+export {
+    Worksheet,
+    Worksheet as default
+};
