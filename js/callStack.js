@@ -1,5 +1,5 @@
 /**
-  * TableMapper CallStack class
+  * Worksheet CallStack class
   * --------------------------------
   * Implementation of the call stack object, which handles
   * creating the stack, running commands and related.
@@ -23,20 +23,27 @@ class CallStack extends Object {
         // bind methods
         this.step = this.step.bind(this);
         this.execute = this.execute.bind(this);
+        this.run = this.run.bind(this);
+        this.jump = this.jump.bind(this);
+        this.reset = this.reset.bind(this);
         this.runNext = this.runNext.bind(this);
         this.runAll = this.runAll.bind(this);
         this.runCommand = this.runCommand.bind(this);
         this.buildCallStack = this.buildCallStack.bind(this);
     }
 
+    /* I increment the counter and reset it (to -1) if the end of the
+       stack is reached. */
     step(){
         if(this.COUNTER == this.stack.length - 1){
-            this.COUNTER = -1;
+            this.reset();
         } else {
             this.COUNTER += 1;
         }
     }
 
+    /* I execute the next command on the callstack
+       if there is a next command */
     execute(){
         if(this.COUNTER == -1){
             throw new Error("End Of Stack");
@@ -45,6 +52,32 @@ class CallStack extends Object {
         const executable = this.interpreter.interpret(entry)
         return executable();
     }
+
+    /* I run commands from this.COUNTER to the end of the stack */
+    run(){
+        if(this.COUNTER == -1){
+            this.step();
+        }
+        while(this.COUNTER != -1){
+            this.execute();
+            this.step();
+        }
+    }
+
+    /* I reset the counter */
+    reset(){
+        this.COUNTER = -1;
+    }
+
+    /* I jump to by specified number of steps
+       either incrementing or decrementing */
+    jump(n){
+        this.COUNTER  += n;
+        // reset the counter if out of range
+        if(this.COUNTER < 0 || this.COUNTER > this.stack.length - 1 ){
+            this.reset();
+        }
+    }i
 
     runCommand(commandData){
         // assume commandData[0] is source coordinates

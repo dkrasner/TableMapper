@@ -12,3 +12,8 @@ Note: for emacs magit users the `magit-list-submodules` command will display inf
 
 Build the bundle `npm run build`, spin up a server like so `python -m http.server` (in preferably a python environment)and open up `localhost:8000`.
 
+## Testing
+
+`npm run test`
+
+

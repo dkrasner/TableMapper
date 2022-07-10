@@ -32,6 +32,7 @@ describe('Callstack', function () {
     const callstack = new CallStack(null, null, simple_interpreter);
     callstack.stack.push([command, 0]);
     callstack.stack.push([command, 1]);
+    callstack.stack.push([command, "the end"]);
     describe('counter', function () {
         it('counter starts at -1', function () {
             assert.equal(callstack.COUNTER, -1);
@@ -54,10 +55,44 @@ describe('Callstack', function () {
         });
         it('counter resets with calling .step() at the end of the stack', function () {
             callstack.step();
+            assert.equal(callstack.COUNTER, 2);
+            callstack.execute();
+            assert.equal(whereAmI, "I am at the end");
+            callstack.step();
             assert.equal(callstack.COUNTER, -1);
         });
-        it('.execute() throws error', function () {
+        it('.execute() throws error at the end of the stack', function () {
             expect(callstack.execute).to.throw();
+        });
+        it('.run() will execute from start to end', function () {
+            whereAmI = "who knows";
+            callstack.run();
+            assert.equal(whereAmI, "I am at the end");
+            assert.equal(callstack.COUNTER, -1);
+        });
+        it('.run() will execute from anywhere to end', function () {
+            whereAmI = "who knows";
+            callstack.COUNTER = 1;
+            callstack.run();
+            assert.equal(whereAmI, "I am at the end");
+            assert.equal(callstack.COUNTER, -1);
+        });
+        it('.reset() will reset the counter to -1', function () {
+            whereAmI = "who knows";
+            callstack.reset();
+            assert.equal(callstack.COUNTER, -1);
+        });
+        it('.jump() will jump the correct amount', function () {
+            callstack.reset();
+            callstack.jump(2);
+            assert.equal(callstack.COUNTER, 1);
+            callstack.jump(-1);
+            assert.equal(callstack.COUNTER, 0);
+        });
+        it('.jump(n) will reset the counter if off stack', function () {
+            callstack.reset();
+            callstack.jump(20);
+            assert.equal(callstack.COUNTER, -1);
         });
     });
 });
