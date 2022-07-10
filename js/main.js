@@ -1,6 +1,6 @@
 /* Main */
 
-import System from './System.js'
+import System from './System.js';
 
 
 const system = new System();
