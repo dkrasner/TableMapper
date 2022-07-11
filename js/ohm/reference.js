@@ -7,16 +7,15 @@ import ohm from 'ohm-js';
 
 const referenceGrammarSource = String.raw`
 Reference {
-
     Ref = sheetId + "!" + Frame
 
-    sheetId = idChar+
+    sheetId = uuid
 
-    idChar = ~"!" (letter | digit)
+    uuid = hexDigit+ "-" hexDigit+ "-" hexDigit+ "-" hexDigit+ "-" hexDigit+
 
     Frame = coordinate + ":" + coordinate
 
-    coordinate = upper+ digit+
+    coordinate = upper+ digit*
 }
 `;
 
@@ -24,21 +23,25 @@ const g = ohm.grammar(referenceGrammarSource);
 
 const referenceSemantics = g.createSemantics().addOperation('interpret', {
     Ref(id, exclamationLiteral, frame){
-        return [id, frame];
+        return [id.interpret(), frame.interpret()];
     },
 
     sheetId(s) {
-        return s;
+        return s.sourceString;
     },
 
     coordinate(column, row) {
-        return [column, row];
+        return [column.sourceString, row.sourceString];
     },
 
     Frame(anchor, semiColonLIteral, corner){
-        return [anchor, corner];
+        // TODO sort out why anchor is wrapped in an extra []'s'
+        return [anchor.interpret()[0], corner.interpret()];
     },
 
+    _iter(...children) {
+        return children.map(c => c.interpret());
+    }
 
 });
 
