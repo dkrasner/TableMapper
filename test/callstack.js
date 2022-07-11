@@ -28,7 +28,6 @@ describe('Callstack', function () {
         return 1;
     }
     const simple_interpreter = new Interpreter();
-    console.log(simple_interpreter.interpret([command, 4])())
     const callstack = new CallStack(null, null, simple_interpreter);
     callstack.stack.push([command, 0]);
     callstack.stack.push([command, 1]);
