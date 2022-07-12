@@ -7,6 +7,8 @@ import ohm from 'ohm-js';
 
 const referenceGrammarSource = String.raw`
 Reference {
+    RefList = NonemptyListOf<Ref, ",">
+
     Ref = sheetId + "!" + Frame
 
     sheetId = uuid
@@ -22,8 +24,15 @@ Reference {
 const g = ohm.grammar(referenceGrammarSource);
 
 const referenceSemantics = g.createSemantics().addOperation('interpret', {
+
+    RefList(items){
+        return items.asIteration().children.map(child => {
+            return child.interpret();
+        })
+    },
+
     Ref(id, exclamationLiteral, frame){
-        return [id.interpret(), frame.interpret()];
+        return [id.interpret()[0], frame.interpret()];
     },
 
     sheetId(s) {

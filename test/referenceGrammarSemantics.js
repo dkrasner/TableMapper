@@ -19,14 +19,43 @@ const semanticMatchFailTest = (str, semanticType) => {
     assert.isFalse(typeMatch.succeeded());
 };
 
+const generateRandomReference = () => {
+    const id = crypto.randomUUID();
+    const anchor = [generateRandomUpperCase(), Math.round(Math.random()*1000).toString()]
+    const corner = [generateRandomUpperCase(), Math.round(Math.random()*1000).toString()]
+    const s = `${id}!${anchor.join("")}:${corner.join("")}`;
+    return {ref: s, id: id, anchor: anchor, corner: corner};
+};
+
+const generateRandomUpperCase = () => {
+    const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const numLetters = Math.max(Math.round(Math.random())*10, 1);
+    let result = "";
+    let i = 0;
+    while(i < numLetters){
+        result += letters[Math.round(Math.random()*(letters.length - 1))];
+        i += 1;
+    }
+    return result;
+};
+
 
 describe('Reference Grammer and Semantics', function () {
     describe('Grammar', function () {
         it('Reference match', function () {
-            let s = `${crypto.randomUUID()}!A10:DD100`;
+            const r = generateRandomReference();
+            const s = r.ref;
             matchTest(s);
-            s = `${crypto.randomUUID()}!A:DD100`;
-            matchTest(s);
+        });
+        it('Reference match multiple reference list', function () {
+            const r1 = generateRandomReference();
+            const r2 = generateRandomReference();
+            const r3 = generateRandomReference();
+            matchTest([r1.ref, r2.ref, r3.ref].join(','));
+        });
+        it('Will not match empty string', function () {
+            const match = g.match("");
+            assert.isFalse(match.succeeded());
         });
         it('Sheet ID is a UUID', function () {
             for(let i = 0; i <= 10; i++){
@@ -66,24 +95,28 @@ describe('Reference Grammer and Semantics', function () {
     })
     describe('Semantics', function () {
         it('Reference match 1', function () {
-            const id = crypto.randomUUID();
-            const anchor = "A10";
-            const corner = "DD100";
-            const s = `${id}!${anchor}:${corner}`;
-            const m = g.match(s);
-            const result = semantics(m).interpret();
-            expect(result[1][0]).to.eql(["A", "10"]);
-            expect(result[1][1]).to.eql(["DD", "100"]);
+            const r = generateRandomReference();
+            const m = g.match(r.ref);
+            let result = semantics(m).interpret();
+            result = result[0];
+            expect(result[0]).to.eql(r.id);
+            expect(result[1][0]).to.eql(r.anchor);
+            expect(result[1][1]).to.eql(r.corner);
         });
-        it('Reference match 2', function () {
-            const id = crypto.randomUUID();
-            const anchor = "A";
-            const corner = "DD";
-            const s = `${id}!${anchor}:${corner}`;
+        it('Reference match list', function () {
+            const r1 = generateRandomReference();
+            const r2 = generateRandomReference();
+            const r3 = generateRandomReference();
+            const s = [r1.ref, r2.ref, r3.ref].join(',');
             const m = g.match(s);
             const result = semantics(m).interpret();
-            expect(result[1][0]).to.eql(["A", ""]);
-            expect(result[1][1]).to.eql(["DD", ""]);
+            for(let i=0; i<3; i++){
+                const r = result[i];
+                const expected = [r1, r2, r3][i];
+                expect(r[0]).to.eql(expected.id);
+                expect(r[1][0]).to.eql(expected.anchor);
+                expect(r[1][1]).to.eql(expected.corner);
+            }
         });
     })
 });
