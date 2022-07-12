@@ -1,5 +1,5 @@
 /** OHM JS implementation of sheet cell reference
-    grammer and semantics.
+    grammar and semantics.
     **/
 
 import ohm from 'ohm-js';

@@ -1,5 +1,4 @@
 import { expect, assert } from 'chai';
-import ohm from 'ohm-js';
 import crypto from 'crypto';
 
 import {referenceGrammar as g} from '../js/ohm/reference.js';
@@ -40,7 +39,7 @@ const generateRandomUpperCase = () => {
 };
 
 
-describe('Reference Grammer and Semantics', function () {
+describe('Reference Grammar and Semantics', function () {
     describe('Grammar', function () {
         it('Reference match', function () {
             const r = generateRandomReference();
@@ -94,7 +93,7 @@ describe('Reference Grammer and Semantics', function () {
         });
     })
     describe('Semantics', function () {
-        it('Reference match 1', function () {
+        it('Reference match', function () {
             const r = generateRandomReference();
             const m = g.match(r.ref);
             let result = semantics(m).interpret();
