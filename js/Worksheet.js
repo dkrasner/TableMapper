@@ -11,6 +11,7 @@ import CallStack from './callStack.js';
 import commandRegistry from './commandRegistry.js';
 import icons from './utils/icons.js';
 import createIconSVGFromString from './utils/helpers.js';
+import BasicInterpreter from './interpreters.js';
 import CSVParser from 'papaparse';
 
 // Simple grid-based sheet component
@@ -302,7 +303,8 @@ class Worksheet extends HTMLElement {
         // make sense moving fwd
         // NOTE: it's the GridSheet in the shadow which (potentially) contains the commands
         // that is passed as the editor to CallStack
-        this.callStack = new CallStack(this.sheet, this.commandRegistry);
+        // this.callStack = new CallStack(this.sheet, this.commandRegistry);
+        this.callStack = new CallStack(new BasicInterpreter());
 
         // set the sources and targets to ""
         this.setAttribute("sources", "");
@@ -572,10 +574,52 @@ class Worksheet extends HTMLElement {
         if(!this.getAttribute("sources") || !this.getAttribute("targets")){
             alert("You must have both sources and targets set to run!");
         }
+        // TODO we want to allow multiple sources and targets
+        const source = this.getAttribute("sources").split(",")[0];
+        const target = this.getAttribute("targets").split(",")[0];
+        // TODO this should really be handled by sheet
+        let maxRowIndex = 0;
+        for(const key in this.sheet.dataFrame.store){
+            let row = key.split(',')[1];
+            row = parseInt(row);
+            if(row > maxRowIndex){
+                maxRowIndex = row;
+            }
+        }
+        const instructions = [];
+        let r = 0;
+        while(r <= maxRowIndex){
+            const row = [];
+            let c = 0;
+            let isNonEmpty= true;
+            while(isNonEmpty){
+                let entry = this.sheet.dataFrame.store[`${c},${r}`];
+                if(entry){
+                    // prepend source and target TODO: fix this up
+                    if(c == 0){
+                        entry = `${source}!${entry}`;
+                    } else if(c == 1){
+                        entry = `${target}!${entry}`;
+                    }
+                    row.push(entry);
+                    c += 1;
+                } else {
+                    isNonEmpty = false;
+                }
+            }
+            instructions.push(row);
+            r += 1;
+            c += 0;
+        }
+        this.callStack.load(instructions);
+        console.log(this.callStack.stack);
+        this.callStack.run();
+        /*
         this.callStack.runAll(
             this.getAttribute("sources").split(","),
             this.getAttribute("targets").split(",")
         );
+        */
     }
 
     onExternalLinkDragStart(event){
