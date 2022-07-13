@@ -8,13 +8,13 @@
 
 
 class CallStack extends Object {
-    constructor(editor, commandRegistry, interpreter){
+    constructor(interpreter){
         super();
 
         // an ap-sheet 'editor' element
-        this.editor = editor;
+        // this.editor = editor;
 
-        this.commandRegistry = commandRegistry;
+        // this.commandRegistry = commandRegistry;
 
         this.interpreter = interpreter;
         this.stack = [];
@@ -26,6 +26,9 @@ class CallStack extends Object {
         this.run = this.run.bind(this);
         this.jump = this.jump.bind(this);
         this.reset = this.reset.bind(this);
+        this.load = this.load.bind(this);
+        this.append = this.append.bind(this);
+        // OLD TODO: remove?
         this.runNext = this.runNext.bind(this);
         this.runAll = this.runAll.bind(this);
         this.runCommand = this.runCommand.bind(this);
@@ -78,6 +81,26 @@ class CallStack extends Object {
             this.reset();
         }
     }i
+
+    /* I load a new set of instruction and reset the counter */
+    load(instructions){
+        this.reset();
+        this.stack = [];
+        instructions.forEach((item) => {
+            // TODO: might want to have better checks here
+            // TODO: throw warning or error here if check fails?
+            if(item){
+                this.stack.push(item);
+            }
+        })
+    }
+
+    append(instruction){
+        // TODO: throw warning or error here if check fails?
+        if(instruction){
+            this.stack.push(instruction);
+        }
+    }
 
     runCommand(commandData){
         // assume commandData[0] is source coordinates

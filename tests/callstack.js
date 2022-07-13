@@ -93,5 +93,24 @@ describe('Callstack', function () {
             callstack.jump(20);
             assert.equal(callstack.COUNTER, -1);
         });
+        it('.append() will append an instruction without moving the counter', function () {
+            callstack.reset();
+            callstack.jump(2);
+            callstack.append([command, 0]);
+            assert.equal(callstack.COUNTER, 1);
+            assert.equal(callstack.stack.length, 4);
+        });
+        it('.append() will not append an empty instruction', function () {
+            callstack.reset();
+            callstack.jump(2);
+            callstack.append();
+            assert.equal(callstack.COUNTER, 1);
+            assert.equal(callstack.stack.length, 4);
+        });
+        it('.load() will load a new set of instructions and reset the counter', function () {
+            callstack.load([[command, 0], [command, 1]]);
+            assert.equal(callstack.COUNTER, -1);
+            assert.equal(callstack.stack.length, 2);
+        });
     });
 });
