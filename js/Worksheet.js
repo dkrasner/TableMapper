@@ -304,6 +304,7 @@ class Worksheet extends HTMLElement {
         // NOTE: it's the GridSheet in the shadow which (potentially) contains the commands
         // that is passed as the editor to CallStack
         // this.callStack = new CallStack(this.sheet, this.commandRegistry);
+        const interpreter = new BasicInterpreter();
         this.callStack = new CallStack(new BasicInterpreter());
 
         // set the sources and targets to ""
@@ -612,7 +613,6 @@ class Worksheet extends HTMLElement {
             c += 0;
         }
         this.callStack.load(instructions);
-        console.log(this.callStack.stack);
         this.callStack.run();
         /*
         this.callStack.runAll(
