@@ -28,7 +28,7 @@ describe('Callstack', function () {
         return 1;
     }
     const simple_interpreter = new Interpreter();
-    const callstack = new CallStack(null, null, simple_interpreter);
+    const callstack = new CallStack(simple_interpreter);
     callstack.stack.push([command, 0]);
     callstack.stack.push([command, 1]);
     callstack.stack.push([command, "the end"]);

@@ -88,6 +88,7 @@ const replace = (source, target, d) => {
             let entry = sourceWS.sheet.dataFrame.getAt([x, y]);
             if(entry && d){
                 // run a replaceAll here
+                // TODO switch to a regex in the future?
                 for(const key in d){
                     entry = entry.replaceAll(key, d[key]);
                 }
