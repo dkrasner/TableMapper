@@ -8,7 +8,6 @@
    **/
 
 import { EndOfStackError, CallStack } from './callStack.js';
-import commandRegistry from './commandRegistry.js';
 import icons from './utils/icons.js';
 import createIconSVGFromString from './utils/helpers.js';
 import BasicInterpreter from './interpreters.js';
@@ -258,7 +257,6 @@ class Worksheet extends HTMLElement {
 
         // the current callStack and available commandis
         this.callStack;
-        this.commandRegistry = commandRegistry;
 
         // generate a random palette for the worksheet
 
@@ -300,11 +298,6 @@ class Worksheet extends HTMLElement {
     connectedCallback(){
         // set the id; NOTE: at the moment this is a random UUID
         this.setAttribute("id",  window.crypto.randomUUID());
-        // for the moment every sheet has a CallStack which might or might not
-        // make sense moving fwd
-        // NOTE: it's the GridSheet in the shadow which (potentially) contains the commands
-        // that is passed as the editor to CallStack
-        // this.callStack = new CallStack(this.sheet, this.commandRegistry);
         const interpreter = new BasicInterpreter();
         this.callStack = new CallStack(interpreter);
 
