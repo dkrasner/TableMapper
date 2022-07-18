@@ -6,6 +6,7 @@
   * The call stack is built from an 'editor' sheet.
   */
 
+const EndOfStackError = new Error("End Of Stack");
 
 class CallStack extends Object {
     constructor(interpreter){
@@ -49,7 +50,7 @@ class CallStack extends Object {
        if there is a next command */
     execute(){
         if(this.COUNTER == -1){
-            throw new Error("End Of Stack");
+            throw EndOfStackError;
         }
         const entry = this.stack[this.COUNTER]
         const executable = this.interpreter.interpret(entry)
@@ -207,6 +208,7 @@ class CallStack extends Object {
 }
 
 export {
+    EndOfStackError,
     CallStack,
     CallStack as default
 }

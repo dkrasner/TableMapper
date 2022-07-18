@@ -7,7 +7,7 @@
    * being done.
    **/
 
-import CallStack from './callStack.js';
+import { EndOfStackError, CallStack } from './callStack.js';
 import commandRegistry from './commandRegistry.js';
 import icons from './utils/icons.js';
 import createIconSVGFromString from './utils/helpers.js';
@@ -286,6 +286,7 @@ class Worksheet extends HTMLElement {
         this.onDownload = this.onDownload.bind(this);
         this.onDelete = this.onDelete.bind(this);
         this.onRun = this.onRun.bind(this);
+        this.onStep = this.onStep.bind(this);
         this.onExternalLinkDragStart = this.onExternalLinkDragStart.bind(this);
         this.onDragOver = this.onDragOver.bind(this);
         this.onDragLeave = this.onDragLeave.bind(this);
@@ -305,7 +306,7 @@ class Worksheet extends HTMLElement {
         // that is passed as the editor to CallStack
         // this.callStack = new CallStack(this.sheet, this.commandRegistry);
         const interpreter = new BasicInterpreter();
-        this.callStack = new CallStack(new BasicInterpreter());
+        this.callStack = new CallStack(interpreter);
 
         // set the sources and targets to ""
         this.setAttribute("sources", "");
@@ -316,6 +317,7 @@ class Worksheet extends HTMLElement {
         this.addToHeader(this.uploadButton(), "left");
         this.addToHeader(this.downloadButton(), "left");
         this.addToHeader(this.eraseButton(), "right");
+        this.addToHeader(this.stepButton(), "right");
         this.addToHeader(this.runButton(), "right");
         this.addToFooter(this.linkButton(), "right");
         const header = this.shadowRoot.querySelector('#header-bar');
@@ -351,7 +353,7 @@ class Worksheet extends HTMLElement {
         this.addEventListener("dragleave", this.onDragLeave);
         this.removeEventListener("drop", this.onDrop);
     }
-    
+
 
     /* I add an element to the header.
        element: DOM element
@@ -432,6 +434,16 @@ class Worksheet extends HTMLElement {
         button.appendChild(svg);
         button.addEventListener("click", this.onRun);
         button.setAttribute("title", "run commands");
+        button.setAttribute("data-clickable", true);
+        return button;
+    }
+
+    stepButton(){
+        const svg = createIconSVGFromString(icons.walk);
+        const button = document.createElement("span");
+        button.appendChild(svg);
+        button.addEventListener("click", this.onStep);
+        button.setAttribute("title", "step to next command");
         button.setAttribute("data-clickable", true);
         return button;
     }
@@ -571,48 +583,52 @@ class Worksheet extends HTMLElement {
         window.URL.revokeObjectURL(url);
     }
 
+    // TODO this should really be handled by sheet
+    _getInstructions(){
+        const source = this.getAttribute("sources").split(",")[0];
+        const target = this.getAttribute("targets").split(",")[0];
+        const nonEmptyCoords = Object.keys(this.sheet.dataFrame.store).filter((k) => {
+            return this.sheet.dataFrame.getAt(k.split(','))
+        });
+        const nonEmptyCols = [];
+        const nonEmptyRows = [];
+        nonEmptyCoords.forEach((coord) => {
+            const [c, r] = coord.split(',');
+            nonEmptyCols.push(parseInt(c));
+            nonEmptyRows.push(parseInt(r));
+        });
+        const maxCol = nonEmptyCols.sort()[nonEmptyCols.length - 1];
+        const maxRow = nonEmptyRows.sort()[nonEmptyRows.length - 1];
+
+        const instructions = [];
+        let c = 0;
+        let r = 0;
+
+        while(r <= maxRow){
+            const row = [];
+            while(c <= maxCol){
+                let entry = this.sheet.dataFrame.getAt([c, r]);
+                if(parseInt(c) == 0){
+                    entry = `${source}!${entry}`;
+                } else if(parseInt(c) == 1){
+                    entry = `${target}!${entry}`;
+                }
+                row.push(entry);
+                c += 1;
+            }
+            instructions.push(row);
+            r += 1;
+            c = 0;
+        }
+        return instructions;
+    }
+
     onRun(){
         if(!this.getAttribute("sources") || !this.getAttribute("targets")){
             alert("You must have both sources and targets set to run!");
         }
         // TODO we want to allow multiple sources and targets
-        const source = this.getAttribute("sources").split(",")[0];
-        const target = this.getAttribute("targets").split(",")[0];
-        // TODO this should really be handled by sheet
-        let maxRowIndex = 0;
-        for(const key in this.sheet.dataFrame.store){
-            let row = key.split(',')[1];
-            row = parseInt(row);
-            if(row > maxRowIndex){
-                maxRowIndex = row;
-            }
-        }
-        const instructions = [];
-        let r = 0;
-        while(r <= maxRowIndex){
-            const row = [];
-            let c = 0;
-            let isNonEmpty= true;
-            while(isNonEmpty){
-                let entry = this.sheet.dataFrame.store[`${c},${r}`];
-                if(entry){
-                    // prepend source and target TODO: fix this up
-                    if(c == 0){
-                        entry = `${source}!${entry}`;
-                    } else if(c == 1){
-                        entry = `${target}!${entry}`;
-                    }
-                    row.push(entry);
-                    c += 1;
-                } else {
-                    isNonEmpty = false;
-                }
-            }
-            instructions.push(row);
-            r += 1;
-            c += 0;
-        }
-        this.callStack.load(instructions);
+        this.callStack.load(this._getInstructions());
         this.callStack.run();
         /*
         this.callStack.runAll(
@@ -622,6 +638,31 @@ class Worksheet extends HTMLElement {
         */
     }
 
+    onStep(){
+        // TODO: sort this out. We need to know how to deal with new commands
+        // appearing, or commands being rewritten at "run-time" etc
+        // we are going to load the commands as new but keep the counter to where it is
+        const counter = this.callStack.COUNTER;
+        if(!this.getAttribute("sources") || !this.getAttribute("targets")){
+            alert("You must have both sources and targets set to run!");
+        }
+        // TODO we want to allow multiple sources and targets
+        this.callStack.load(this._getInstructions());
+        // now set the counter back: TODO this should not be handled here
+        this.callStack.COUNTER = counter;
+        try{
+            this.callStack.step();
+            this.callStack.execute();
+        } catch (EndOfStackError){
+            this.callStack.reset();
+        }
+        /*
+        this.callStack.runAll(
+            this.getAttribute("sources").split(","),
+            this.getAttribute("targets").split(",")
+        );
+        */
+    }
     onExternalLinkDragStart(event){
         event.dataTransfer.setData("id", this.id);
         event.dataTransfer.setData("name", this.name);
@@ -669,7 +710,7 @@ class Worksheet extends HTMLElement {
             const sourceName = event.dataTransfer.getData("name");
             this.addSource(sourceId, sourceName);
             // now tell the source to add me as a target
-            // TODO: maybe all of this source/target adding/removing should be
+            // TODO: maybe all of this source/target adding/removing should
             // handled with custom events...?
             const sourceSheet = document.getElementById(sourceId);
             sourceSheet.addTarget(this.id, this.name);
