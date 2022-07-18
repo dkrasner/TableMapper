@@ -60,38 +60,7 @@ class BasicInterpreter extends Object {
 }
 
 const copy = (source, target) => {
-    const [sourceWSId, sourceWSSelection] = source;
-    const [sourceWSAnchor, sourceWSCorner] = sourceWSSelection;
-    const sourceWS = document.getElementById(sourceWSId);
-    const [targetWSId, targetWSSelection] = target;
-    const [targetWSAnchor, _] = targetWSSelection;
-    const targetWS = document.getElementById(targetWSId);
-
-    const sourceWSAnchorX = letters.indexOf(sourceWSAnchor[0]);
-    const sourceWSCornerX = letters.indexOf(sourceWSCorner[0]);
-    const sourceWSAnchorY = parseInt(sourceWSAnchor[1]) - 1;
-    const sourceWSCornerY = parseInt(sourceWSCorner[1]) - 1;
-
-    const targetWSAnchorX = letters.indexOf(targetWSAnchor[0]);
-    const targetWSAnchorY = parseInt(targetWSAnchor[1]) - 1;
-    // interate of source frame and insert into the target
-    let y = sourceWSAnchorY;
-    let ycounter = 0;
-    while(y <= sourceWSCornerY){
-        let x = sourceWSAnchorX;
-        let xcounter = 0;
-        while(x <= sourceWSCornerX){
-            const entry = sourceWS.sheet.dataFrame.getAt([x, y]);
-            const targetX = targetWSAnchorX + xcounter;
-            const targetY = targetWSAnchorY + ycounter;
-            targetWS.sheet.dataFrame.putAt([targetX, targetY], entry, false);
-            x += 1;
-            xcounter += 1;
-        }
-        y += 1;
-        ycounter += 1;
-    }
-    targetWS.sheet.render();
+    replace(source, target);
 }
 
 const replace = (source, target, d) => {
@@ -102,12 +71,12 @@ const replace = (source, target, d) => {
     const [targetWSAnchor, _] = targetWSSelection;
     const targetWS = document.getElementById(targetWSId);
 
-    const sourceWSAnchorX = letters.indexOf(sourceWSAnchor[0]);
-    const sourceWSCornerX = letters.indexOf(sourceWSCorner[0]);
+    const sourceWSAnchorX = labelIndex(sourceWSAnchor[0]);
+    const sourceWSCornerX = labelIndex(sourceWSCorner[0]);
     const sourceWSAnchorY = parseInt(sourceWSAnchor[1]) - 1;
     const sourceWSCornerY = parseInt(sourceWSCorner[1]) - 1;
 
-    const targetWSAnchorX = letters.indexOf(targetWSAnchor[0]);
+    const targetWSAnchorX = labelIndex(targetWSAnchor[0]);
     const targetWSAnchorY = parseInt(targetWSAnchor[1]) - 1;
     // interate of source frame and insert into the target
     let y = sourceWSAnchorY;
@@ -117,7 +86,7 @@ const replace = (source, target, d) => {
         let xcounter = 0;
         while(x <= sourceWSCornerX){
             let entry = sourceWS.sheet.dataFrame.getAt([x, y]);
-            if(entry){
+            if(entry && d){
                 // run a replaceAll here
                 for(const key in d){
                     entry = entry.replaceAll(key, d[key]);
@@ -140,7 +109,14 @@ const commandRegistry = {
     "replace": replace
 }
 
-//TODO remove this
+
+// Utils
+/* I take a string like s="AA" and return its 'true'
+   column index */
+const labelIndex = (s) => {
+    return letters.indexOf(s[0]) + (letters.length * (s.length - 1));
+};
+
 const letters = [
     "A","B","C","D","E","F","G","H",
     "I","J","K","L","M","N","O","P",
