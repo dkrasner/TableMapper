@@ -95,7 +95,7 @@ describe("Interpreter Tests", () => {
             targetWS.onErase();
             expect(targetWS.sheet.dataFrame.store).to.eql({});
         });
-        it("Running copy and replace command populates target Worksheet", () => {
+        it("Running copy and replace commandis populates target Worksheet", () => {
             mapperWS.sheet.dataFrame.putAt([0, 0], "A1:C2");
             mapperWS.sheet.dataFrame.putAt([1, 0], "A1:A1");
             mapperWS.sheet.dataFrame.putAt([2, 0], "copy()");
@@ -117,6 +117,34 @@ describe("Interpreter Tests", () => {
                 "4,1": "b1",
                 "5,1": "c1",
             };
+            expect(targetWS.sheet.dataFrame.store).to.eql(result);
+            targetWS.onErase();
+            expect(targetWS.sheet.dataFrame.store).to.eql({});
+        });
+        it("Stepping through copy and replace commands populates target Worksheet", () => {
+            mapperWS.sheet.dataFrame.putAt([0, 0], "A1:C2");
+            mapperWS.sheet.dataFrame.putAt([1, 0], "A1:A1");
+            mapperWS.sheet.dataFrame.putAt([2, 0], "copy()");
+            mapperWS.sheet.dataFrame.putAt([0, 1], "A1:C2");
+            mapperWS.sheet.dataFrame.putAt([1, 1], "D1:D1");
+            mapperWS.sheet.dataFrame.putAt([2, 1], "replace({'a': 'AAA'})");
+            mapperWS.onStep();
+            expect(targetWS.sheet.dataFrame.store).to.eql(dataDict);
+            const result = {
+                "0,0": "a0",
+                "1,0": "b0",
+                "2,0": "c0",
+                "0,1": "a1",
+                "1,1": "b1",
+                "2,1": "c1",
+                "3,0": "AAA0",
+                "4,0": "b0",
+                "5,0": "c0",
+                "3,1": "AAA1",
+                "4,1": "b1",
+                "5,1": "c1",
+            };
+            mapperWS.onStep();
             expect(targetWS.sheet.dataFrame.store).to.eql(result);
             targetWS.onErase();
             expect(targetWS.sheet.dataFrame.store).to.eql({});

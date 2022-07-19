@@ -289,6 +289,7 @@ class Worksheet extends HTMLElement {
         this.onDragOver = this.onDragOver.bind(this);
         this.onDragLeave = this.onDragLeave.bind(this);
         this.onDrop = this.onDrop.bind(this);
+        this.onCallStackStep = this.onCallStackStep.bind(this);
 
         // Bound serialization methods
         this.toCSV = this.toCSV.bind(this);
@@ -300,6 +301,7 @@ class Worksheet extends HTMLElement {
         this.setAttribute("id",  window.crypto.randomUUID());
         const interpreter = new BasicInterpreter();
         this.callStack = new CallStack(interpreter);
+        this.callStack.onStep = this.onCallStackStep;
 
         // set the sources and targets to ""
         this.setAttribute("sources", "");
@@ -619,6 +621,7 @@ class Worksheet extends HTMLElement {
     onRun(){
         if(!this.getAttribute("sources") || !this.getAttribute("targets")){
             alert("You must have both sources and targets set to run!");
+            return;
         }
         // TODO we want to allow multiple sources and targets
         this.callStack.load(this._getInstructions());
@@ -638,6 +641,7 @@ class Worksheet extends HTMLElement {
         const counter = this.callStack.COUNTER;
         if(!this.getAttribute("sources") || !this.getAttribute("targets")){
             alert("You must have both sources and targets set to run!");
+            return;
         }
         // TODO we want to allow multiple sources and targets
         this.callStack.load(this._getInstructions());
@@ -656,6 +660,28 @@ class Worksheet extends HTMLElement {
         );
         */
     }
+
+    onCallStackStep(){
+        if(this.callStack.COUNTER > -1){
+            // make sure no other tabs are highlighted atm
+            const tabs = this.sheet.shadowRoot.querySelectorAll("row-tab")
+            tabs.forEach((tab) => {
+                tab.removeAttribute("highlighted");
+            });
+            // grab the corresponding row tab
+            const tab = this.sheet.shadowRoot.querySelector(`row-tab[data-relative-y='${this.callStack.COUNTER}']`);
+            // if the tab is not found then it is out of the view and we need to shift accordingly
+            /* TODO this is a big buggy and not clear we want it
+            if(!tab){
+                const shift = this.callStack.COUNTER - tabs.length + 1;
+                this.sheet.primaryFrame.shiftDownBy(shift);
+                tab = this.sheet.shadowRoot.querySelector(`row-tab[data-relative-y='${this.callStack.COUNTER}']`);
+            }
+            */
+            tab.setAttribute("highlighted", true);
+        }
+    }
+
     onExternalLinkDragStart(event){
         event.dataTransfer.setData("id", this.id);
         event.dataTransfer.setData("name", this.name);

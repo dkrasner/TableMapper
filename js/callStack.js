@@ -31,6 +31,11 @@ class CallStack extends Object {
         this.append = this.append.bind(this);
     }
 
+    // to be implemented
+    onStep(){
+        return;
+    }
+
     /* I increment the counter and reset it (to -1) if the end of the
        stack is reached. */
     step(){
@@ -39,6 +44,7 @@ class CallStack extends Object {
         } else {
             this.COUNTER += 1;
         }
+        this.onStep();
     }
 
     /* I execute the next command on the callstack
