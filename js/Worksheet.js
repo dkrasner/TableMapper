@@ -7,10 +7,10 @@
    * being done.
    **/
 
-import CallStack from './callStack.js';
-import commandRegistry from './commandRegistry.js';
+import { EndOfStackError, CallStack } from './callStack.js';
 import icons from './utils/icons.js';
 import createIconSVGFromString from './utils/helpers.js';
+import BasicInterpreter from './interpreters.js';
 import CSVParser from 'papaparse';
 
 // Simple grid-based sheet component
@@ -257,7 +257,6 @@ class Worksheet extends HTMLElement {
 
         // the current callStack and available commandis
         this.callStack;
-        this.commandRegistry = commandRegistry;
 
         // generate a random palette for the worksheet
 
@@ -285,10 +284,12 @@ class Worksheet extends HTMLElement {
         this.onDownload = this.onDownload.bind(this);
         this.onDelete = this.onDelete.bind(this);
         this.onRun = this.onRun.bind(this);
+        this.onStep = this.onStep.bind(this);
         this.onExternalLinkDragStart = this.onExternalLinkDragStart.bind(this);
         this.onDragOver = this.onDragOver.bind(this);
         this.onDragLeave = this.onDragLeave.bind(this);
         this.onDrop = this.onDrop.bind(this);
+        this.onCallStackStep = this.onCallStackStep.bind(this);
 
         // Bound serialization methods
         this.toCSV = this.toCSV.bind(this);
@@ -298,11 +299,9 @@ class Worksheet extends HTMLElement {
     connectedCallback(){
         // set the id; NOTE: at the moment this is a random UUID
         this.setAttribute("id",  window.crypto.randomUUID());
-        // for the moment every sheet has a CallStack which might or might not
-        // make sense moving fwd
-        // NOTE: it's the GridSheet in the shadow which (potentially) contains the commands
-        // that is passed as the editor to CallStack
-        this.callStack = new CallStack(this.sheet, this.commandRegistry);
+        const interpreter = new BasicInterpreter();
+        this.callStack = new CallStack(interpreter);
+        this.callStack.onStep = this.onCallStackStep;
 
         // set the sources and targets to ""
         this.setAttribute("sources", "");
@@ -313,6 +312,7 @@ class Worksheet extends HTMLElement {
         this.addToHeader(this.uploadButton(), "left");
         this.addToHeader(this.downloadButton(), "left");
         this.addToHeader(this.eraseButton(), "right");
+        this.addToHeader(this.stepButton(), "right");
         this.addToHeader(this.runButton(), "right");
         this.addToFooter(this.linkButton(), "right");
         const header = this.shadowRoot.querySelector('#header-bar');
@@ -348,7 +348,7 @@ class Worksheet extends HTMLElement {
         this.addEventListener("dragleave", this.onDragLeave);
         this.removeEventListener("drop", this.onDrop);
     }
-    
+
 
     /* I add an element to the header.
        element: DOM element
@@ -429,6 +429,16 @@ class Worksheet extends HTMLElement {
         button.appendChild(svg);
         button.addEventListener("click", this.onRun);
         button.setAttribute("title", "run commands");
+        button.setAttribute("data-clickable", true);
+        return button;
+    }
+
+    stepButton(){
+        const svg = createIconSVGFromString(icons.walk);
+        const button = document.createElement("span");
+        button.appendChild(svg);
+        button.addEventListener("click", this.onStep);
+        button.setAttribute("title", "step to next command");
         button.setAttribute("data-clickable", true);
         return button;
     }
@@ -568,14 +578,103 @@ class Worksheet extends HTMLElement {
         window.URL.revokeObjectURL(url);
     }
 
+    // TODO this should really be handled by sheet
+    _getInstructions(){
+        const source = this.getAttribute("sources").split(",")[0];
+        const target = this.getAttribute("targets").split(",")[0];
+        const nonEmptyCoords = Object.keys(this.sheet.dataFrame.store).filter((k) => {
+            return this.sheet.dataFrame.getAt(k.split(','))
+        });
+        const nonEmptyCols = [];
+        const nonEmptyRows = [];
+        nonEmptyCoords.forEach((coord) => {
+            const [c, r] = coord.split(',');
+            nonEmptyCols.push(parseInt(c));
+            nonEmptyRows.push(parseInt(r));
+        });
+        const maxCol = nonEmptyCols.sort()[nonEmptyCols.length - 1];
+        const maxRow = nonEmptyRows.sort()[nonEmptyRows.length - 1];
+
+        const instructions = [];
+        let c = 0;
+        let r = 0;
+
+        while(r <= maxRow){
+            const row = [];
+            while(c <= maxCol){
+                let entry = this.sheet.dataFrame.getAt([c, r]);
+                if(parseInt(c) == 0){
+                    entry = `${source}!${entry}`;
+                } else if(parseInt(c) == 1){
+                    entry = `${target}!${entry}`;
+                }
+                row.push(entry);
+                c += 1;
+            }
+            instructions.push(row);
+            r += 1;
+            c = 0;
+        }
+        return instructions;
+    }
+
     onRun(){
         if(!this.getAttribute("sources") || !this.getAttribute("targets")){
             alert("You must have both sources and targets set to run!");
+            return;
         }
+        // TODO we want to allow multiple sources and targets
+        this.callStack.load(this._getInstructions());
+        this.callStack.run();
+        /*
         this.callStack.runAll(
             this.getAttribute("sources").split(","),
             this.getAttribute("targets").split(",")
         );
+        */
+    }
+
+    onStep(){
+        if(!this.getAttribute("sources") || !this.getAttribute("targets")){
+            alert("You must have both sources and targets set to run!");
+            return;
+        }
+        // TODO we want to allow multiple sources and targets
+        this.callStack.load(this._getInstructions(), false); // do not reset the counter
+        try{
+            this.callStack.step();
+            this.callStack.execute();
+        } catch (EndOfStackError){
+            console.log(EndOfStackError);
+            this.callStack.reset();
+        }
+        /*
+        this.callStack.runAll(
+            this.getAttribute("sources").split(","),
+            this.getAttribute("targets").split(",")
+        );
+        */
+    }
+
+    onCallStackStep(){
+        if(this.callStack.COUNTER > -1){
+            // make sure no other tabs are highlighted atm
+            const tabs = this.sheet.shadowRoot.querySelectorAll("row-tab")
+            tabs.forEach((tab) => {
+                tab.removeAttribute("highlighted");
+            });
+            // grab the corresponding row tab
+            const tab = this.sheet.shadowRoot.querySelector(`row-tab[data-relative-y='${this.callStack.COUNTER}']`);
+            // if the tab is not found then it is out of the view and we need to shift accordingly
+            /* TODO this is a big buggy and not clear we want it
+            if(!tab){
+                const shift = this.callStack.COUNTER - tabs.length + 1;
+                this.sheet.primaryFrame.shiftDownBy(shift);
+                tab = this.sheet.shadowRoot.querySelector(`row-tab[data-relative-y='${this.callStack.COUNTER}']`);
+            }
+            */
+            tab.setAttribute("highlighted", true);
+        }
     }
 
     onExternalLinkDragStart(event){
@@ -625,7 +724,7 @@ class Worksheet extends HTMLElement {
             const sourceName = event.dataTransfer.getData("name");
             this.addSource(sourceId, sourceName);
             // now tell the source to add me as a target
-            // TODO: maybe all of this source/target adding/removing should be
+            // TODO: maybe all of this source/target adding/removing should
             // handled with custom events...?
             const sourceSheet = document.getElementById(sourceId);
             sourceSheet.addTarget(this.id, this.name);

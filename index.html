@@ -7,6 +7,28 @@
         <script type="module" src="./ap-sheet/src/GridSheet.js"></script>
         <script type="module" src="./ap-sheet/src/SheetCell.js"></script>
         <script type="module" src="./dist/worksheet.bundle.js"></script>
+        <script type="module">
+            import icons from './js/utils/icons.js';
+            const template = document.createElement("template");
+            template.innerHTML = icons.sheet;
+            const addSheetButton = template.content.childNodes[1];
+            document.body.appendChild(addSheetButton);
+
+            // event listeners
+            addSheetButton.addEventListener("click", () => {
+                const newSheet = document.createElement("work-sheet");
+                document.body.appendChild(newSheet);
+            });
+            document.addEventListener("newSheetFocus", () => {
+                // set the z-index to 1 for all sheets
+                // and set z-index to 2 for the target sheet
+                // TODO: we'll have to do this better
+                document.querySelectorAll("work-sheet").forEach((sheet) => {
+                    sheet.style.setProperty("z-index", 1);
+                })
+                event.target.style.setProperty("z-index", 2);
+            });
+        </script>
     </head>
     <body>
         <div id="main"/>
