@@ -635,22 +635,17 @@ class Worksheet extends HTMLElement {
     }
 
     onStep(){
-        // TODO: sort this out. We need to know how to deal with new commands
-        // appearing, or commands being rewritten at "run-time" etc
-        // we are going to load the commands as new but keep the counter to where it is
-        const counter = this.callStack.COUNTER;
         if(!this.getAttribute("sources") || !this.getAttribute("targets")){
             alert("You must have both sources and targets set to run!");
             return;
         }
         // TODO we want to allow multiple sources and targets
-        this.callStack.load(this._getInstructions());
-        // now set the counter back: TODO this should not be handled here
-        this.callStack.COUNTER = counter;
+        this.callStack.load(this._getInstructions(), false); // do not reset the counter
         try{
             this.callStack.step();
             this.callStack.execute();
         } catch (EndOfStackError){
+            console.log(EndOfStackError);
             this.callStack.reset();
         }
         /*

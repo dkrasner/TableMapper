@@ -85,8 +85,10 @@ class CallStack extends Object {
     }i
 
     /* I load a new set of instruction and reset the counter */
-    load(instructions){
-        this.reset();
+    load(instructions, resetCounter=true){
+        if(resetCounter){
+            this.reset();
+        }
         this.stack = [];
         instructions.forEach((item) => {
             // TODO: might want to have better checks here
