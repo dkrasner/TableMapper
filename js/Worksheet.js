@@ -83,6 +83,7 @@ const templateString = `
 }
 
 #footer-bar {
+    cursor: grab;
     width: 100%;
     padding-left: 3px;
     padding-right: 4px;
@@ -274,7 +275,7 @@ class Worksheet extends HTMLElement {
         this.removeTarget = this.removeTarget.bind(this);
         this.removeLink = this.removeLink.bind(this);
         this.onMouseMoveInHeader = this.onMouseMoveInHeader.bind(this);
-        this.onMouseDownInHeader = this.onMouseDownInHeader.bind(this);
+        this.onMouseDownInHeaderFooter = this.onMouseDownInHeaderFooter.bind(this);
         this.onMouseUpAfterDrag = this.onMouseUpAfterDrag.bind(this);
         this.onNameDblClick = this.onNameDblClick.bind(this);
         this.onNameKeydown = this.onNameKeydown.bind(this);
@@ -316,15 +317,17 @@ class Worksheet extends HTMLElement {
         this.addToHeader(this.runButton(), "right");
         this.addToFooter(this.linkButton(), "right");
         const header = this.shadowRoot.querySelector('#header-bar');
+        const footer = this.shadowRoot.querySelector('#footer-bar');
         const name = header.querySelector('#title');
-
-        // set icon titles for hover over
 
         // set the name to default
         this.updateName("The worksheet");
 
         // add event listeners
-        header.addEventListener("mousedown", this.onMouseDownInHeader);
+        // using the same callback function for multiple DOM elements can fail to add the listener to
+        // all elements!
+        header.addEventListener("mousedown", (event) => {this.onMouseDownInHeaderFooter(event)});
+        footer.addEventListener("mousedown", (event) => {this.onMouseDownInHeaderFooter(event)});
         name.addEventListener("dblclick", this.onNameDblClick);
         this.addEventListener("dragover", this.onDragOver);
         this.addEventListener("dragleave", this.onDragLeave);
@@ -341,11 +344,11 @@ class Worksheet extends HTMLElement {
     disconnectedCallback(){
         // remove event listeners
         const header = this.shadowRoot.querySelector('#header-bar');
+        const footer = this.shadowRoot.querySelector('#footer-bar');
         const name = header.querySelector('span');
-        header.addEventListener("mousedown", this.onMouseDownInHeader);
-        name.addEventListener("dblclick", this.onNameDblClick);
+        name.removeEventListener("dblclick", this.onNameDblClick);
         this.removeEventListener("dragover", this.onDragOver);
-        this.addEventListener("dragleave", this.onDragLeave);
+        this.removeEventListener("dragleave", this.onDragLeave);
         this.removeEventListener("drop", this.onDrop);
     }
 
@@ -455,7 +458,7 @@ class Worksheet extends HTMLElement {
         return button;
     }
 
-    onMouseDownInHeader(){
+    onMouseDownInHeaderFooter(){
         // dispatch an event to put the sheet in focus
         const event = new CustomEvent(
             'newSheetFocus',
