@@ -274,7 +274,7 @@ class Worksheet extends HTMLElement {
         this.addTarget = this.addTarget.bind(this);
         this.removeTarget = this.removeTarget.bind(this);
         this.removeLink = this.removeLink.bind(this);
-        this.onMouseMoveInHeader = this.onMouseMoveInHeader.bind(this);
+        this.onMouseMove = this.onMouseMove.bind(this);
         this.onMouseDownInHeaderFooter = this.onMouseDownInHeaderFooter.bind(this);
         this.onMouseUpAfterDrag = this.onMouseUpAfterDrag.bind(this);
         this.onNameDblClick = this.onNameDblClick.bind(this);
@@ -455,29 +455,34 @@ class Worksheet extends HTMLElement {
         button.setAttribute("data-clickable", true);
         button.setAttribute("draggable", true);
         button.addEventListener("dragstart", this.onExternalLinkDragStart);
+        button.addEventListener("dragend", (event) => {event.stopPropagation();});
         return button;
     }
 
-    onMouseDownInHeaderFooter(){
-        // dispatch an event to put the sheet in focus
-        const event = new CustomEvent(
-            'newSheetFocus',
-            {
-                bubbles: true,
-                detail: {target: this}
-            }
-        );
-        this.dispatchEvent(event);
-        document.addEventListener('mousemove', this.onMouseMoveInHeader);
-        document.addEventListener('mouseup', this.onMouseUpAfterDrag);
+    onMouseDownInHeaderFooter(event){
+        // drag event propagation can be touchy so make sure we are not clicking or dragging
+        // any children of header/footer
+        if(event.target.id == "footer-bar" || event.target.id == "header-bar"){
+            // dispatch an event to put the sheet in focus
+            const focusEvent = new CustomEvent(
+                'newSheetFocus',
+                {
+                    bubbles: true,
+                    detail: {target: this}
+                }
+            );
+            this.dispatchEvent(focusEvent);
+            document.addEventListener('mousemove', this.onMouseMove);
+            document.addEventListener('mouseup', this.onMouseUpAfterDrag);
+        }
     }
 
     onMouseUpAfterDrag(){
         document.removeEventListener('mouseup', this.onMouseUpAfterDrag);
-        document.removeEventListener('mousemove', this.onMouseMoveInHeader);
+        document.removeEventListener('mousemove', this.onMouseMove);
     }
 
-    onMouseMoveInHeader(event){
+    onMouseMove(event){
         const currentLeft = this.getBoundingClientRect().left;
         const currentTop = this.getBoundingClientRect().top;
         const newTop = currentTop + event.movementY;
@@ -790,7 +795,6 @@ class Worksheet extends HTMLElement {
     removeLink(event){
         event.stopPropagation();
         event.preventDefault();
-        console.log(event.target);
         // remove the link and
         // tell the corresponding target worksheets to remove the link
         // TODO: maybe this should all be handled with custom events
@@ -803,11 +807,13 @@ class Worksheet extends HTMLElement {
             this.removeSource(id);
             if(worksheet){
                 worksheet.removeTarget(this.id);
+                worksheet.style.outline = "initial";
             }
         } else {
             this.removeTarget(id);
             if(worksheet){
                 worksheet.removeSource(this.id);
+                worksheet.style.outline = "initial";
             }
         }
     }
