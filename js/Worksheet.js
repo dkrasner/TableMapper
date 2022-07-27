@@ -8,6 +8,7 @@
    **/
 
 import { EndOfStackError, CallStack } from './callStack.js';
+import {labelIndex} from './interpreters.js';
 import icons from './utils/icons.js';
 import createIconSVGFromString from './utils/helpers.js';
 import BasicInterpreter from './interpreters.js';
@@ -644,9 +645,13 @@ class Worksheet extends HTMLElement {
         try{
             this.callStack.step();
             this.callStack.execute();
-        } catch (EndOfStackError){
-            console.log(EndOfStackError);
-            this.callStack.reset();
+        } catch (e){
+            if(e instanceof EndOfStackError){
+                console.log(EndOfStackError);
+                this.callStack.reset();
+                this.hideSelection();
+            }
+            else throw e;
         }
         /*
         this.callStack.runAll(
@@ -658,13 +663,20 @@ class Worksheet extends HTMLElement {
 
     onCallStackStep(){
         if(this.callStack.COUNTER > -1){
-            // make sure no other tabs are highlighted atm
-            const tabs = this.sheet.shadowRoot.querySelectorAll("row-tab")
-            tabs.forEach((tab) => {
-                tab.removeAttribute("highlighted");
-            });
-            // grab the corresponding row tab
-            const tab = this.sheet.shadowRoot.querySelector(`row-tab[data-relative-y='${this.callStack.COUNTER}']`);
+            // hide the current selection since it might interfere with the tab/row highlight
+            this.hideSelection()
+            // NOTE: this is hard-coded to the 3rd column (x=2) which should change in the future
+            const row = [[0, this.callStack.COUNTER + 1], [2, this.callStack.COUNTER + 1]];
+            this.select(null, row);
+            // get data on the source and target and show selected frames
+            const interpreter = this.callStack.interpreter;
+            let [source, target, _] = this.callStack.stack[this.callStack.COUNTER];
+            source = interpreter.matchAndInterpretReference(source);
+            target = interpreter.matchAndInterpretReference(target);
+            const [sourceWSId, sourceWSSelection] = source;
+            this.select(sourceWSId, sourceWSSelection);
+            const [targetWSId, targetWSSelection] = target;
+            this.select(targetWSId, targetWSSelection);
             // if the tab is not found then it is out of the view and we need to shift accordingly
             /* TODO this is a big buggy and not clear we want it
             if(!tab){
@@ -673,9 +685,42 @@ class Worksheet extends HTMLElement {
                 tab = this.sheet.shadowRoot.querySelector(`row-tab[data-relative-y='${this.callStack.COUNTER}']`);
             }
             */
-            tab.setAttribute("highlighted", true);
         }
     }
+
+    /* I hide the sheet.selection for a worksheet */
+    hideSelection(worksheet){
+        if(!worksheet){
+            worksheet = this;
+        }
+        const sel = worksheet.sheet.shadowRoot.getElementById("main-selection");
+        sel.hide();
+    }
+
+    /* I set the sheet.selection for a worksheet */
+    select(id, coordinates){
+        const [origin, corner] = coordinates;
+        let ws;
+        if(id){
+            ws = document.getElementById(id);
+        } else {
+            ws = this;
+        }
+        // TODO we shouldn't need to deal with labels/names for columns here
+        const originX = labelIndex(origin[0]);
+        const cornerX = labelIndex(corner[0]);
+        const originY = parseInt(origin[1]) - 1;
+        const cornerY = parseInt(corner[1]) - 1;
+        // hide the current selection to make sure that it doesn't linger for the next step
+        this.hideSelection(ws);
+        const sel = ws.sheet.shadowRoot.getElementById("main-selection");
+        sel.updateFromRelativeCoordinates(
+            [originX, originY],
+            [cornerX, cornerY]
+        );
+    }
+
+
 
     onExternalLinkDragStart(event){
         event.dataTransfer.setData("id", this.id);

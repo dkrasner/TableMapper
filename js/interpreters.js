@@ -115,7 +115,11 @@ const commandRegistry = {
 /* I take a string like s="AA" and return its 'true'
    column index */
 const labelIndex = (s) => {
-    return letters.indexOf(s[0]) + (letters.length * (s.length - 1));
+    const index = letters.indexOf(s[0]) + (letters.length * (s.length - 1));
+    if(index){
+        return index;
+    }
+    return s;
 };
 
 const letters = [
@@ -128,5 +132,6 @@ const letters = [
 
 export {
     BasicInterpreter,
+    labelIndex,
     BasicInterpreter as default
 }
