@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "test": "./node_modules/mocha/bin/mocha.js --require ./tests/preload.js ./tests/*",
-    "build": "./node_modules/webpack/bin/webpack.js"
+      "build": "./node_modules/webpack/bin/webpack.js",
+      "run": "npm build && python3 -m http.server"
   },
   "repository": {
     "type": "git",
