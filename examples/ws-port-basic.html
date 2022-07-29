@@ -5,15 +5,48 @@
     <script src="../node_modules/leader-line/leader-line.min.js"></script>
     <script src="../js/WSPort.js" type="module"></script>
     <style>
+      * {
+        box-sizing: border-box;
+      }
       ws-port {
         display: block;
         background-color: blue;
         width: 50px;
         height: 50px;
       }
+
+      main {
+        display: flex;
+        width: 100vw;
+        height: 100vh;
+        padding: 150px;
+        justify-content: space-between;
+      }
+
+      ws-port:nth-child(2) {
+        transform: translateY(50vh);
+      }
+
+      .example-parent {
+        display: block;
+        width: 200px;
+        height: 150px;
+        padding: 10px;
+        background-color: rgba(200, 200, 200);
+      }
+      .port-target-drag-enter {
+        transform: scale(1.5);
+      }
     </style>
   </head>
   <body>
-    <ws-port></ws-port>
+    <main>
+      <div class="example-parent" id="first-parent">
+        <ws-port id="first"></ws-port>
+      </div>
+      <div class="example-parent" id="second-parent">
+        <ws-port id="second"></ws-port>
+      </div>
+    </main>
   </body>
 </html>

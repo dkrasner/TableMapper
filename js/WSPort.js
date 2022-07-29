@@ -26,6 +26,7 @@ class WSPort extends HTMLElement {
     this.handle = null;
     this.handleRect = null;
     this.handleIsDragging = false;
+    this.isPort = true;
 
     // The leader-line will follow the handle
     // during drags
@@ -40,6 +41,10 @@ class WSPort extends HTMLElement {
     this.handleDragStart = this.handleDragStart.bind(this);
     this.handleDrag = this.handleDrag.bind(this);
     this.handleDragOver = this.handleDragOver.bind(this);
+    this.handleDocumentDragOver = this.handleDocumentDragOver.bind(this);
+    this.handleDragEnter = this.handleDragEnter.bind(this);
+    this.handleDragLeave = this.handleDragLeave.bind(this);
+    this.handleDrop = this.handleDrop.bind(this);
   }
 
   connectedCallback() {
@@ -48,17 +53,21 @@ class WSPort extends HTMLElement {
       this.setAttribute("draggable", true);
 
       // Setup event handling
-      //this.addEventListener('mouseenter', this.handleMouseEnter);
-      //this.addEventListener('mouseleave', this.handleMouseLeave);
       this.addEventListener("dragstart", this.handleDragStart);
       this.addEventListener("drag", this.handleDrag);
       this.addEventListener("dragend", this.handleDragEnd);
+      this.addEventListener("dragenter", this.handleDragEnter);
+      this.addEventListener("dragleave", this.handleDragLeave);
+      this.addEventListener("drop", this.handleDrop);
+      this.addEventListener("dragover", this.handleDragOver);
     }
   }
 
   disconnectedCallback() {
-    this.removeEventListener("mouseenter", this.handleMouseEnter);
-    this.removeEventListener("mouseleave", this.handleMouseLeave);
+    this.removeEventListener("dragenter", this.handleDragEnter);
+    this.removeEventListener("dragleave", this.handleDragLeave);
+    this.removeEventListener("drop", this.handleDrop);
+    this.removeEventListener("dragover", this.handleDragOver);
   }
 
   handleMouseEnter(event) {
@@ -73,7 +82,6 @@ class WSPort extends HTMLElement {
     this.handle.style.backgroundColor = "green";
     this.handle.style.position = "absolute";
     this.setHandlePosition();
-    //this.handle.addEventListener('dragstart', this.handleDragStart);
     document.body.append(this.handle);
     event.stopPropagation();
     event.preventDefault();
@@ -87,6 +95,24 @@ class WSPort extends HTMLElement {
   }
 
   handleDragStart(event) {
+    // First, we need to ignore certain drag and drop
+    // events on this element itself, so that we prevent
+    // the effects of possibly dropping on itself
+    this.removeEventListener("dragenter", this.handleDragEnter);
+    this.removeEventListener("dragleve", this.handleDragLeave);
+    this.removeEventListener("drop", this.handleDrop);
+
+    // Set the dataTransfer object to include the id of
+    // this element's parent element.
+    let parentEl = this.parentElement || this.host;
+    if (parentEl) {
+      event.dataTransfer.setData("text/plain", parentEl.id);
+    }
+    event.dataTransfer.effectAllowed = "none";
+
+    // Initialize the visual handle, which will be tracked
+    // during move events. The LeaderLine will follow it,
+    // constantly updating
     this.initHandleElement();
     this.handleRect = this.handle.getBoundingClientRect();
     this.leaderLine = new LeaderLine(this, this.handle, {
@@ -99,7 +125,7 @@ class WSPort extends HTMLElement {
     document.body.append(hiddenImageEl);
     event.dataTransfer.setDragImage(hiddenImageEl, 0, 0);
     console.log("handle did a dragstart!");
-    document.addEventListener("dragover", this.handleDragOver);
+    document.addEventListener("dragover", this.handleDocumentDragOver);
   }
 
   handleDragEnd(event) {
@@ -107,23 +133,35 @@ class WSPort extends HTMLElement {
     this.updateHandlePosition(0, 0);
     this.handle.remove();
     document.querySelector(".h-image-drag").remove();
-    document.removeEventListener("mousemove", this.handleDragOver);
+    document.removeEventListener("dragover", this.handleDocumentDragOver);
+
+    // Add the normal drag listeners back to this element.
+    this.addEventListener("dragenter", this.handleDragEnter);
+    this.addEventListener("dragleve", this.handleDragLeave);
+    this.addEventListener("drop", this.handleDrop);
   }
 
   handleDrag(event) {
     // Nothing for now.
   }
 
-  handleDragOver(event) {
+  handleDocumentDragOver(event) {
     this.updateHandlePosition(event.pageX, event.pageY);
     this.leaderLine.position().show();
   }
 
-  handleMouseMove(event) {
-    if (this.handleIsDragging) {
-      this.updateHandlePosition(event.deltaX, event.deltaY);
-      this.leaderLine.position.show();
-    }
+  handleDragOver(event) {
+    event.preventDefault();
+  }
+
+  handleDragEnter(event) {
+    event.preventDefault(); // Allows this to be a drop target
+  }
+
+  handleDragLeave(event) {}
+
+  handleDrop(event) {
+    console.log(event);
   }
 
   initHandleElement() {
@@ -149,8 +187,8 @@ class WSPort extends HTMLElement {
   }
 
   updateHandlePosition(x, y) {
-    this.handle.style.transform = `translate(${x - this.handleRect.width}px, ${
-      y - this.handleRect.height
+    this.handle.style.transform = `translate(${x - this.handleRect.x}px, ${
+      y - this.handleRect.y
     }px)`;
   }
 }
