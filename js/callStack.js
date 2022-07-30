@@ -6,7 +6,11 @@
   * The call stack is built from an 'editor' sheet.
   */
 
-const EndOfStackError = new Error("End Of Stack");
+class EndOfStackError extends Error{
+    constructor() {
+        super();
+    }
+}
 
 class CallStack extends Object {
     constructor(interpreter){
