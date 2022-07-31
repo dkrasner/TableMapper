@@ -1,10 +1,14 @@
-
-import crypto from 'crypto';
 import * as chai from 'chai';
-import '../ap-sheet/src/GridSheet.js';
 const assert = chai.assert;
 const should = chai.should;
 const expect = chai.expect;
+
+import crypto from 'crypto';
+
+// NOTE: we need the following two imports for the worksheet and sheet
+// to be available
+import Worksheet from '../js/Worksheet.js';
+import '../ap-sheet/src/GridSheet.js';
 
 
 describe("Interpreter Tests", () => {
@@ -95,7 +99,7 @@ describe("Interpreter Tests", () => {
             targetWS.onErase();
             expect(targetWS.sheet.dataFrame.store).to.eql({});
         });
-        it("Running copy and replace commandis populates target Worksheet", () => {
+        it("Running copy and replace commands populates target Worksheet", () => {
             mapperWS.sheet.dataFrame.putAt([0, 0], "A1:C2");
             mapperWS.sheet.dataFrame.putAt([1, 0], "A1:A1");
             mapperWS.sheet.dataFrame.putAt([2, 0], "copy()");

@@ -681,9 +681,9 @@ class Worksheet extends HTMLElement {
             let [source, target, _] = this.callStack.stack[this.callStack.COUNTER];
             source = interpreter.matchAndInterpretReference(source);
             target = interpreter.matchAndInterpretReference(target);
-            const [sourceWSId, sourceWSSelection] = source;
+            const [__, sourceWSId, sourceWSSelection] = source;
             this.select(sourceWSId, sourceWSSelection);
-            const [targetWSId, targetWSSelection] = target;
+            const [___, targetWSId, targetWSSelection] = target;
             this.select(targetWSId, targetWSSelection);
             // if the tab is not found then it is out of the view and we need to shift accordingly
             /* TODO this is a big buggy and not clear we want it
