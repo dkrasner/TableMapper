@@ -2,8 +2,7 @@
 <html>
   <head>
     <title>Basic WSPort Event Tests</title>
-    <script src="../node_modules/leader-line/leader-line.min.js"></script>
-    <script src="../js/WSPort.js" type="module"></script>
+    <script src="../dist/worksheet.bundle.js" type="module"></script>
     <style>
       * {
         box-sizing: border-box;
@@ -48,5 +47,23 @@
         <ws-port id="second"></ws-port>
       </div>
     </main>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const connectionMadeHandler = (event) => {
+          if (event.detail.sourceId && event.detail.targetId) {
+            const connectionEl = document.createElement("ws-connection");
+            connectionEl.setAttribute("source", event.detail.sourceId);
+            connectionEl.setAttribute("destination", event.detail.targetId);
+            document.body.append(connectionEl);
+          }
+        };
+        Array.from(document.querySelectorAll("ws-port")).forEach((portEl) => {
+          portEl.addEventListener(
+            "port-made-connection",
+            connectionMadeHandler
+          );
+        });
+      });
+    </script>
   </body>
 </html>

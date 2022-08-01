@@ -15,6 +15,7 @@ height: 50px;
 }
 </style>
 `;
+import LeaderLine from "leader-line";
 
 class WSPort extends HTMLElement {
   constructor() {
@@ -106,6 +107,7 @@ class WSPort extends HTMLElement {
     // this element's parent element.
     let parentEl = this.parentElement || this.host;
     if (parentEl) {
+      console.log(`Setting dataTransfer id to ${parentEl.id}`);
       event.dataTransfer.setData("text/plain", parentEl.id);
     }
     event.dataTransfer.effectAllowed = "none";
@@ -161,19 +163,39 @@ class WSPort extends HTMLElement {
   handleDragLeave(event) {}
 
   handleDrop(event) {
-    console.log(event);
+    let eventInfo = {};
+    let parentEl = this.parentElement || this.host;
+    if (parentEl) {
+      eventInfo.targetId = parentEl.id;
+    } else {
+      eventInfo.targetId = undefined;
+    }
+
+    eventInfo.sourceId = event.dataTransfer.getData("text/plain");
+    this.dispatchEvent(
+      new CustomEvent("port-made-connection", {
+        detail: eventInfo,
+      })
+    );
+
+    event.preventDefault();
   }
 
   initHandleElement() {
     this.handle = document.createElement("div");
     this.handle.classList.add("active-port-handle");
     this.handle.setAttribute("draggable", true);
-    // TEMPORARY -- inline style for live testing
+
+    /**
+     * Temporary styling for testing.
+     * Should remove.
+     */
     this.handle.style.display = "block";
     this.handle.style.width = "25px";
     this.handle.style.height = "25px";
     this.handle.style.backgroundColor = "green";
     this.handle.style.position = "absolute";
+
     this.setHandlePosition();
     document.body.append(this.handle);
   }
