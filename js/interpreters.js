@@ -72,38 +72,29 @@ const replace = (source, target, d) => {
     const [targetWSOrigin, _] = targetWSSelection;
     const targetWS = document.getElementById(targetWSId);
 
-    const sourceWSOriginX = labelIndex(sourceWSOrigin[0]);
-    const sourceWSCornerX = labelIndex(sourceWSCorner[0]);
-    const sourceWSOriginY = parseInt(sourceWSOrigin[1]) - 1;
-    const sourceWSCornerY = parseInt(sourceWSCorner[1]) - 1;
+    sourceWSOrigin[0] = labelIndex(sourceWSOrigin[0]);
+    sourceWSOrigin[1] = parseInt(sourceWSOrigin[1]) - 1;
+    sourceWSCorner[0] = labelIndex(sourceWSCorner[0]);
+    sourceWSCorner[1] = parseInt(sourceWSCorner[1]) - 1;
 
-    const targetWSOriginX = labelIndex(targetWSOrigin[0]);
-    const targetWSOriginY = parseInt(targetWSOrigin[1]) - 1;
-    // interate of source frame and insert into the target
-    let y = sourceWSOriginY;
-    let ycounter = 0;
-    while(y <= sourceWSCornerY){
-        let x = sourceWSOriginX;
-        let xcounter = 0;
-        while(x <= sourceWSCornerX){
-            let entry = sourceWS.sheet.dataFrame.getAt([x, y]);
-            if(entry && d){
-                // run a replaceAll here
-                // TODO switch to a regex in the future?
+    targetWSOrigin[0] = labelIndex(targetWSOrigin[0]);
+    targetWSOrigin[1] = parseInt(targetWSOrigin[1]) - 1;
+
+    const sourceDF = sourceWS.sheet.dataFrame.getDataSubFrame(sourceWSOrigin, sourceWSCorner);
+    if(d){
+        sourceDF.apply((entry) => {
+            if(entry){
                 for(const key in d){
                     entry = entry.replaceAll(key, d[key]);
                 }
             }
-            const targetX = targetWSOriginX + xcounter;
-            const targetY = targetWSOriginY + ycounter;
-            targetWS.sheet.dataFrame.putAt([targetX, targetY], entry, false);
-            x += 1;
-            xcounter += 1;
-        }
-        y += 1;
-        ycounter += 1;
+            return entry;
+        })
     }
-    targetWS.sheet.render();
+
+    // NOTE: this renders right away which we might want to deal with later for
+    // performance reasons
+    targetWS.sheet.dataFrame.copyFrom(sourceDF, targetWSOrigin);
 }
 
 const commandRegistry = {
