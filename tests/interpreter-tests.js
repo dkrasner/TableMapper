@@ -13,6 +13,7 @@ import '../ap-sheet/src/GridSheet.js';
 
 describe("Interpreter Tests", () => {
     let sourceWS;
+    let anotherSourceWS;
     let targetWS;
     let mapperWS;
     const dataDict = {
@@ -29,18 +30,21 @@ describe("Interpreter Tests", () => {
     ];
     before(() => {
         sourceWS = document.createElement('work-sheet');
+        anotherSourceWS = document.createElement('work-sheet');
         // sourceWS.onErase();
         targetWS = document.createElement('work-sheet');
         // targetWS.onErase();
         mapperWS = document.createElement('work-sheet');
         // mapperWS.onErase();
         document.body.append(sourceWS);
+        document.body.append(anotherSourceWS);
         document.body.append(targetWS);
         document.body.append(mapperWS);
         // NOTE: bc of some Node nonsense we need to generate
         // the ids manually, otherwise they are not guaranteed to be
         // standard UUID format
         sourceWS.id = crypto.randomUUID();
+        anotherSourceWS.id = crypto.randomUUID();
         targetWS.id = crypto.randomUUID();
         mapperWS.id = crypto.randomUUID();
     });
@@ -152,6 +156,41 @@ describe("Interpreter Tests", () => {
             expect(targetWS.sheet.dataFrame.store).to.eql(result);
             targetWS.onErase();
             expect(targetWS.sheet.dataFrame.store).to.eql({});
+        });
+        it("Running the join command populates target Worksheet", () => {
+            // add another source and make sure it exists
+            assert.exists(anotherSourceWS);
+            assert.exists(anotherSourceWS.sheet);
+            assert.exists(anotherSourceWS.sheet.dataFrame);
+            anotherSourceWS.onErase();
+            expect(anotherSourceWS.sheet.dataFrame.store).to.eql({});
+            mapperWS.addSource(anotherSourceWS.id, "anotherSource");
+            assert.equal(mapperWS.getAttribute("sources"), [sourceWS.id, anotherSourceWS.id].join(','));
+            anotherSourceWS.sheet.dataFrame.loadFromArray(dataArray);
+            expect(anotherSourceWS.sheet.dataFrame.store).to.eql(dataDict);
+            sourceWS.onErase();
+            sourceWS.sheet.dataFrame.loadFromArray(dataArray);
+            expect(sourceWS.sheet.dataFrame.store).to.eql(dataDict);
+            targetWS.onErase();
+
+            // now populate the mapper with the join command
+            mapperWS.onErase();
+            mapperWS.sheet.dataFrame.putAt([0, 0], "A1:C2,A1:C2");
+            mapperWS.sheet.dataFrame.putAt([1, 0], "A1:A1");
+            mapperWS.sheet.dataFrame.putAt([2, 0], "join(',')");
+            mapperWS.onRun();
+            const result = {
+                "0,0": "a0,a0",
+                "1,0": "b0,b0",
+                "2,0": "c0,c0",
+                "0,1": "a1,a1",
+                "1,1": "b1,b1",
+                "2,1": "c1,c1",
+            };
+            expect(targetWS.sheet.dataFrame.store).to.eql(result);
+            targetWS.onErase();
+            expect(targetWS.sheet.dataFrame.store).to.eql({});
+            mapperWS.removeSource(anotherSourceWS.id);
         });
     });
 

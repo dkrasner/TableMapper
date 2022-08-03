@@ -589,7 +589,7 @@ class Worksheet extends HTMLElement {
 
     // TODO this should really be handled by sheet
     _getInstructions(){
-        const source = this.getAttribute("sources").split(",")[0];
+        const sources = this.getAttribute("sources").split(",");
         const target = this.getAttribute("targets").split(",")[0];
         const nonEmptyCoords = Object.keys(this.sheet.dataFrame.store).filter((k) => {
             return this.sheet.dataFrame.getAt(k.split(','))
@@ -613,7 +613,12 @@ class Worksheet extends HTMLElement {
             while(c <= maxCol){
                 let entry = this.sheet.dataFrame.getAt([c, r]);
                 if(parseInt(c) == 0){
-                    entry = `${source}!${entry}`;
+                    const tmp = [];
+                    const entry_list = entry.split(",");
+                    for(let i = 0; i < entry_list.length; i++){
+                        tmp.push(`${sources[i]}!${entry_list[i]}`);
+                    }
+                    entry = tmp.join(',');
                 } else if(parseInt(c) == 1){
                     entry = `${target}!${entry}`;
                 }
@@ -671,6 +676,7 @@ class Worksheet extends HTMLElement {
 
     onCallStackStep(){
         if(this.callStack.COUNTER > -1){
+            return; // TODO! 
             // hide the current selection since it might interfere with the tab/row highlight
             this.hideSelection()
             // NOTE: this is hard-coded to the 3rd column (x=2) which should change in the future
@@ -707,6 +713,8 @@ class Worksheet extends HTMLElement {
 
     /* I set the sheet.selection for a worksheet */
     select(id, coordinates){
+        console.log(id)
+        console.log(coordinates)
         const [origin, corner] = coordinates;
         let ws;
         if(id){
