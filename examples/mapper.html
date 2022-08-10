@@ -1,0 +1,62 @@
+<!doctype html>
+<html>
+    <head>
+        <title>Mapping</title>
+        <link rel="stylesheet" type="text/css" href="../css/core.css">
+        <link rel="stylesheet" type="text/css" href="../css/sheet.css">
+        <script type="module" src="../ap-sheet/src/GridSheet.js"></script>
+        <script type="module" src="../ap-sheet/src/SheetCell.js"></script>
+        <script type="module" src="../dist/worksheet.bundle.js"></script>
+        <script type="module">
+            import icons from '../js/utils/icons.js';
+            const template = document.createElement("template");
+            template.innerHTML = icons.sheet;
+            const addSheetButton = template.content.childNodes[1];
+            document.body.appendChild(addSheetButton);
+
+            const newSheet = (name) => {
+                const sheet = document.createElement("work-sheet");
+                document.body.appendChild(sheet);
+                if(name){
+                    sheet.updateName(name);
+                }
+                return sheet;
+            };
+            // event listeners
+            addSheetButton.addEventListener("click", newSheet);
+            document.addEventListener("newSheetFocus", () => {
+                // set the z-index to 1 for all sheets
+                // and set z-index to 2 for the target sheet
+                // TODO: we'll have to do this better
+                document.querySelectorAll("work-sheet").forEach((sheet) => {
+                    sheet.style.setProperty("z-index", 1);
+                })
+                event.target.style.setProperty("z-index", 2);
+            });
+
+            // add some sheets we need
+            const source1 = newSheet("source 1");
+            const source2 = newSheet("source 2");
+            const target = newSheet("target");
+            const mapper = newSheet("mapper");
+            target.onErase();
+            mapper.onErase();
+            mapper.sheet.dataFrame.loadFromArray(
+                [
+                    ["B3:B54", "B3:B3", "copy()"],
+                    ["C3:C54", "C3:C3" , "replace({'/': '-'})"],
+                    ["D3:D54", "D3:D3", "copy()"],
+                    ["F3:F54,G3:G54", "E3:E3", "join(':::')"],
+                ]
+            );
+            mapper.addSource(source1.id, source1.name);
+            mapper.addSource(source2.id, source2.name);
+            mapper.addTarget(target.id, target.name);
+
+        </script>
+    </head>
+    <body>
+        <div id="main"/>
+    </div>
+    </body>
+</html>
