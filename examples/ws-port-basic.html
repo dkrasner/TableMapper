@@ -53,7 +53,7 @@
           if (event.detail.sourceId && event.detail.targetId) {
             const connectionEl = document.createElement("ws-connection");
             connectionEl.setAttribute("source", event.detail.sourceId);
-            connectionEl.setAttribute("destination", event.detail.targetId);
+            connectionEl.setAttribute("target", event.detail.targetId);
             document.body.append(connectionEl);
           }
         };
