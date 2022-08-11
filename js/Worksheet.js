@@ -676,7 +676,6 @@ class Worksheet extends HTMLElement {
 
     onCallStackStep(){
         if(this.callStack.COUNTER > -1){
-            return; // TODO! 
             // hide the current selection since it might interfere with the tab/row highlight
             this.hideSelection()
             // NOTE: this is hard-coded to the 3rd column (x=2) which should change in the future
@@ -684,13 +683,17 @@ class Worksheet extends HTMLElement {
             this.select(null, row);
             // get data on the source and target and show selected frames
             const interpreter = this.callStack.interpreter;
-            let [source, target, _] = this.callStack.stack[this.callStack.COUNTER];
-            source = interpreter.matchAndInterpretReference(source);
-            target = interpreter.matchAndInterpretReference(target);
-            const [__, sourceWSId, sourceWSSelection] = source;
-            this.select(sourceWSId, sourceWSSelection);
-            const [___, targetWSId, targetWSSelection] = target;
-            this.select(targetWSId, targetWSSelection);
+            let [sources, targets, _] = this.callStack.stack[this.callStack.COUNTER];
+            sources = interpreter.matchAndInterpretReference(sources);
+            targets = interpreter.matchAndInterpretReference(targets);
+            sources.forEach((entry) => {
+                const [__, sourceWSId, sourceWSSelection] = entry;
+                this.select(sourceWSId, sourceWSSelection);
+            })
+            targets.forEach((entry) => {
+                const [___, targetWSId, targetWSSelection] = entry;
+                this.select(targetWSId, targetWSSelection);
+            })
             // if the tab is not found then it is out of the view and we need to shift accordingly
             /* TODO this is a big buggy and not clear we want it
             if(!tab){
