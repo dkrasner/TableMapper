@@ -1,18 +1,18 @@
 /**
-   * Worksheet web component
-   * -----------------------
-   * The worksheep component is a sort of flexible container
-   * which conains a sheet (or potentially something else tbd)
-   * has a useable border and displays information about the work
-   * being done.
-   **/
+ * Worksheet web component
+ * -----------------------
+ * The worksheep component is a sort of flexible container
+ * which conains a sheet (or potentially something else tbd)
+ * has a useable border and displays information about the work
+ * being done.
+ **/
 
-import { EndOfStackError, CallStack } from './callStack.js';
-import {labelIndex} from './interpreters.js';
-import icons from './utils/icons.js';
-import createIconSVGFromString from './utils/helpers.js';
-import BasicInterpreter from './interpreters.js';
-import CSVParser from 'papaparse';
+import { EndOfStackError, CallStack } from "./callStack.js";
+import { labelIndex } from "./interpreters.js";
+import icons from "./utils/icons.js";
+import createIconSVGFromString from "./utils/helpers.js";
+import BasicInterpreter from "./interpreters.js";
+import CSVParser from "papaparse";
 
 // Simple grid-based sheet component
 const templateString = `
@@ -243,16 +243,13 @@ my-grid {
 
 `;
 
-
 class Worksheet extends HTMLElement {
-    constructor(){
+    constructor() {
         super();
-        this.template = document.createElement('template');
+        this.template = document.createElement("template");
         this.template.innerHTML = templateString;
-        this.attachShadow({mode: 'open', delegatesFocus: true});
-        this.shadowRoot.appendChild(
-            this.template.content.cloneNode(true)
-        );
+        this.attachShadow({ mode: "open", delegatesFocus: true });
+        this.shadowRoot.appendChild(this.template.content.cloneNode(true));
 
         // a randomly generated UUID
         this.id;
@@ -276,7 +273,8 @@ class Worksheet extends HTMLElement {
         this.removeTarget = this.removeTarget.bind(this);
         this.removeLink = this.removeLink.bind(this);
         this.onMouseMove = this.onMouseMove.bind(this);
-        this.onMouseDownInHeaderFooter = this.onMouseDownInHeaderFooter.bind(this);
+        this.onMouseDownInHeaderFooter =
+            this.onMouseDownInHeaderFooter.bind(this);
         this.onMouseUpAfterDrag = this.onMouseUpAfterDrag.bind(this);
         this.onNameDblClick = this.onNameDblClick.bind(this);
         this.onNameKeydown = this.onNameKeydown.bind(this);
@@ -298,9 +296,9 @@ class Worksheet extends HTMLElement {
         this.fromCSV = this.fromCSV.bind(this);
     }
 
-    connectedCallback(){
+    connectedCallback() {
         // set the id; NOTE: at the moment this is a random UUID
-        this.setAttribute("id",  window.crypto.randomUUID());
+        this.setAttribute("id", window.crypto.randomUUID());
         const interpreter = new BasicInterpreter();
         this.callStack = new CallStack(interpreter);
         this.callStack.onStep = this.onCallStackStep;
@@ -309,7 +307,6 @@ class Worksheet extends HTMLElement {
         this.setAttribute("sources", "");
         this.setAttribute("targets", "");
 
-
         this.addToHeader(this.trashButton(), "left");
         this.addToHeader(this.uploadButton(), "left");
         this.addToHeader(this.downloadButton(), "left");
@@ -317,9 +314,9 @@ class Worksheet extends HTMLElement {
         this.addToHeader(this.stepButton(), "right");
         this.addToHeader(this.runButton(), "right");
         this.addToFooter(this.linkButton(), "right");
-        const header = this.shadowRoot.querySelector('#header-bar');
-        const footer = this.shadowRoot.querySelector('#footer-bar');
-        const name = header.querySelector('#title');
+        const header = this.shadowRoot.querySelector("#header-bar");
+        const footer = this.shadowRoot.querySelector("#footer-bar");
+        const name = header.querySelector("#title");
 
         // set the name to default
         this.updateName("The worksheet");
@@ -327,41 +324,44 @@ class Worksheet extends HTMLElement {
         // add event listeners
         // using the same callback function for multiple DOM elements can fail to add the listener to
         // all elements!
-        header.addEventListener("mousedown", (event) => {this.onMouseDownInHeaderFooter(event)});
-        footer.addEventListener("mousedown", (event) => {this.onMouseDownInHeaderFooter(event)});
+        header.addEventListener("mousedown", (event) => {
+            this.onMouseDownInHeaderFooter(event);
+        });
+        footer.addEventListener("mousedown", (event) => {
+            this.onMouseDownInHeaderFooter(event);
+        });
         name.addEventListener("dblclick", this.onNameDblClick);
         this.addEventListener("dragover", this.onDragOver);
         this.addEventListener("dragleave", this.onDragLeave);
         this.addEventListener("drop", this.onDrop);
 
         // Stash a reference to the underlying ap-sheet
-        this.sheet = this.shadowRoot.getElementById('ap-sheet');
+        this.sheet = this.shadowRoot.getElementById("ap-sheet");
 
         // set the palette
         this.style.backgroundColor = "var(--bg-color)";
         this.sheet.style.backgroundColor = "var(--sheet-bg-color)";
     }
 
-    disconnectedCallback(){
+    disconnectedCallback() {
         // remove event listeners
-        const header = this.shadowRoot.querySelector('#header-bar');
-        const footer = this.shadowRoot.querySelector('#footer-bar');
-        const name = header.querySelector('span');
+        const header = this.shadowRoot.querySelector("#header-bar");
+        const footer = this.shadowRoot.querySelector("#footer-bar");
+        const name = header.querySelector("span");
         name.removeEventListener("dblclick", this.onNameDblClick);
         this.removeEventListener("dragover", this.onDragOver);
         this.removeEventListener("dragleave", this.onDragLeave);
         this.removeEventListener("drop", this.onDrop);
     }
 
-
     /* I add an element to the header.
        element: DOM element
        location: str (one of "left", "right")
     */
-    addToHeader(element, location, prepend=false){
-        const header = this.shadowRoot.querySelector('#header-bar');
+    addToHeader(element, location, prepend = false) {
+        const header = this.shadowRoot.querySelector("#header-bar");
         const parent = header.querySelector(`#header-${location}`);
-        if(prepend){
+        if (prepend) {
             parent.prepend(element);
         } else {
             parent.append(element);
@@ -372,10 +372,10 @@ class Worksheet extends HTMLElement {
        element: DOM element
        location: str (one of "left", "right", "middle")
        */
-    addToFooter(element, location, prepend=false){
-        const footer = this.shadowRoot.querySelector('#footer-bar');
+    addToFooter(element, location, prepend = false) {
+        const footer = this.shadowRoot.querySelector("#footer-bar");
         const parent = footer.querySelector(`#footer-${location}`);
-        if(prepend){
+        if (prepend) {
             parent.prepend(element);
         } else {
             parent.append(element);
@@ -383,7 +383,7 @@ class Worksheet extends HTMLElement {
     }
 
     /* default header/footer buttons */
-    trashButton(){
+    trashButton() {
         const svg = createIconSVGFromString(icons.trash);
         const button = document.createElement("span");
         button.appendChild(svg);
@@ -393,7 +393,7 @@ class Worksheet extends HTMLElement {
         return button;
     }
 
-    uploadButton(){
+    uploadButton() {
         const label = document.createElement("label");
         label.setAttribute("id", "upload");
         const input = document.createElement("input");
@@ -407,7 +407,7 @@ class Worksheet extends HTMLElement {
         return label;
     }
 
-    downloadButton(){
+    downloadButton() {
         const svg = createIconSVGFromString(icons.fileDownload);
         const button = document.createElement("span");
         button.appendChild(svg);
@@ -417,7 +417,7 @@ class Worksheet extends HTMLElement {
         return button;
     }
 
-    eraseButton(){
+    eraseButton() {
         const svg = createIconSVGFromString(icons.eraser);
         const button = document.createElement("span");
         button.appendChild(svg);
@@ -427,7 +427,7 @@ class Worksheet extends HTMLElement {
         return button;
     }
 
-    runButton(){
+    runButton() {
         const svg = createIconSVGFromString(icons.run);
         const button = document.createElement("span");
         button.appendChild(svg);
@@ -437,7 +437,7 @@ class Worksheet extends HTMLElement {
         return button;
     }
 
-    stepButton(){
+    stepButton() {
         const svg = createIconSVGFromString(icons.walk);
         const button = document.createElement("span");
         button.appendChild(svg);
@@ -447,7 +447,7 @@ class Worksheet extends HTMLElement {
         return button;
     }
 
-    linkButton(){
+    linkButton() {
         const svg = createIconSVGFromString(icons.link);
         const button = document.createElement("span");
         button.appendChild(svg);
@@ -456,88 +456,101 @@ class Worksheet extends HTMLElement {
         button.setAttribute("data-clickable", true);
         button.setAttribute("draggable", true);
         button.addEventListener("dragstart", this.onExternalLinkDragStart);
-        button.addEventListener("dragend", (event) => {event.stopPropagation();});
+        button.addEventListener("dragend", (event) => {
+            event.stopPropagation();
+        });
         return button;
     }
 
-    onMouseDownInHeaderFooter(event){
+    onMouseDownInHeaderFooter(event) {
         // drag event propagation can be touchy so make sure we are not clicking or dragging
         // any children of header/footer
-        if(event.target.id == "footer-bar" || event.target.id == "header-bar"){
+        if (
+            event.target.id == "footer-bar" ||
+            event.target.id == "header-bar"
+        ) {
             // dispatch an event to put the sheet in focus
-            const focusEvent = new CustomEvent(
-                'newSheetFocus',
-                {
-                    bubbles: true,
-                    detail: {target: this}
-                }
-            );
+            const focusEvent = new CustomEvent("newSheetFocus", {
+                bubbles: true,
+                detail: { target: this },
+            });
             this.dispatchEvent(focusEvent);
-            document.addEventListener('mousemove', this.onMouseMove);
-            document.addEventListener('mouseup', this.onMouseUpAfterDrag);
+            document.addEventListener("mousemove", this.onMouseMove);
+            document.addEventListener("mouseup", this.onMouseUpAfterDrag);
         }
     }
 
-    onMouseUpAfterDrag(){
-        document.removeEventListener('mouseup', this.onMouseUpAfterDrag);
-        document.removeEventListener('mousemove', this.onMouseMove);
+    onMouseUpAfterDrag() {
+        document.removeEventListener("mouseup", this.onMouseUpAfterDrag);
+        document.removeEventListener("mousemove", this.onMouseMove);
     }
 
-    onMouseMove(event){
+    onMouseMove(event) {
         const currentLeft = this.getBoundingClientRect().left;
         const currentTop = this.getBoundingClientRect().top;
         const newTop = currentTop + event.movementY;
         const newLeft = currentLeft + event.movementX;
-        this.style.setProperty("top", newTop + 'px');
-        this.style.setProperty("left", newLeft + 'px');
+        this.style.setProperty("top", newTop + "px");
+        this.style.setProperty("left", newLeft + "px");
+
+        // Trigger a custom move event so that
+        // implementors of the Worksheet can react
+        let moveEvent = new CustomEvent("worksheet-moved", {
+            bubbles: true,
+            detail: {
+                movementX: event.movementX,
+                movementY: event.movementY,
+            },
+        });
+        this.dispatchEvent(moveEvent);
     }
 
-    onNameDblClick(){
-        if(!this.isEditingName){
+    onNameDblClick() {
+        if (!this.isEditingName) {
             this.startEditingName();
         }
     }
 
-    onNameKeydown(event){
-        if(event.key == "Enter"){
+    onNameKeydown(event) {
+        if (event.key == "Enter") {
             event.preventDefault();
             event.stopPropagation();
             this.stopEditingName();
         }
     }
 
-    updateName(name){
-        const header = this.shadowRoot.querySelector('#header-bar');
-        const nameSpan = header.querySelector('#title > span');
+    updateName(name) {
+        const header = this.shadowRoot.querySelector("#header-bar");
+        const nameSpan = header.querySelector("#title > span");
 
         this.name = name;
         this.setAttribute("name", name);
         nameSpan.textContent = this.name;
     }
 
-    startEditingName(){
+    startEditingName() {
         this.isEditingName = true;
-        const header = this.shadowRoot.querySelector('#header-bar');
-        const nameSpan = header.querySelector('#title > span');
+        const header = this.shadowRoot.querySelector("#header-bar");
+        const nameSpan = header.querySelector("#title > span");
         nameSpan.classList.add("hide");
-        const input = header.querySelector('#title > input');
-        input.classList.add('show');
+        const input = header.querySelector("#title > input");
+        input.classList.add("show");
         input.value = this.name;
-        input.addEventListener('keydown', this.onNameKeydown);
+        input.addEventListener("keydown", this.onNameKeydown);
         // input.addEventListener('blur', this.handleInputBlur);
         input.focus();
     }
 
-    stopEditingName(){
+    stopEditingName() {
         this.isEditingName = false;
-        const header = this.shadowRoot.querySelector('#header-bar');
-        const input = header.querySelector('#title > input');
-        const nameSpan = header.querySelector('#title > span');
+        const header = this.shadowRoot.querySelector("#header-bar");
+        const input = header.querySelector("#title > input");
+        const nameSpan = header.querySelector("#title > span");
         nameSpan.classList.remove("hide");
-        input.removeEventListener('keydown', this.onNameKeydown);
-        input.classList.remove('show');
+        input.removeEventListener("keydown", this.onNameKeydown);
+        input.classList.remove("show");
         let newName = input.value;
-        if(!newName){
+        if (!newName) {
             newName = "A worksheet";
         }
         this.updateName(newName);
@@ -545,21 +558,21 @@ class Worksheet extends HTMLElement {
         // input.blur();
     }
 
-    onDelete(){
+    onDelete() {
         const msg = `Are you sure you want to delete ${this.name}?`;
-        if(window.confirm(msg)){
+        if (window.confirm(msg)) {
             this.remove();
         }
     }
 
-    onErase(){
+    onErase() {
         this.sheet.dataFrame.clear();
     }
 
-    onUpload(event){
+    onUpload(event) {
         let file = event.target.files[0];
         let reader = new FileReader();
-        reader.addEventListener('load', loadEv => {
+        reader.addEventListener("load", (loadEv) => {
             this.fromCSV(loadEv.target.result);
         });
         reader.addEventListener("error", (e) => {
@@ -574,11 +587,11 @@ class Worksheet extends HTMLElement {
         this.updateName(file.name);
     }
 
-    onDownload(event){
+    onDownload(event) {
         let csv = this.toCSV();
-        let anchor = document.createElement('a');
+        let anchor = document.createElement("a");
         anchor.style.display = "none";
-        let blob = new Blob([csv], {type: 'text/csv'});
+        let blob = new Blob([csv], { type: "text/csv" });
         let url = window.URL.createObjectURL(blob);
         anchor.href = url;
         anchor.download = `${this.name}.csv`;
@@ -591,13 +604,15 @@ class Worksheet extends HTMLElement {
     _getInstructions(){
         const sources = this.getAttribute("sources").split(",");
         const target = this.getAttribute("targets").split(",")[0];
-        const nonEmptyCoords = Object.keys(this.sheet.dataFrame.store).filter((k) => {
-            return this.sheet.dataFrame.getAt(k.split(','))
-        });
+        const nonEmptyCoords = Object.keys(this.sheet.dataFrame.store).filter(
+            (k) => {
+                return this.sheet.dataFrame.getAt(k.split(","));
+            }
+        );
         const nonEmptyCols = [];
         const nonEmptyRows = [];
         nonEmptyCoords.forEach((coord) => {
-            const [c, r] = coord.split(',');
+            const [c, r] = coord.split(",");
             nonEmptyCols.push(parseInt(c));
             nonEmptyRows.push(parseInt(r));
         });
@@ -608,9 +623,9 @@ class Worksheet extends HTMLElement {
         let c = 0;
         let r = 0;
 
-        while(r <= maxRow){
+        while (r <= maxRow) {
             const row = [];
-            while(c <= maxCol){
+            while (c <= maxCol) {
                 let entry = this.sheet.dataFrame.getAt([c, r]);
                 if(parseInt(c) == 0){
                     const tmp = [];
@@ -632,8 +647,8 @@ class Worksheet extends HTMLElement {
         return instructions;
     }
 
-    onRun(){
-        if(!this.getAttribute("sources") || !this.getAttribute("targets")){
+    onRun() {
+        if (!this.getAttribute("sources") || !this.getAttribute("targets")) {
             alert("You must have both sources and targets set to run!");
             return;
         }
@@ -648,23 +663,22 @@ class Worksheet extends HTMLElement {
         */
     }
 
-    onStep(){
-        if(!this.getAttribute("sources") || !this.getAttribute("targets")){
+    onStep() {
+        if (!this.getAttribute("sources") || !this.getAttribute("targets")) {
             alert("You must have both sources and targets set to run!");
             return;
         }
         // TODO we want to allow multiple sources and targets
         this.callStack.load(this._getInstructions(), false); // do not reset the counter
-        try{
+        try {
             this.callStack.step();
             this.callStack.execute();
-        } catch (e){
-            if(e instanceof EndOfStackError){
+        } catch (e) {
+            if (e instanceof EndOfStackError) {
                 console.log(EndOfStackError);
                 this.callStack.reset();
                 this.hideSelection();
-            }
-            else throw e;
+            } else throw e;
         }
         /*
         this.callStack.runAll(
@@ -674,12 +688,15 @@ class Worksheet extends HTMLElement {
         */
     }
 
-    onCallStackStep(){
-        if(this.callStack.COUNTER > -1){
+    onCallStackStep() {
+        if (this.callStack.COUNTER > -1) {
             // hide the current selection since it might interfere with the tab/row highlight
-            this.hideSelection()
+            this.hideSelection();
             // NOTE: this is hard-coded to the 3rd column (x=2) which should change in the future
-            const row = [[0, this.callStack.COUNTER + 1], [2, this.callStack.COUNTER + 1]];
+            const row = [
+                [0, this.callStack.COUNTER + 1],
+                [2, this.callStack.COUNTER + 1],
+            ];
             this.select(null, row);
             // get data on the source and target and show selected frames
             const interpreter = this.callStack.interpreter;
@@ -706,8 +723,8 @@ class Worksheet extends HTMLElement {
     }
 
     /* I hide the sheet.selection for a worksheet */
-    hideSelection(worksheet){
-        if(!worksheet){
+    hideSelection(worksheet) {
+        if (!worksheet) {
             worksheet = this;
         }
         const sel = worksheet.sheet.shadowRoot.getElementById("main-selection");
@@ -715,10 +732,10 @@ class Worksheet extends HTMLElement {
     }
 
     /* I set the sheet.selection for a worksheet */
-    select(id, coordinates){
+    select(id, coordinates) {
         const [origin, corner] = coordinates;
         let ws;
-        if(id){
+        if (id) {
             ws = document.getElementById(id);
         } else {
             ws = this;
@@ -737,27 +754,28 @@ class Worksheet extends HTMLElement {
         );
     }
 
-
-
-    onExternalLinkDragStart(event){
+    onExternalLinkDragStart(event) {
         event.dataTransfer.setData("id", this.id);
         event.dataTransfer.setData("name", this.name);
         event.dataTransfer.setData("worksheet-link", true);
         event.dataTransfer.effectAllowed = "all";
     }
 
-    onDragOver(event){
+    onDragOver(event) {
         event.stopPropagation();
         event.preventDefault();
         const overlay = this.shadowRoot.querySelector(".overlay");
         // NOTE: dataTransfer payload can disappear in the debugger - fun!
         // Also detecting whether a drop event is file drop is not consistent across browsers
         // and is touchy in general
-        if(event.dataTransfer.types.indexOf("Files") != -1 || event.dataTransfer.getData("worksheet-link")){
+        if (
+            event.dataTransfer.types.indexOf("Files") != -1 ||
+            event.dataTransfer.getData("worksheet-link")
+        ) {
             overlay.classList.remove("hide");
             event.dataTransfer.dropEffect = "link";
             let iconString = icons.link;
-            if(event.dataTransfer.types.indexOf("Files") != -1 ){
+            if (event.dataTransfer.types.indexOf("Files") != -1) {
                 event.dataTransfer.dropEffect = "copy";
                 iconString = icons.fileUpload;
             }
@@ -768,19 +786,19 @@ class Worksheet extends HTMLElement {
         }
     }
 
-    onDragLeave(event){
+    onDragLeave(event) {
         event.stopPropagation();
         event.preventDefault();
         const overlay = this.shadowRoot.querySelector(".overlay");
         overlay.classList.add("hide");
     }
 
-    onDrop(event){
+    onDrop(event) {
         event.stopPropagation();
         event.preventDefault();
         const overlay = this.shadowRoot.querySelector(".overlay");
         overlay.classList.add("hide");
-        if(event.dataTransfer.getData("worksheet-link")){
+        if (event.dataTransfer.getData("worksheet-link")) {
             // add the source
             const sourceId = event.dataTransfer.getData("id");
             const sourceName = event.dataTransfer.getData("name");
@@ -790,7 +808,7 @@ class Worksheet extends HTMLElement {
             // handled with custom events...?
             const sourceSheet = document.getElementById(sourceId);
             sourceSheet.addTarget(this.id, this.name);
-        } else if(event.dataTransfer.files){
+        } else if (event.dataTransfer.files) {
             // set the event.target.files to the dataTransfer.files
             // since that is what this.onUpload() expects
             event.target.files = event.dataTransfer.files;
@@ -798,9 +816,9 @@ class Worksheet extends HTMLElement {
         }
     }
 
-    addSource(id, name){
+    addSource(id, name) {
         const sources = this._attributeToList("sources");
-        if(sources.indexOf(id) != -1){
+        if (sources.indexOf(id) != -1) {
             alert(`${id} already added`);
             return;
         }
@@ -812,19 +830,23 @@ class Worksheet extends HTMLElement {
         return id;
     }
 
-    removeSource(id){
+    removeSource(id) {
         let sources = this._attributeToList("sources");
-        sources = sources.filter((item) => {return item != id});
+        sources = sources.filter((item) => {
+            return item != id;
+        });
         this.setAttribute("sources", sources);
         // remove the source link
         const footer = this.shadowRoot.querySelector("#footer-bar");
-        const linkContainer = footer.querySelector('#footer-left');
-        linkContainer.querySelectorAll(`[data-id='${id}']`).forEach((item) => {item.remove();});
+        const linkContainer = footer.querySelector("#footer-left");
+        linkContainer.querySelectorAll(`[data-id='${id}']`).forEach((item) => {
+            item.remove();
+        });
     }
 
-    addTarget(id, name){
+    addTarget(id, name) {
         const targets = this._attributeToList("targets");
-        if(targets.indexOf(id) != -1){
+        if (targets.indexOf(id) != -1) {
             alert(`${id} already added`);
             return;
         }
@@ -836,17 +858,21 @@ class Worksheet extends HTMLElement {
         return id;
     }
 
-    removeTarget(id){
+    removeTarget(id) {
         let targets = this._attributeToList("targets");
-        targets = targets.filter((item) => {return item != id});
+        targets = targets.filter((item) => {
+            return item != id;
+        });
         this.setAttribute("targets", targets);
         // remove the target link
         const footer = this.shadowRoot.querySelector("#footer-bar");
-        const linkContainer = footer.querySelector('#footer-right');
-        linkContainer.querySelectorAll(`[data-id='${id}']`).forEach((item) => {item.remove();});
+        const linkContainer = footer.querySelector("#footer-right");
+        linkContainer.querySelectorAll(`[data-id='${id}']`).forEach((item) => {
+            item.remove();
+        });
     }
 
-    removeLink(event){
+    removeLink(event) {
         event.stopPropagation();
         event.preventDefault();
         // remove the link and
@@ -857,15 +883,15 @@ class Worksheet extends HTMLElement {
         // NOTE: it's possible that the worksheet is null (for example it was
         // deleted earlier). In this case we should ignore, although TODO this should
         // all be better handled in a uniform model
-        if(event.target.getAttribute("data-type") == "source"){
+        if (event.target.getAttribute("data-type") == "source") {
             this.removeSource(id);
-            if(worksheet){
+            if (worksheet) {
                 worksheet.removeTarget(this.id);
                 worksheet.style.outline = "initial";
             }
         } else {
             this.removeTarget(id);
-            if(worksheet){
+            if (worksheet) {
                 worksheet.removeSource(this.id);
                 worksheet.style.outline = "initial";
             }
@@ -873,11 +899,11 @@ class Worksheet extends HTMLElement {
     }
 
     /**
-      * Convert a DOM element attribute to a list
-      */
-    _attributeToList(name){
+     * Convert a DOM element attribute to a list
+     */
+    _attributeToList(name) {
         let attr = this.getAttribute(name);
-        if(!attr){
+        if (!attr) {
             attr = [];
         } else {
             attr = attr.split(",");
@@ -886,17 +912,17 @@ class Worksheet extends HTMLElement {
     }
 
     /**
-      * Create a DOM element from an SVG string
-      * for both the source/target icon as well as the
-      * unlink icon. Adds event listeners for mousenter and
-      * mouseleave.
-      */
-    _createSourceTargetIconSpan(type, id, name){
+     * Create a DOM element from an SVG string
+     * for both the source/target icon as well as the
+     * unlink icon. Adds event listeners for mousenter and
+     * mouseleave.
+     */
+    _createSourceTargetIconSpan(type, id, name) {
         // make a reference to the source/target sheet
         // to update css on hover
         const sheet = document.getElementById(id);
         let iconString;
-        if(type == "source"){
+        if (type == "source") {
             iconString = icons.sheetImport;
         } else {
             iconString = icons.sheetExport;
@@ -911,7 +937,7 @@ class Worksheet extends HTMLElement {
         const unlinkIcon = createIconSVGFromString(icons.unlink);
         unlinkIcon.setAttribute("data-type", type);
         unlinkIcon.setAttribute("data-id", id);
-        unlinkIcon.style.display = 'none';
+        unlinkIcon.style.display = "none";
         iconSpan.addEventListener("click", this.removeLink);
         iconSpan.appendChild(unlinkIcon);
         iconSpan.addEventListener("mouseover", () => {
@@ -927,9 +953,9 @@ class Worksheet extends HTMLElement {
         return iconSpan;
     }
 
-    fromCSV(aString){
+    fromCSV(aString) {
         let data = CSVParser.parse(aString).data;
-        if(data){
+        if (data) {
             this.sheet.dataFrame.clear();
             this.sheet.dataFrame.corner.x = data[0].length - 1;
             this.sheet.dataFrame.corner.y = data.length - 1;
@@ -938,7 +964,7 @@ class Worksheet extends HTMLElement {
         }
     }
 
-    toCSV(){
+    toCSV() {
         let data = this.sheet.dataFrame.getDataArrayForFrame(
             this.sheet.dataFrame
         );
@@ -948,7 +974,4 @@ class Worksheet extends HTMLElement {
 
 window.customElements.define("work-sheet", Worksheet);
 
-export {
-    Worksheet,
-    Worksheet as default
-};
+export { Worksheet, Worksheet as default };
