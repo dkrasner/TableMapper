@@ -5,9 +5,8 @@
   "main": "./dist/worksheet.bundle.js",
   "type": "module",
   "scripts": {
-    "test": "./node_modules/mocha/bin/mocha.js --require ./tests/preload.js ./tests/*",
-      "build": "./node_modules/webpack/bin/webpack.js",
-      "run": "npm build && python3 -m http.server"
+    "test": "./node_modules/mocha/bin/mocha.js --timeout 3000 --require ./tests/preload.js ./tests/*",
+    "build": "./node_modules/webpack/bin/webpack.js"
   },
   "repository": {
     "type": "git",

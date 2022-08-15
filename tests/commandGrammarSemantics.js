@@ -34,6 +34,15 @@ describe('Reference Grammar and Semantics', function () {
             const s = "replace()";
             semanticMatchFailTest(s, "Replace");
         });
+        it('Join', function () {
+            const s = "join(',')";
+            matchTest(s);
+            // semanticMatchTest(s, "Join");
+        });
+        it('Join must have an argument', function () {
+            const s = "join()";
+            semanticMatchFailTest(s, "Join");
+        });
         it('Dict (single quotes)', function () {
             const s = "{'a': '1', 'b': '2'}";
             semanticMatchTest(s, "Dict");
@@ -52,6 +61,10 @@ describe('Reference Grammar and Semantics', function () {
             const s = "{'a': '1', 'b': 2}";
             semanticMatchTest(s, "Dict");
         });
+        it('String literal return proper literal', function () {
+            const s = "'this is a literal'";
+            semanticMatchTest(s, "stringLiteral");
+        });
     })
     describe('Semantics', function () {
         it('Copy', function () {
@@ -65,6 +78,18 @@ describe('Reference Grammar and Semantics', function () {
             const m = g.match(s);
             const result = semantics(m).interpret();
             expect(result).to.eql(["replace", {'a': 1, 'b': 2}]);
+        });
+        it('Join', function () {
+            const s= "join(',')";
+            const m = g.match(s);
+            const result = semantics(m).interpret();
+            expect(result).to.eql(["join", ","]);
+        });
+        it('String literal return proper literal (w/out quotes)', function () {
+            const s = "'this is a literal'";
+            const m = g.match(s, "stringLiteral");
+            const result = semantics(m).interpret();
+            expect(result).to.eql("this is a literal");
         });
     })
 });
