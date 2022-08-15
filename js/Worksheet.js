@@ -589,7 +589,7 @@ class Worksheet extends HTMLElement {
 
     // TODO this should really be handled by sheet
     _getInstructions(){
-        const source = this.getAttribute("sources").split(",")[0];
+        const sources = this.getAttribute("sources").split(",");
         const target = this.getAttribute("targets").split(",")[0];
         const nonEmptyCoords = Object.keys(this.sheet.dataFrame.store).filter((k) => {
             return this.sheet.dataFrame.getAt(k.split(','))
@@ -613,7 +613,12 @@ class Worksheet extends HTMLElement {
             while(c <= maxCol){
                 let entry = this.sheet.dataFrame.getAt([c, r]);
                 if(parseInt(c) == 0){
-                    entry = `${source}!${entry}`;
+                    const tmp = [];
+                    const entry_list = entry.split(",");
+                    for(let i = 0; i < entry_list.length; i++){
+                        tmp.push(`${sources[i]}!${entry_list[i]}`);
+                    }
+                    entry = tmp.join(',');
                 } else if(parseInt(c) == 1){
                     entry = `${target}!${entry}`;
                 }
@@ -678,13 +683,17 @@ class Worksheet extends HTMLElement {
             this.select(null, row);
             // get data on the source and target and show selected frames
             const interpreter = this.callStack.interpreter;
-            let [source, target, _] = this.callStack.stack[this.callStack.COUNTER];
-            source = interpreter.matchAndInterpretReference(source);
-            target = interpreter.matchAndInterpretReference(target);
-            const [sourceWSId, sourceWSSelection] = source;
-            this.select(sourceWSId, sourceWSSelection);
-            const [targetWSId, targetWSSelection] = target;
-            this.select(targetWSId, targetWSSelection);
+            let [sources, targets, _] = this.callStack.stack[this.callStack.COUNTER];
+            sources = interpreter.matchAndInterpretReference(sources);
+            targets = interpreter.matchAndInterpretReference(targets);
+            sources.forEach((entry) => {
+                const [__, sourceWSId, sourceWSSelection] = entry;
+                this.select(sourceWSId, sourceWSSelection);
+            })
+            targets.forEach((entry) => {
+                const [___, targetWSId, targetWSSelection] = entry;
+                this.select(targetWSId, targetWSSelection);
+            })
             // if the tab is not found then it is out of the view and we need to shift accordingly
             /* TODO this is a big buggy and not clear we want it
             if(!tab){

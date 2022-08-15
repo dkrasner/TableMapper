@@ -9,7 +9,11 @@ const referenceGrammarSource = String.raw`
 Reference {
     RefList = NonemptyListOf<Ref, ",">
 
-    Ref = sheetId + "!" + Frame
+    Ref = name ? sheetId + "!" + Frame
+
+    name = "<" namechar+ ">"
+
+    namechar = alnum | "_" | "-"
 
     sheetId = uuid
 
@@ -31,8 +35,17 @@ const referenceSemantics = g.createSemantics().addOperation('interpret', {
         })
     },
 
-    Ref(id, exclamationLiteral, frame){
-        return [id.interpret()[0], frame.interpret()];
+    Ref(name, id, exclamationLiteral, frame){
+        if(name.sourceString){
+            name = name.interpret()[0];
+        } else {
+            name = null;
+        }
+        return [name, id.interpret()[0], frame.interpret()];
+    },
+
+    name(leftAngle, name, rightAngle){
+        return name.sourceString;
     },
 
     sheetId(s) {

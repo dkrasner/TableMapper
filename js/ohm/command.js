@@ -8,11 +8,13 @@ import ohm from 'ohm-js';
 
 const commandGrammarSource = String.raw`
 Command {
-    Command = Copy | Replace
+    Command = Copy | Replace | Join
 
     Copy = "copy" "()"
 
     Replace = "replace" + "(" + Dict + ")"
+
+    Join = "join" + "(" + stringLiteral + ")"
 
     Dict = "{" + NonemptyListOf<KeyVal, ","> + "}"
 
@@ -42,11 +44,19 @@ const commandSemantics = g.createSemantics().addOperation('interpret', {
         return [replaceLiteral.sourceString, d.interpret()[0]];
     },
 
+    Join(joinLiteral, leftBracket, s, rightBracket){
+        return [joinLiteral.sourceString, s.interpret()[0]];
+    },
+
     Dict(leftBracket, kvList, rightBracket){
         let d = leftBracket.sourceString + kvList.sourceString + rightBracket.sourceString;
         // NOTE: JSON.parse doesn't like single quotes; we could prob parse/build the dict ourselves
         d = d.replaceAll("'", '"');
         return JSON.parse(d);
+    },
+
+    stringLiteral(quoteLeftLiteral, s, quoteRightLiteral){
+        return s.sourceString;
     },
 
     _iter(...children) {
