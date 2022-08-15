@@ -716,8 +716,6 @@ class Worksheet extends HTMLElement {
 
     /* I set the sheet.selection for a worksheet */
     select(id, coordinates){
-        console.log(id)
-        console.log(coordinates)
         const [origin, corner] = coordinates;
         let ws;
         if(id){
