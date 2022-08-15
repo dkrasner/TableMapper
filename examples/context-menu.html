@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Context Menu Example</title>
+    <script src="../js/ContextMenu.js" type="module"></script>
+    <link rel="stylesheet" type="text/css" href="../css/context-menu.css" />
+  </head>
+  <body>
+    <h3>Right-click anywhere on the screen to reveal the context menu.</h3>
+    <script>
+      document.addEventListener("contextmenu", (event) => {
+        event.preventDefault();
+        const menu = document.createElement("context-menu");
+        menu
+          .addMenuItem("First Item", null, (e) => {
+            alert("First Item!");
+          })
+          .addMenuItem("Second Item", null, (e) => {
+            alert("Second Item!");
+          })
+          .addNestedMenuItem("Third Inner Item", null, (innerMenu) => {
+            innerMenu
+              .addMenuItem("First Inner Item", null, (e) => {
+                alert("First Item!");
+              })
+              .addMenuItem("Second Inner Item", null, (e) => {
+                alert("Second Inner Item!");
+              });
+          })
+          .addMenuItem("Third Item", null, (e) => {
+            alert("Third Item!");
+          });
+        menu.style.top = `${event.pageY}px`;
+        menu.style.left = `${event.pageX}px`;
+        document.body.append(menu);
+      });
+    </script>
+  </body>
+</html>
