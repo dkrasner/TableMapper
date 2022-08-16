@@ -9,6 +9,8 @@ class WSConnection extends HTMLElement {
     constructor() {
         super();
 
+        this.leaderLines = [];
+
         // Bound component methods
         this.updateLeaderLine = this.updateLeaderLine.bind(this);
         this.updateLinkedSheet = this.updateLinkedSheet.bind(this);
@@ -17,64 +19,91 @@ class WSConnection extends HTMLElement {
 
     connectedCallback() {
         if (this.isConnected) {
-            this.updateLinkedSheet("", this.getAttribute("source"));
+            this.updateLinkedSheet("", this.getAttribute("sources"));
             this.updateLinkedSheet("", this.getAttribute("target"));
         }
     }
 
     disconnectedCallback() {
-        this.updateLinkedSheet(this.getAttribute("source"), "");
+        this.updateLinkedSheet(this.getAttribute("sources"), "");
         this.updateLinkedSheet(this.getAttribute("target"));
     }
 
     updateLeaderLine() {
-        if (this.leaderLine) {
-            this.leaderLine.remove();
+        // update the leader line for each source
+        let sources = this.getAttribute("sources");
+        if(!sources){
+            return;
         }
-        let sourceElement = document.getElementById(
-            this.getAttribute("source")
-        );
-        let destElement = document.getElementById(this.getAttribute("target"));
-        if (sourceElement && destElement) {
-            console.log("Creating new leader-line between:");
-            console.log(sourceElement, destElement);
-            this.leaderLine = new LeaderLine(sourceElement, destElement);
-        }
+        sources = sources.split(",");
+        // for now we remove all the lines and put them back as needed
+        this.leaderLines.forEach((line) => {
+            line.remove();
+        });
+        sources.forEach((id) => {
+            const sourceElement = document.getElementById(id);
+            const destElement = document.getElementById(this.getAttribute("target"));
+            if (sourceElement && destElement) {
+                console.log("Creating new leader-line between:");
+                console.log(sourceElement, destElement);
+                this.leaderLines.push(new LeaderLine(sourceElement, destElement));
+            }
+        })
     }
 
     updateLinkedSheet(oldVal, newVal) {
         console.log("updateLinkedSheet called!");
         console.log(`old: ${oldVal} new: ${newVal}`);
-        if (this.isConnected && oldVal !== newVal) {
+        if(oldVal){
+            oldVal = oldVal.split(',');
+        } else {
+            oldVal = [];
+        }
+        if(newVal){
+            newVal = newVal.split(',');
+        } else {
+            newVal = [];
+        }
+        // check if the arrays are equal
+        const temp = oldVal.filter((item) => {return newVal.indexOf(item) > -1});
+        const areEqual = temp.length == oldVal.length && temp.length == newVal.length;
+        if (this.isConnected && !areEqual) {
             console.log("updating linked sheet", oldVal, newVal);
-            const oldLinkedEl = document.getElementById(oldVal);
-            if (oldLinkedEl) {
-                oldLinkedEl.removeEventListener(
-                    "worksheet-moved",
-                    this.onWorksheetMoved
-                );
-            }
-            const newLinkedEl = document.getElementById(newVal);
-            if (newLinkedEl) {
-                newLinkedEl.addEventListener(
-                    "worksheet-moved",
-                    this.onWorksheetMoved
-                );
-            }
+            oldVal.forEach((id) => {
+                const oldLinkedEl = document.getElementById(id);
+                if (oldLinkedEl) {
+                    oldLinkedEl.removeEventListener(
+                        "worksheet-moved",
+                        this.onWorksheetMoved
+                    );
+                }
+            });
+            newVal.forEach((id) => {
+                const newLinkedEl = document.getElementById(id);
+                if (newLinkedEl) {
+                    newLinkedEl.addEventListener(
+                        "worksheet-moved",
+                        this.onWorksheetMoved
+                    );
+                }
+            });
         }
     }
 
     onWorksheetMoved(event) {
         // When the worksheet moves, we need to redraw the leaderLine
         console.log("worksheet moved in connection element");
-        this.leaderLine.position().show();
+        const line = this.leaderLines.filter((l) => {
+            return l.start.id == event.detail.id;
+        })[0];
+        line.position().show()
     }
 
     attributeChangedCallback(name, oldVal, newVal) {
-        if (name === "source" || name === "target") {
+        if (name === "sources" || name === "target") {
             this.updateLeaderLine();
         }
-        if (name === "source") {
+        if (name === "sources") {
             this.updateLinkedSheet(oldVal, newVal);
         }
         if (name === "target") {
@@ -83,7 +112,7 @@ class WSConnection extends HTMLElement {
     }
 
     static get observedAttributes() {
-        return ["source", "target"];
+        return ["sources", "target"];
     }
 }
 

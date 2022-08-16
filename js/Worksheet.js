@@ -498,6 +498,7 @@ class Worksheet extends HTMLElement {
         let moveEvent = new CustomEvent("worksheet-moved", {
             bubbles: true,
             detail: {
+                id: this.id,
                 movementX: event.movementX,
                 movementY: event.movementY,
             },
@@ -570,8 +571,8 @@ class Worksheet extends HTMLElement {
     }
 
     onUpload(event) {
-        let file = event.target.files[0];
-        let reader = new FileReader();
+        const file = event.target.files[0];
+        const reader = new FileReader();
         reader.addEventListener("load", (loadEv) => {
             this.fromCSV(loadEv.target.result);
         });
@@ -587,12 +588,12 @@ class Worksheet extends HTMLElement {
         this.updateName(file.name);
     }
 
-    onDownload(event) {
-        let csv = this.toCSV();
-        let anchor = document.createElement("a");
+    onDownload() {
+        const csv = this.toCSV();
+        const anchor = document.createElement("a");
         anchor.style.display = "none";
-        let blob = new Blob([csv], { type: "text/csv" });
-        let url = window.URL.createObjectURL(blob);
+        const blob = new Blob([csv], { type: "text/csv" });
+        const url = window.URL.createObjectURL(blob);
         anchor.href = url;
         anchor.download = `${this.name}.csv`;
         document.body.append(anchor);
@@ -808,6 +809,7 @@ class Worksheet extends HTMLElement {
             // handled with custom events...?
             const sourceSheet = document.getElementById(sourceId);
             sourceSheet.addTarget(this.id, this.name);
+
         } else if (event.dataTransfer.files) {
             // set the event.target.files to the dataTransfer.files
             // since that is what this.onUpload() expects
@@ -827,6 +829,22 @@ class Worksheet extends HTMLElement {
         // add an icon with data about the source to the footer
         const sourceSpan = this._createSourceTargetIconSpan("source", id, name);
         this.addToFooter(sourceSpan, "left");
+        // now create a new WSConnection element if it doesn't exist
+        // if it does exist for this target then add the source to it
+        let connection = document.querySelector(`ws-connection[target="${this.id}"]`)
+        if(connection){
+            const sources = connection.getAttribute("sources").split(",");
+            if(sources.indexOf(id) == -1){
+                sources.push(id);
+                connection.setAttribute("sources", sources);
+            }
+        } else {
+            connection = document.createElement("ws-connection");
+            document.body.append(connection);
+            connection.setAttribute("target", this.id);
+            connection.setAttribute("sources", [id]);
+
+        }
         return id;
     }
 
@@ -842,6 +860,15 @@ class Worksheet extends HTMLElement {
         linkContainer.querySelectorAll(`[data-id='${id}']`).forEach((item) => {
             item.remove();
         });
+        // now remove the sources from the ws-connection element
+        const connection = document.querySelector(`ws-connection[target="${this.id}"]`)
+        if(connection){
+            const sources = connection.getAttribute("sources").split(",");
+            if(sources.indexOf(sourceId) > -1){
+                sources.splice(sources.indexOf(sourceId), 1);
+                connection.setAttribute("sources", sources);
+            }
+        }
     }
 
     addTarget(id, name) {
