@@ -37,8 +37,9 @@ class WSConnection extends HTMLElement {
         }
         sources = sources.split(",");
         // for now we remove all the lines and put them back as needed
-        this.leaderLines.forEach((line) => {
+        this.leaderLines.forEach((line, index) => {
             line.remove();
+            this.leaderLines.pop(index);
         });
         sources.forEach((id) => {
             const sourceElement = document.getElementById(id);
@@ -93,10 +94,10 @@ class WSConnection extends HTMLElement {
     onWorksheetMoved(event) {
         // When the worksheet moves, we need to redraw the leaderLine
         console.log("worksheet moved in connection element");
-        const line = this.leaderLines.filter((l) => {
-            return l.start.id == event.detail.id;
-        })[0];
-        line.position().show()
+        const lines = this.leaderLines.filter((l) => {
+            return l.start.id == event.detail.id || l.end.id == event.detail.id;
+        });
+        lines.forEach((l) => {l.position().show()});
     }
 
     attributeChangedCallback(name, oldVal, newVal) {
