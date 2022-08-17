@@ -1,99 +1,182 @@
-const rightCaretIcon = `
-<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-caret-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
-   <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
-   <path d="M18 15l-6 -6l-6 6h12" transform="rotate(90 12 12)"></path>
-</svg>
+const CONTEXT_MENU_EL_NAME = "context-menu";
+const CONTEXT_ITEM_EL_NAME = "context-menu-item";
+
+const templateString = `
+<style>
+    :host {
+        display: flex;
+        flex-direction: column;
+        position: absolute;
+        border: 1px solid black;
+        background-color: white;
+        box-shadow: 1px 2px 10px rgba(50, 50, 50, 0.7);
+        z-index: 10000;
+        padding-bottom: 8px;
+        min-width: 200px;
+        font-family: 'Helvetica', sans-serif;
+    }
+
+    :host-context(li) {
+        display: none;
+        position: absolute;
+        left: 100%;
+        top: 0px;
+    }
+
+    :host-context(li):hover {
+        display: flex;
+    }
+
+    header {
+        position: relative;
+        display: flex;
+        border-bottom: 1px solid rgba(150, 150, 150, 0.5);
+        padding-right: 16px;
+        padding-left: 16px;
+        padding-top: 8px;
+        padding-bottom: 8px;
+    }
+
+    header > h4 {
+        padding: 0;
+        margin:0;
+    }
+
+    ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        font-size: 0.8rem;
+    }
+
+</style>
+<ul id="list-items">
+<slot></slot>
+</ul>
 `;
 
 class ContextMenu extends HTMLElement {
-  constructor() {
-    super();
+    constructor() {
+        super();
 
-    this.listContainer = document.createElement("ul");
-    this.listContainer.classList.add("context-menu-items");
+        // Setup template and shadow root
+        const template = document.createElement("template");
+        template.innerHTML = templateString;
+        this._shadowRoot = this.attachShadow({ mode: "open" });
+        this._shadowRoot.appendChild(template.content.cloneNode(true));
 
-    // Bound component methods
-    this.clear = this.clear.bind(this);
-    this.close = this.close.bind(this);
-    this.addMenuItem = this.addMenuItem.bind(this);
-    this.addNestedMenuItem = this.addNestedMenuItem.bind(this);
-    this.handleOtherClick = this.handleOtherClick.bind(this);
-    this.handleNestedItemMouseEnter =
-      this.handleNestedItemMouseEnter.bind(this);
-    this.handleNestedItemMouseLeave =
-      this.handleNestedItemMouseLeave.bind(this);
-  }
-
-  connectedCallback() {
-    if (this.isConnected) {
-      this.setAttribute("open", false);
-      this.append(this.listContainer);
-
-      // Event listeners
-      document.addEventListener("click", this.handleOtherClick);
-      document.addEventListener("contextmenu", this.handleOtherClick);
+        // Bound component methods
+        this.addListItem = this.addListItem.bind(this);
+        this.addSpacer = this.addSpacer.bind(this);
+        this.handleOutsideClick = this.handleOutsideClick.bind(this);
     }
-  }
 
-  disconnectedCallback() {
-    document.removeEventListener("click", this.handleOtherClick);
-    document.removeEventListener("contextmenu", this.handleOtherClick);
-  }
-
-  clear() {
-    this.listContainer.innerHTML = "";
-  }
-
-  addMenuItem(labelString, icon, callback) {
-    const itemEl = document.createElement("li");
-    const itemLabel = document.createElement("span");
-    itemEl.classList.add("context-menu-item");
-    itemLabel.classList.add("context-menu-item-label");
-    itemLabel.textContent = labelString;
-    itemEl.append(itemLabel);
-    if (icon) {
-      const iconEl = document.createElement("div");
-      iconEl.classList.add("context-menu-item-icon");
-      iconEl.innerHTML = icon;
-      itemEl.append(iconEl);
+    connectedCallback() {
+        if (this.isConnected) {
+            // Add event listeners
+            document.addEventListener("click", this.handleOutsideClick);
+        }
     }
-    itemEl.addEventListener("click", callback);
-    this.listContainer.append(itemEl);
-    return this;
-  }
 
-  addNestedMenuItem(labelString, onOpenCallback, builderCallback) {
-    const itemEl = this.addMenuItem(
-      labelString,
-      rightCaretIcon,
-      onOpenCallback
-    );
-    const submenu = document.createElement("context-menu");
-    this.append(submenu);
-    if (builderCallback) {
-      builderCallback(submenu);
+    disconnectedCallback() {
+        // Remove event listeners
+        document.removeEventListener("click", this.handleOutsideClick);
     }
-    itemEl.addEventListener("mouseenter", this.handleNestedItemMouseEnter);
-    itemEl.addEventListener("mouseleave", this.handleNestedItemMouseLeave);
-    return this;
-  }
 
-  handleOtherClick(event) {
-    this.close();
-  }
-
-  handleNestedItemMouseEnter(event) {}
-
-  handleNestedItemMouseLeave(event) {}
-
-  close() {
-    const parentElement = this.parentElement;
-    if (parentElement) {
-      this.remove();
+    addListItem(label, callback, submenu = null) {
+        const itemEl = document.createElement(CONTEXT_ITEM_EL_NAME);
+        itemEl.textContent = label;
+        itemEl.addEventListener("click", callback);
+        itemEl.addEventListener("click", this.handleOutsideClick);
+        if (submenu) {
+            submenu.classList.add("context-submenu", "submenu-hidden");
+            submenu.setAttribute("slot", "submenu");
+            itemEl.append(submenu);
+            itemEl.showCaret();
+        }
+        this.append(itemEl);
+        return this;
     }
-  }
+
+    addListItemWithSubmenu(label, callback, submenuCallback) {
+        const submenu = document.createElement(CONTEXT_MENU_EL_NAME);
+        submenuCallback(submenu);
+        return this.addListItem(label, callback, submenu);
+    }
+
+    addSpacer() {
+        const item = document.createElement("li");
+        item.classList.add("context-menu-spacer");
+        this.append(item);
+        return this;
+    }
+
+    handleOutsideClick() {
+        this.remove();
+    }
 }
 
-window.customElements.define("context-menu", ContextMenu);
+const itemTemplateString = `
+<style>
+    :host {
+        display: flex;
+        position: relative;
+    }
+    .submenu-area {
+        display: none;
+        position: absolute;
+        left: 100%;
+        top: 0px;
+    }
 
-export { ContextMenu as default, ContextMenu };
+    :host(:hover) .submenu-area {
+        display: flex;
+    }
+
+    .label-area {
+        display: flex;
+        align-items: center;
+    }
+
+    .caret.hidden {
+        display: none;
+    }
+    .caret {
+        display: block;
+        margin-left: auto;
+        font-size: 1.1em;
+    }
+</style>
+<div class="label-area">
+    <span class="label"><slot></slot></span>
+    <div class="caret hidden">→</div>
+</div>
+<div class="submenu-area">
+    <slot name="submenu"></slot>
+</div>
+`;
+
+class ContextMenuItem extends HTMLElement {
+    constructor() {
+        super();
+
+        // Setup shadow dom and template
+        this.template = document.createElement("template");
+        this.template.innerHTML = itemTemplateString;
+        this._shadowRoot = this.attachShadow({ mode: "open" });
+        this._shadowRoot.append(this.template.content.cloneNode(true));
+
+        // Bound methods
+        this.showCaret = this.showCaret.bind(this);
+    }
+
+    showCaret() {
+        const caretEl = this.shadowRoot.querySelector(".caret");
+        caretEl.classList.remove("hidden");
+    }
+}
+
+window.customElements.define(CONTEXT_MENU_EL_NAME, ContextMenu);
+window.customElements.define(CONTEXT_ITEM_EL_NAME, ContextMenuItem);
+
+export { ContextMenu as default, ContextMenu, ContextMenuItem };
