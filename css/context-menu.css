@@ -24,7 +24,7 @@ context-menu > ul {
     padding: 0;
 }
 
-.context-menu-item {
+context-menu-item {
     display: flex;
     flex-direction: row;
     width: 100%;
@@ -32,11 +32,17 @@ context-menu > ul {
     justify-content: space-between;
     padding-left: 4px;
     padding-right: 4px;
+    padding-top: 2px;
+    padding-bottom: 2px;
     background-color: var(--ctx-item-background-color);
     color: var(--ctx-item-font-color);
 }
 
-.context-menu-item:hover {
+context-menu-item + context-menu-item {
+    
+}
+
+context-menu-item:hover {
     background-color: var(--ctx-item-background-color-highlighted);
     color: var(--ctx-item-font-color-highlighted);
     cursor: pointer;

@@ -7,13 +7,9 @@ const templateString = `
         display: flex;
         flex-direction: column;
         position: absolute;
-        border: 1px solid black;
-        background-color: white;
-        box-shadow: 1px 2px 10px rgba(50, 50, 50, 0.7);
         z-index: 10000;
         padding-bottom: 8px;
         min-width: 200px;
-        font-family: 'Helvetica', sans-serif;
     }
 
     :host-context(li) {
@@ -46,7 +42,6 @@ const templateString = `
         list-style: none;
         margin: 0;
         padding: 0;
-        font-size: 0.8rem;
     }
 
 </style>
@@ -69,18 +64,23 @@ class ContextMenu extends HTMLElement {
         this.addListItem = this.addListItem.bind(this);
         this.addSpacer = this.addSpacer.bind(this);
         this.handleOutsideClick = this.handleOutsideClick.bind(this);
+        this.handleEscapeKey = this.handleEscapeKey.bind(this);
     }
 
     connectedCallback() {
         if (this.isConnected) {
             // Add event listeners
             document.addEventListener("click", this.handleOutsideClick);
+            document.addEventListener("contextmenu", this.handleOutsideClick);
+            document.addEventListener("keydown", this.handleEscapeKey);
         }
     }
 
     disconnectedCallback() {
         // Remove event listeners
         document.removeEventListener("click", this.handleOutsideClick);
+        document.removeEventListener("contextmenu", this.handleOutsideClick);
+        document.removeEventListener("keydown", this.handleEscapeKey);
     }
 
     addListItem(label, callback, submenu = null) {
@@ -114,6 +114,18 @@ class ContextMenu extends HTMLElement {
     handleOutsideClick() {
         this.remove();
     }
+
+    handleEscapeKey(event) {
+        if (event.key == "Escape") {
+            this.remove();
+        }
+    }
+
+    openAtMouseEvent(event) {
+        this.style.top = `${event.pageY}px`;
+        this.style.left = `${event.pageX}px`;
+        document.body.append(this);
+    }
 }
 
 const itemTemplateString = `
@@ -136,6 +148,7 @@ const itemTemplateString = `
     .label-area {
         display: flex;
         align-items: center;
+        width: 100%;
     }
 
     .caret.hidden {
@@ -144,7 +157,6 @@ const itemTemplateString = `
     .caret {
         display: block;
         margin-left: auto;
-        font-size: 1.1em;
     }
 </style>
 <div class="label-area">
