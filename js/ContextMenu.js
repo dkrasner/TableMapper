@@ -1,4 +1,4 @@
-const CONTEXT_MENU_EL_NAME = "context-menu";
+export const CONTEXT_MENU_EL_NAME = "context-menu";
 const CONTEXT_ITEM_EL_NAME = "context-menu-item";
 
 const templateString = `
@@ -191,4 +191,9 @@ class ContextMenuItem extends HTMLElement {
 window.customElements.define(CONTEXT_MENU_EL_NAME, ContextMenu);
 window.customElements.define(CONTEXT_ITEM_EL_NAME, ContextMenuItem);
 
-export { ContextMenu as default, ContextMenu, ContextMenuItem };
+export {
+    ContextMenu as default,
+    ContextMenu,
+    ContextMenuItem,
+    CONTEXT_ITEM_EL_NAME,
+};

@@ -13,6 +13,7 @@ import icons from "./utils/icons.js";
 import createIconSVGFromString from "./utils/helpers.js";
 import BasicInterpreter from "./interpreters.js";
 import CSVParser from "papaparse";
+import ContextMenuHandler from "./ContextMenuHandler.js";
 
 // Simple grid-based sheet component
 const templateString = `
@@ -303,6 +304,10 @@ class Worksheet extends HTMLElement {
         this.callStack = new CallStack(interpreter);
         this.callStack.onStep = this.onCallStackStep;
 
+        // Setup a ContextMenu handler for this sheet
+        this.contextMenuHandler = new ContextMenuHandler(this);
+        this.contextMenuHandler.setupListeners();
+
         // set the sources and targets to ""
         this.setAttribute("sources", "");
         this.setAttribute("targets", "");
@@ -352,6 +357,7 @@ class Worksheet extends HTMLElement {
         this.removeEventListener("dragover", this.onDragOver);
         this.removeEventListener("dragleave", this.onDragLeave);
         this.removeEventListener("drop", this.onDrop);
+        this.contextMenuHandler.removeListeners();
     }
 
     /* I add an element to the header.
@@ -601,7 +607,7 @@ class Worksheet extends HTMLElement {
     }
 
     // TODO this should really be handled by sheet
-    _getInstructions(){
+    _getInstructions() {
         const sources = this.getAttribute("sources").split(",");
         const target = this.getAttribute("targets").split(",")[0];
         const nonEmptyCoords = Object.keys(this.sheet.dataFrame.store).filter(
@@ -627,14 +633,14 @@ class Worksheet extends HTMLElement {
             const row = [];
             while (c <= maxCol) {
                 let entry = this.sheet.dataFrame.getAt([c, r]);
-                if(parseInt(c) == 0){
+                if (parseInt(c) == 0) {
                     const tmp = [];
                     const entry_list = entry.split(",");
-                    for(let i = 0; i < entry_list.length; i++){
+                    for (let i = 0; i < entry_list.length; i++) {
                         tmp.push(`${sources[i]}!${entry_list[i]}`);
                     }
-                    entry = tmp.join(',');
-                } else if(parseInt(c) == 1){
+                    entry = tmp.join(",");
+                } else if (parseInt(c) == 1) {
                     entry = `${target}!${entry}`;
                 }
                 row.push(entry);
@@ -700,17 +706,18 @@ class Worksheet extends HTMLElement {
             this.select(null, row);
             // get data on the source and target and show selected frames
             const interpreter = this.callStack.interpreter;
-            let [sources, targets, _] = this.callStack.stack[this.callStack.COUNTER];
+            let [sources, targets, _] =
+                this.callStack.stack[this.callStack.COUNTER];
             sources = interpreter.matchAndInterpretReference(sources);
             targets = interpreter.matchAndInterpretReference(targets);
             sources.forEach((entry) => {
                 const [__, sourceWSId, sourceWSSelection] = entry;
                 this.select(sourceWSId, sourceWSSelection);
-            })
+            });
             targets.forEach((entry) => {
                 const [___, targetWSId, targetWSSelection] = entry;
                 this.select(targetWSId, targetWSSelection);
-            })
+            });
             // if the tab is not found then it is out of the view and we need to shift accordingly
             /* TODO this is a big buggy and not clear we want it
             if(!tab){

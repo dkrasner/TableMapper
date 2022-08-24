@@ -8,6 +8,7 @@ context-menu {
     position: absolute;
     max-width: 450px;
     border: 1px solid var(--ctx-item-background-color-highlighted);
+    background-color: white;
 }
 
 context-menu,
