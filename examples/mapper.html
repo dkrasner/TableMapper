@@ -49,13 +49,16 @@
                     ["B3:B54,A3:A54", "E3:E3", "join(':::')"],
                 ]
             );
-            source1.addTarget(mapper.id, mapper.name);
-            source2.addTarget(mapper.id, mapper.name);
-            mapper.addSource(source1.id, source1.name);
-            mapper.addSource(source2.id, source2.name);
-            mapper.addTarget(target.id, target.name);
-            target.addSource(mapper.id, mapper.name);
-
+            addEventListener('DOMContentLoaded', (event) => {
+                const connectionMapperTarget = document.createElement("ws-connection");
+                const connectionSourcesMapper = document.createElement("ws-connection");
+                document.body.append(connectionMapperTarget);
+                document.body.append(connectionSourcesMapper);
+                connectionMapperTarget.setAttribute("target", target.id);
+                connectionMapperTarget.setAttribute("sources", [mapper.id]);
+                connectionSourcesMapper.setAttribute("target", mapper.id);
+                connectionSourcesMapper.setAttribute("sources", [source1.id, source2.id]);
+            });
         </script>
     </head>
     <body>

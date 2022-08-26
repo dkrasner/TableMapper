@@ -26,10 +26,18 @@ class WSConnection extends HTMLElement {
 
     disconnectedCallback() {
         this.updateLinkedSheet(this.getAttribute("sources"), "");
-        this.updateLinkedSheet(this.getAttribute("target"));
+        this.updateLinkedSheet(this.getAttribute("target"), "");
     }
 
     updateLeaderLine() {
+        this.leaderLines.forEach((line, index) => {
+            // when we remove the lines tell the corresponding worksheets to
+            // remove the link icons
+            line.start.removeTarget(line.end.id);
+            line.end.removeSource(line.start.id);
+            line.remove();
+            this.leaderLines.pop(index);
+        });
         // update the leader line for each source
         let sources = this.getAttribute("sources");
         if(!sources){
@@ -37,10 +45,6 @@ class WSConnection extends HTMLElement {
         }
         sources = sources.split(",");
         // for now we remove all the lines and put them back as needed
-        this.leaderLines.forEach((line, index) => {
-            line.remove();
-            this.leaderLines.pop(index);
-        });
         sources.forEach((id) => {
             const sourceElement = document.getElementById(id);
             const destElement = document.getElementById(this.getAttribute("target"));
@@ -48,6 +52,10 @@ class WSConnection extends HTMLElement {
                 console.log("Creating new leader-line between:");
                 console.log(sourceElement, destElement);
                 this.leaderLines.push(new LeaderLine(sourceElement, destElement));
+                console.log(`Telling ${sourceElement.id} to add target`);
+                sourceElement.addTarget(destElement.id, destElement.name);
+                console.log(`Telling ${destElement.id} to add source`);
+                destElement.addSource(sourceElement.id, sourceElement.name);
             }
         })
     }
@@ -103,11 +111,6 @@ class WSConnection extends HTMLElement {
     attributeChangedCallback(name, oldVal, newVal) {
         if (name === "sources" || name === "target") {
             this.updateLeaderLine();
-        }
-        if (name === "sources") {
-            this.updateLinkedSheet(oldVal, newVal);
-        }
-        if (name === "target") {
             this.updateLinkedSheet(oldVal, newVal);
         }
     }
