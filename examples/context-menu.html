@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Context Menu Example</title>
+        <script src="../js/ContextMenu.js" type="module"></script>
+        <link rel="stylesheet" type="text/css" href="../css/core.css" />
+        <link rel="stylesheet" type="text/css" href="../css/context-menu.css" />
+    </head>
+    <body>
+        <h3>Right-click anywhere on the screen to reveal the context menu.</h3>
+        <div id="outer1" class="example-container">
+            <div id="inner1" class="example-container">
+                <div id="inner2" class="example-container"></div>
+                <div id="inner3" class="example-container"></div>
+            </div>
+        </div>
+        <style>
+            @keyframes myAnimation {
+                0% {
+                    transform: scale(1);
+                }
+                50% {
+                    transform: scale(3);
+                }
+                100% {
+                    transofmr: scale(1);
+                }
+            }
+            #outer1 {
+                display: block;
+                transform: translateX(20vw);
+                width: 100px;
+                height: 120px;
+                background-color: green;
+                padding: 10px;
+            }
+            #inner1 {
+                display: block;
+                width: 80px;
+                height: 80px;
+                background-color: orange;
+            }
+            #inner2,
+            #inner3 {
+                display: block;
+                width: 30px;
+                height: 30px;
+                background-color: blue;
+            }
+            #inner3 {
+                background-color: red;
+            }
+            .animate {
+                animation: myAnimation 0.2s ease-in;
+            }
+        </style>
+        <script>
+            document.addEventListener("DOMContentLoaded", () => {
+                const examples = Array.from(
+                    document.querySelectorAll(".example-container")
+                );
+                examples.forEach((element) => {
+                    element.addEventListener("contextmenu", (event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        const menu = document.createElement("context-menu");
+                        examples
+                            .map((containerEl) => {
+                                return containerEl.id;
+                            })
+                            .filter((id) => {
+                                return id && id !== "" && id !== element.id;
+                            })
+                            .forEach((id) => {
+                                menu.addListItem(id, (e) => {
+                                    const el = document.getElementById(id);
+                                    examples.forEach((element) =>
+                                        element.classList.remove("animate")
+                                    );
+                                    el.classList.remove("animate");
+                                    el.classList.add("animate");
+                                });
+                            });
+                        menu.openAtMouseEvent(event);
+                    });
+                });
+            });
+            document.addEventListener("contextmenu", (event) => {
+                event.preventDefault();
+                const menu = document.createElement("context-menu");
+
+                menu.addListItem("First Item", (e) => {
+                    alert("First Item!");
+                })
+                    .addListItem("Second Item", (e) => {
+                        alert("Second Item!");
+                    })
+                    .addListItemWithSubmenu(
+                        "Third Item",
+                        (e) => {
+                            alert("Third Item -- submenu");
+                        },
+                        (submenu) => {
+                            submenu
+                                .addListItem("First Item", (e) => {
+                                    alert("First Submenu Item!");
+                                })
+                                .addListItem("Second Item", (e) => {
+                                    alert("Second Submenu Item!");
+                                });
+                        }
+                    )
+                    .addListItem("Fourth Item", (e) => {
+                        alert("Fourth Item!");
+                    });
+                menu.style.top = `${event.pageY}px`;
+                menu.style.left = `${event.pageX}px`;
+                document.body.append(menu);
+            });
+        </script>
+    </body>
+</html>
