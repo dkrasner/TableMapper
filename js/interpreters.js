@@ -5,8 +5,10 @@ import {commandGrammar} from './ohm/command.js';
 import {commandSemantics} from './ohm/command.js';
 
 class BasicInterpreter extends Object {
-    constructor(){
+    constructor(command_registry=commandRegistry){
         super();
+
+        this.command_registry = command_registry;
 
         this.interpret = this.interpret.bind(this);
         this.matchAndInterpretCommand = this.matchAndInterpretCommand.bind(this);
@@ -22,7 +24,7 @@ class BasicInterpreter extends Object {
         source = this.matchAndInterpretReference(source);
         target = this.matchAndInterpretReference(target)[0].slice(1);
         return function(){
-            const exec = commandRegistry[name];
+            const exec = this.command_registry[name];
             return exec(source, target, args);
         };
     }
