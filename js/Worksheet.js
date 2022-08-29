@@ -286,6 +286,7 @@ class Worksheet extends HTMLElement {
         this.onDelete = this.onDelete.bind(this);
         this.onRun = this.onRun.bind(this);
         this.onStep = this.onStep.bind(this);
+        this.onRecordToggle = this.onRecordToggle.bind(this);
         this.onExternalLinkDragStart = this.onExternalLinkDragStart.bind(this);
         this.onDragOver = this.onDragOver.bind(this);
         this.onDragLeave = this.onDragLeave.bind(this);
@@ -449,6 +450,18 @@ class Worksheet extends HTMLElement {
         return button;
     }
 
+    recordButton() {
+        // TODO add proper icon
+        const svg = createIconSVGFromString(icons.walk);
+        const button = document.createElement("span");
+        svg.style.stroke = "green"; // TODO set to palette color
+        button.appendChild(svg);
+        button.addEventListener("click", this.onRecordToggle);
+        button.setAttribute("title", "start recording");
+        button.setAttribute("data-clickable", true);
+        return button;
+    }
+
     linkButton() {
         const svg = createIconSVGFromString(icons.link);
         const button = document.createElement("span");
@@ -570,6 +583,10 @@ class Worksheet extends HTMLElement {
 
     onErase() {
         this.sheet.dataFrame.clear();
+    }
+
+    onRecordToggle(){
+        this.toggleAttribute("recording");
     }
 
     onUpload(event) {
@@ -773,6 +790,8 @@ class Worksheet extends HTMLElement {
             template.innerHTML = iconString;
             const iconSVG = template.content.childNodes[0];
             overlay.replaceChildren(iconSVG);
+        } else if(event.dataTransfer.getData("selection-drag")){
+            console.log("dragging selection");
         }
     }
 
@@ -805,9 +824,13 @@ class Worksheet extends HTMLElement {
                 document.body.append(connection);
                 connection.setAttribute("target", this.id);
                 connection.setAttribute("sources", [sourceId]);
+                // add a record butto: TODO update to better icon
+                this.addToHeader(this.recordButton(), "right");
             }
 
-        } else if (event.dataTransfer.files) {
+        } else if(event.dataTransfer.getData("selection-drag")){
+            console.log("dropping selection")
+        } else if(event.dataTransfer.files) {
             // set the event.target.files to the dataTransfer.files
             // since that is what this.onUpload() expects
             event.target.files = event.dataTransfer.files;
