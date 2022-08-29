@@ -1,0 +1,50 @@
+context-menu {
+    /* Variables */
+    --ctx-item-font-color: var(--palette-black);
+    --ctx-item-font-color-highlighted: var(--palette-white);
+    --ctx-item-background-color: var(--palette-white);
+    --ctx-item-background-color-highlighted: var(--palette-black);
+    display: block;
+    position: absolute;
+    max-width: 450px;
+    border: 1px solid var(--ctx-item-background-color-highlighted);
+    background-color: white;
+}
+
+context-menu,
+context-menu * {
+    box-sizing: border-box;
+}
+
+context-menu > ul {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    position: relative;
+    margin: 0;
+    padding: 0;
+}
+
+context-menu-item {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    padding-left: 4px;
+    padding-right: 4px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    background-color: var(--ctx-item-background-color);
+    color: var(--ctx-item-font-color);
+}
+
+context-menu-item + context-menu-item {
+    
+}
+
+context-menu-item:hover {
+    background-color: var(--ctx-item-background-color-highlighted);
+    color: var(--ctx-item-font-color-highlighted);
+    cursor: pointer;
+}
