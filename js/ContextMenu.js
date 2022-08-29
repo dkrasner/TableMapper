@@ -74,6 +74,13 @@ class ContextMenu extends HTMLElement {
             document.addEventListener("contextmenu", this.handleOutsideClick);
             document.addEventListener("keydown", this.handleEscapeKey);
         }
+
+        // Remove any existing context menus in the document
+        Array.from(document.querySelectorAll(CONTEXT_MENU_EL_NAME))
+            .filter((element) => {
+                return element !== this;
+            })
+            .forEach((element) => element.remove());
     }
 
     disconnectedCallback() {
