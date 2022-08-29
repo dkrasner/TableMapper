@@ -11,7 +11,7 @@ import Worksheet from '../js/Worksheet.js';
 import '../ap-sheet/src/GridSheet.js';
 
 
-describe("Interpreter Tests", () => {
+describe.skip("Interpreter Tests", () => {
     let sourceWS;
     let anotherSourceWS;
     let targetWS;

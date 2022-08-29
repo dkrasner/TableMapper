@@ -308,10 +308,6 @@ class Worksheet extends HTMLElement {
         this.contextMenuHandler = new ContextMenuHandler(this);
         this.contextMenuHandler.setupListeners();
 
-        // set the sources and targets to ""
-        this.setAttribute("sources", "");
-        this.setAttribute("targets", "");
-
         this.addToHeader(this.trashButton(), "left");
         this.addToHeader(this.uploadButton(), "left");
         this.addToHeader(this.downloadButton(), "left");
@@ -504,6 +500,7 @@ class Worksheet extends HTMLElement {
         let moveEvent = new CustomEvent("worksheet-moved", {
             bubbles: true,
             detail: {
+                id: this.id,
                 movementX: event.movementX,
                 movementY: event.movementY,
             },
@@ -576,8 +573,8 @@ class Worksheet extends HTMLElement {
     }
 
     onUpload(event) {
-        let file = event.target.files[0];
-        let reader = new FileReader();
+        const file = event.target.files[0];
+        const reader = new FileReader();
         reader.addEventListener("load", (loadEv) => {
             this.fromCSV(loadEv.target.result);
         });
@@ -593,12 +590,12 @@ class Worksheet extends HTMLElement {
         this.updateName(file.name);
     }
 
-    onDownload(event) {
-        let csv = this.toCSV();
-        let anchor = document.createElement("a");
+    onDownload() {
+        const csv = this.toCSV();
+        const anchor = document.createElement("a");
         anchor.style.display = "none";
-        let blob = new Blob([csv], { type: "text/csv" });
-        let url = window.URL.createObjectURL(blob);
+        const blob = new Blob([csv], { type: "text/csv" });
+        const url = window.URL.createObjectURL(blob);
         anchor.href = url;
         anchor.download = `${this.name}.csv`;
         document.body.append(anchor);
@@ -606,10 +603,18 @@ class Worksheet extends HTMLElement {
         window.URL.revokeObjectURL(url);
     }
 
-    // TODO this should really be handled by sheet
-    _getInstructions() {
-        const sources = this.getAttribute("sources").split(",");
-        const target = this.getAttribute("targets").split(",")[0];
+    _getInstructions(){
+        // TODO! this is a temp solution since the callstack editor worksheet
+        // will become something else in the future
+        const targetConnection = [...document.querySelectorAll("ws-connection")].filter(
+            (ws) => {
+                return ws.getAttribute("sources").split(",").indexOf(this.id) > -1;
+            }
+        )[0];
+        const sourcesConnection = document.querySelector(`ws-connection[target="${this.id}"]`)
+        const sources = sourcesConnection.getAttribute("sources").split(",");
+        const target = targetConnection.getAttribute("target");
+
         const nonEmptyCoords = Object.keys(this.sheet.dataFrame.store).filter(
             (k) => {
                 return this.sheet.dataFrame.getAt(k.split(","));
@@ -654,27 +659,11 @@ class Worksheet extends HTMLElement {
     }
 
     onRun() {
-        if (!this.getAttribute("sources") || !this.getAttribute("targets")) {
-            alert("You must have both sources and targets set to run!");
-            return;
-        }
-        // TODO we want to allow multiple sources and targets
         this.callStack.load(this._getInstructions());
         this.callStack.run();
-        /*
-        this.callStack.runAll(
-            this.getAttribute("sources").split(","),
-            this.getAttribute("targets").split(",")
-        );
-        */
     }
 
     onStep() {
-        if (!this.getAttribute("sources") || !this.getAttribute("targets")) {
-            alert("You must have both sources and targets set to run!");
-            return;
-        }
-        // TODO we want to allow multiple sources and targets
         this.callStack.load(this._getInstructions(), false); // do not reset the counter
         try {
             this.callStack.step();
@@ -686,12 +675,6 @@ class Worksheet extends HTMLElement {
                 this.hideSelection();
             } else throw e;
         }
-        /*
-        this.callStack.runAll(
-            this.getAttribute("sources").split(","),
-            this.getAttribute("targets").split(",")
-        );
-        */
     }
 
     onCallStackStep() {
@@ -808,13 +791,22 @@ class Worksheet extends HTMLElement {
         if (event.dataTransfer.getData("worksheet-link")) {
             // add the source
             const sourceId = event.dataTransfer.getData("id");
-            const sourceName = event.dataTransfer.getData("name");
-            this.addSource(sourceId, sourceName);
-            // now tell the source to add me as a target
-            // TODO: maybe all of this source/target adding/removing should
-            // handled with custom events...?
-            const sourceSheet = document.getElementById(sourceId);
-            sourceSheet.addTarget(this.id, this.name);
+            // now create a new WSConnection element if it doesn't exist
+            // if it does exist for this target then add the source to it
+            let connection = document.querySelector(`ws-connection[target="${this.id}"]`)
+            if(connection){
+                const sources = connection.getAttribute("sources").split(",");
+                if(sources.indexOf(sourceId) == -1){
+                    sources.push(sourceId);
+                    connection.setAttribute("sources", sources);
+                }
+            } else {
+                connection = document.createElement("ws-connection");
+                document.body.append(connection);
+                connection.setAttribute("target", this.id);
+                connection.setAttribute("sources", [sourceId]);
+            }
+
         } else if (event.dataTransfer.files) {
             // set the event.target.files to the dataTransfer.files
             // since that is what this.onUpload() expects
@@ -823,85 +815,57 @@ class Worksheet extends HTMLElement {
         }
     }
 
-    addSource(id, name) {
-        const sources = this._attributeToList("sources");
-        if (sources.indexOf(id) != -1) {
-            alert(`${id} already added`);
-            return;
+    addSource(id) {
+        if(!this.shadowRoot.querySelector(`#footer-left > [data-source-id='${id}']`)){
+            // add an icon with data about the source to the footer
+            const sourceSpan = this._createSourceTargetIconSpan("source", id, this.id);
+            this.addToFooter(sourceSpan, "left");
+            return id;
         }
-        sources.push(id);
-        this.setAttribute("sources", sources);
-        // add an icon with data about the source to the footer
-        const sourceSpan = this._createSourceTargetIconSpan("source", id, name);
-        this.addToFooter(sourceSpan, "left");
-        return id;
     }
 
     removeSource(id) {
-        let sources = this._attributeToList("sources");
-        sources = sources.filter((item) => {
-            return item != id;
-        });
-        this.setAttribute("sources", sources);
         // remove the source link
-        const footer = this.shadowRoot.querySelector("#footer-bar");
-        const linkContainer = footer.querySelector("#footer-left");
-        linkContainer.querySelectorAll(`[data-id='${id}']`).forEach((item) => {
+        this.shadowRoot.querySelectorAll(`#footer-left > [data-source-id='${id}']`).forEach((item) => {
             item.remove();
         });
+        // make sure no outline styles linger
+        this.style.outline = "initial";
     }
 
-    addTarget(id, name) {
-        const targets = this._attributeToList("targets");
-        if (targets.indexOf(id) != -1) {
-            alert(`${id} already added`);
-            return;
+    addTarget(id) {
+        if(!this.shadowRoot.querySelector(`#footer-right > [data-target-id='${id}']`)){
+            // add an icon with data about the target to the footer
+            const targetSpan = this._createSourceTargetIconSpan("target", this.id, id);
+            this.addToFooter(targetSpan, "right", true);
+            return id;
         }
-        targets.push(id);
-        this.setAttribute("targets", targets);
-        // add an icon with data about the target to the footer
-        const targetSpan = this._createSourceTargetIconSpan("target", id, name);
-        this.addToFooter(targetSpan, "right", true);
-        return id;
     }
 
     removeTarget(id) {
-        let targets = this._attributeToList("targets");
-        targets = targets.filter((item) => {
-            return item != id;
-        });
-        this.setAttribute("targets", targets);
         // remove the target link
-        const footer = this.shadowRoot.querySelector("#footer-bar");
-        const linkContainer = footer.querySelector("#footer-right");
-        linkContainer.querySelectorAll(`[data-id='${id}']`).forEach((item) => {
+        this.shadowRoot.querySelectorAll(`#footer-right > [data-target-id='${id}']`).forEach((item) => {
             item.remove();
         });
+        // make sure no outline styles linger
+        this.style.outline = "initial";
     }
 
     removeLink(event) {
         event.stopPropagation();
         event.preventDefault();
-        // remove the link and
-        // tell the corresponding target worksheets to remove the link
-        // TODO: maybe this should all be handled with custom events
-        const id = event.target.getAttribute("data-id");
-        const worksheet = document.getElementById(id);
-        // NOTE: it's possible that the worksheet is null (for example it was
-        // deleted earlier). In this case we should ignore, although TODO this should
-        // all be better handled in a uniform model
+        const sourceId = event.target.getAttribute("data-source-id");
+        const targetId = event.target.getAttribute("data-target-id");
+        const connection = this._getConnection(sourceId, targetId);
+        const sources = connection.getAttribute("sources").split(",");
+        if(sources.indexOf(sourceId) > -1){
+            sources.splice(sources.indexOf(sourceId), 1);
+            connection.setAttribute("sources", sources);
+        }
         if (event.target.getAttribute("data-type") == "source") {
-            this.removeSource(id);
-            if (worksheet) {
-                worksheet.removeTarget(this.id);
-                worksheet.style.outline = "initial";
-            }
+            this.removeSource(sourceId);
         } else {
-            this.removeTarget(id);
-            if (worksheet) {
-                worksheet.removeSource(this.id);
-                worksheet.style.outline = "initial";
-            }
+            this.removeTarget(targetId);
         }
     }
 
@@ -919,31 +883,52 @@ class Worksheet extends HTMLElement {
     }
 
     /**
+      * I find the connection which corresponds to both the source and target
+      * provided. The assumption is that each sheet can be the source, or target,
+      * of multiple sheets. However, there can be **only one** connection between
+      * two sheets.
+      **/
+    _getConnection(sourceId, targetId){
+        const l = [...document.querySelectorAll(`ws-connection[target="${targetId}"]`)].filter(
+            (ws) => {
+                return ws.getAttribute("sources").split(",").indexOf(sourceId) > -1;
+            });
+        if(l.length == 1){
+            return l[0];
+        } else if(l.length > 1) {
+            throw `Multiple connections found between source ${sourceId} and target ${targetId}`; 
+        }
+    }
+
+    /**
      * Create a DOM element from an SVG string
      * for both the source/target icon as well as the
      * unlink icon. Adds event listeners for mousenter and
      * mouseleave.
      */
-    _createSourceTargetIconSpan(type, id, name) {
+    _createSourceTargetIconSpan(type, sourceId, targetId) {
         // make a reference to the source/target sheet
         // to update css on hover
-        const sheet = document.getElementById(id);
         let iconString;
+        let sheet;
         if (type == "source") {
             iconString = icons.sheetImport;
+            sheet = document.getElementById(sourceId);
         } else {
             iconString = icons.sheetExport;
+            sheet = document.getElementById(targetId);
         }
         const icon = createIconSVGFromString(iconString);
         const iconSpan = document.createElement("span");
         iconSpan.appendChild(icon);
         iconSpan.setAttribute("data-type", type);
-        iconSpan.setAttribute("data-id", id);
-        iconSpan.setAttribute("title", `${type}: ${name} (${id})`);
+        iconSpan.setAttribute("data-source-id", sourceId);
+        iconSpan.setAttribute("data-target-id", targetId);
         // overlay the unlink icon
         const unlinkIcon = createIconSVGFromString(icons.unlink);
         unlinkIcon.setAttribute("data-type", type);
-        unlinkIcon.setAttribute("data-id", id);
+        unlinkIcon.setAttribute("data-source-id", sourceId);
+        unlinkIcon.setAttribute("data-target-id", targetId);
         unlinkIcon.style.display = "none";
         iconSpan.addEventListener("click", this.removeLink);
         iconSpan.appendChild(unlinkIcon);
@@ -951,6 +936,7 @@ class Worksheet extends HTMLElement {
             unlinkIcon.style.display = "inherit";
             icon.style.display = "none";
             sheet.style.outline = "solid var(--palette-blue)";
+            iconSpan.setAttribute("title", `${type}: ${sheet.name} (${sheet.id})`);
         });
         iconSpan.addEventListener("mouseleave", () => {
             unlinkIcon.style.display = "none";
