@@ -1,9 +1,9 @@
 context-menu {
     /* Variables */
-    --ctx-item-font-color: black;
-    --ctx-item-font-color-highlighted: white;
-    --ctx-item-background-color: white;
-    --ctx-item-background-color-highlighted: black;
+    --ctx-item-font-color: var(--palette-black);
+    --ctx-item-font-color-highlighted: var(--palette-white);
+    --ctx-item-background-color: var(--palette-white);
+    --ctx-item-background-color-highlighted: var(--palette-black);
     display: block;
     position: absolute;
     max-width: 450px;

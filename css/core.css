@@ -4,6 +4,8 @@
     --palette-lightblue: #B4DFE5;
     --palette-cyan: #D2FDFF;
     --palette-orange: #F4976C;
+    --palette-black: black;
+    --palette-white: white;
 }
 
 #main {
