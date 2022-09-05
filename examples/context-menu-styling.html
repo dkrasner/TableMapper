@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Context Menu Styling</title>
+        <script src="../js/ContextMenu.js" type="module"></script>
+        <link rel="stylesheet" type="text/css" href="../css/core.css" />
+        <link rel="stylesheet" type="text/css" href="../css/context-menu.css" />
+    </head>
+    <body>
+       <section id="static-example">
+            <context-menu>
+                <context-menu-item>First Item</context-menu-item>
+                <context-menu-item>Second Item</context-menu-item>
+                <context-menu-item>Third Item</context-menu-item>
+                <hr></hr>
+                <context-menu-item>
+                    Fourth Item
+                    <context-menu slot="submenu" class="context-submenu submenu-hidden">
+                        <context-menu-item>First Submenu Item</context-menu-item>
+                        <context-menu-item>Second Submenu Item</context-menu-item>
+                        <context-menu-item>Third Submenu Item</context-menu-item>
+                    </context-menu>
+                </context-menu-item>
+                <hr></hr>
+                <context-menu-item>Fifth Item</context-menu-item>
+                <context-menu-item>Sixth Item</context-menu-item>
+            </context-menu>
+       </section>
+       <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Remove the active mouse listeners from the context menu
+            // so that it stays on the screen
+            document.querySelector('context-menu').disconnectedCallback();
+        });
+       </script>
+    </body>
+</html>

@@ -48,3 +48,9 @@ context-menu-item:hover {
     color: var(--ctx-item-font-color-highlighted);
     cursor: pointer;
 }
+
+context-menu hr {
+    height: 1px;
+    width: 100%;
+    background-color: black;
+}
