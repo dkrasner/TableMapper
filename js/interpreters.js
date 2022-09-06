@@ -24,7 +24,7 @@ class BasicInterpreter extends Object {
         source = this.matchAndInterpretReference(source);
         target = this.matchAndInterpretReference(target)[0].slice(1);
         return function(){
-            const exec = this.command_registry[name];
+            const exec = this.command_registry[name].command;
             return exec(source, target, args);
         };
     }
@@ -117,9 +117,9 @@ const replace = (sources, target, d) => {
 }
 
 const commandRegistry = {
-    "copy": copy,
-    "replace": replace,
-    "join": join
+    "copy": {command: copy, description: "Copy the contents\n(This command takes no arguments)", args: false},
+    "replace": {command: replace, description: "Replace content with new", args: true},
+    "join": {command: join, description: "Join multiple sources using provided string", args: true}
 }
 
 

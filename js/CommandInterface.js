@@ -13,9 +13,13 @@ const templateString = `
         position: absolute;
         z-index: 10000;
         background-color: var(--palette-lightblue);
-        border: solid var(--palette-orange);
+        border: solid var(--palette-orange) 1.5px;
         left: 50%;
         top: 30%;
+    }
+
+    div.wrapper {
+        margin: 8px;
     }
 
     #header {
@@ -31,6 +35,8 @@ const templateString = `
 
     textarea {
         outline: none;
+        margin-bottom: 4px;
+        margin-top: 4px;
     }
 
     textarea:focus {
@@ -64,6 +70,7 @@ const templateString = `
 class CommandInterface extends HTMLElement {
     constructor() {
         super();
+        this.interpreter = null;
 
         // Setup template and shadow root
         const template = document.createElement("template");
@@ -75,29 +82,32 @@ class CommandInterface extends HTMLElement {
         this.onMouseDownInHeaderFooter = this.onMouseDownInHeaderFooter.bind(this);
         this.onMouseMove = this.onMouseMove.bind(this);
         this.onMouseUpAfterDrag = this.onMouseUpAfterDrag.bind(this);
+        this.onComamndSelection = this.onComamndSelection.bind(this);
     }
 
     connectedCallback() {
         if (this.isConnected) {
             const header = this.shadowRoot.querySelector("#header");
             const footer = this.shadowRoot.querySelector("#footer");
-            header.addEventListener("mousedown", (event) => {
-                this.onMouseDownInHeaderFooter(event);
-            });
-            footer.addEventListener("mousedown", (event) => {
-                this.onMouseDownInHeaderFooter(event);
-            });
-            // TODO: this might need to be set by WSConnection
-            const interpreter = new BasicInterpreter();
-            const command_registry = interpreter.command_registry;
-            // add the options to the dropdown
+            const editor = this.shadowRoot.querySelector("#editor");
             const selection = header.querySelector("#available-commands");
+            // event listeners
+            header.addEventListener("mousedown", this.onMouseDownInHeaderFooter);
+            footer.addEventListener("mousedown", this.onMouseDownInHeaderFooter);
+            selection.addEventListener("change", this.onComamndSelection);
+            // TODO: this might need to be set by WSConnection
+            this.interpreter = new BasicInterpreter();
+            const command_registry = this.interpreter.command_registry;
+            // add the options to the dropdown
             Object.keys(command_registry).forEach((name) => {
                 const option = document.createElement("option");
                 option.innerText = name;
                 option.setAttribute("value", name);
                 if(name == "copy"){
                     option.toggleAttribute("selected");
+                    // copy takes no args
+                    editor.toggleAttribute("disabled");
+                    editor.setAttribute("Placeholder", command_registry[name].description)
                 }
                 selection.appendChild(option);
             });
@@ -105,8 +115,24 @@ class CommandInterface extends HTMLElement {
     }
 
     disconnectedCallback() {
+        header.removeEventListener("mousedown", this.onMouseDownInHeaderFooter);
+        footer.removeEventListener("mousedown", this.onMouseDownInHeaderFooter);
+        selection.removeEventListener("change", this.onComamndSelection);
     }
 
+
+    onComamndSelection(event){
+        const name = event.target.value;
+        const editor = this.shadowRoot.querySelector("#editor");
+        const command_info = this.interpreter.command_registry[name];
+        editor.value = "";
+        if(command_info.args){
+            editor.removeAttribute("disabled");
+        } else {
+            editor.setAttribute("disabled", true);
+        }
+        editor.setAttribute("Placeholder", this.interpreter.command_registry[name].description)
+    }
 
     onMouseDownInHeaderFooter(event) {
         // drag event propagation can be touchy so make sure we are not clicking or dragging

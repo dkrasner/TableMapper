@@ -451,8 +451,7 @@ class Worksheet extends HTMLElement {
     }
 
     recordButton() {
-        // TODO add proper icon
-        const svg = createIconSVGFromString(icons.walk);
+        const svg = createIconSVGFromString(icons.record);
         const button = document.createElement("span");
         svg.style.stroke = "green"; // TODO set to palette color
         button.appendChild(svg);
