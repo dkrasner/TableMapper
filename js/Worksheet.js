@@ -296,6 +296,7 @@ class Worksheet extends HTMLElement {
         this.onDragOver = this.onDragOver.bind(this);
         this.onDragLeave = this.onDragLeave.bind(this);
         this.onDrop = this.onDrop.bind(this);
+        this._removeDragoverStyling = this._removeDragoverStyling.bind(this);
         this.onCallStackStep = this.onCallStackStep.bind(this);
 
         // Bound serialization methods
@@ -818,12 +819,17 @@ class Worksheet extends HTMLElement {
             const iconSVG = template.content.childNodes[0];
             overlay.replaceChildren(iconSVG);
         } else if(event.dataTransfer.getData("selection-drag")){
+            // make sure we are in record mode
+            // TODO: should we make sure there is a corresponding connection?
             // make sure we are dragging over a cell
             const target = event.originalTarget;
-            console.log(target.nodeName);
-            if(target.nodeName == "SHEET-CELL"){
+            // we need to define the recording bool here otherwise event can
+            // loose reference to target inside a condition - wtf?!
+            const recording = event.target.hasAttribute("recording");
+            if(target.nodeName == "SHEET-CELL" && recording){
                 target.classList.add("dragover");
                 target.addEventListener("dragleave", this._removeDragoverStyling); 
+                target.addEventListener("drop", this._removeDragoverStyling); 
             }
         }
     }
@@ -832,6 +838,7 @@ class Worksheet extends HTMLElement {
         console.log("removing");
         event.target.classList.remove("dragover");
         event.target.removeEventListener("dragleave", this._removeDragoverStyling);
+        event.target.removeEventListener("drop", this._removeDragoverStyling);
     }
 
     onDragLeave(event) {
@@ -870,11 +877,20 @@ class Worksheet extends HTMLElement {
             }
 
         } else if(event.dataTransfer.getData("selection-drag")){
-            console.log("dropping selection")
-            console.log(event.target)
-            console.log(event.originalTarget)
-            console.log(JSON.parse(event.dataTransfer.getData("text/json")))
-            console.log(event.dataTransfer.getData("id"));
+            // make sure we are in record mode
+            // TODO: should we make sure there is a corresponding connection?
+            // make sure we are dragging over a cell
+            const target = event.originalTarget;
+            // we need to define the recording bool here otherwise event can
+            // loose reference to target inside a condition - wtf?!
+            const recording = event.target.hasAttribute("recording");
+            if(target.nodeName == "SHEET-CELL" && recording){
+                console.log("dropping selection")
+                console.log(event.target)
+                console.log(event.originalTarget)
+                console.log(JSON.parse(event.dataTransfer.getData("text/json")))
+                console.log(event.dataTransfer.getData("id"));
+            }
         } else if(event.dataTransfer.files) {
             // set the event.target.files to the dataTransfer.files
             // since that is what this.onUpload() expects
