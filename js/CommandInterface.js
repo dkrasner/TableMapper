@@ -4,6 +4,8 @@
  * Custom Element allowing for the selection and configuraiton of commands
  */
 import BasicInterpreter from "./interpreters.js";
+import icons from "./utils/icons.js";
+import createIconSVGFromString from "./utils/helpers.js";
 
 const templateString = `
 <style>
@@ -29,7 +31,7 @@ const templateString = `
         font-size: 20px;
         font-weight: bold;
         display: flex;
-        justify-content: flex-start;
+        justify-content: space-between;
         align-items: center;
     }
 
@@ -53,11 +55,26 @@ const templateString = `
         justify-content: flex-end;
         align-items: center;
     }
+
+    #save {
+        margin-left: 2px;
+    }
+
+    svg {
+        width: 20px;
+        height: 20px;
+        pointer-events: none;
+    }
+
+    #close {
+        display: flex
+    }
 </style>
 <div class="wrapper">
     <div id="header">
         <select name="commands" id="available-commands">
         </select>
+
     </div>
     <textarea id="editor" rows="5" cols="33"></textarea>
     <div id="footer">
@@ -83,6 +100,7 @@ class CommandInterface extends HTMLElement {
         this.onMouseMove = this.onMouseMove.bind(this);
         this.onMouseUpAfterDrag = this.onMouseUpAfterDrag.bind(this);
         this.onComamndSelection = this.onComamndSelection.bind(this);
+        this.onClose = this.onClose.bind(this);
     }
 
     connectedCallback() {
@@ -111,10 +129,20 @@ class CommandInterface extends HTMLElement {
                 }
                 selection.appendChild(option);
             });
+            // add a close button
+            const svg = createIconSVGFromString(icons.circleX);
+            const button = document.createElement("span");
+            button.id = "close";
+            button.appendChild(svg);
+            button.addEventListener("click", this.onClose);
+            header.appendChild(button);
         }
     }
 
     disconnectedCallback() {
+        const header = this.shadowRoot.querySelector("#header");
+        const footer = this.shadowRoot.querySelector("#footer");
+        const selection = header.querySelector("#available-commands");
         header.removeEventListener("mousedown", this.onMouseDownInHeaderFooter);
         footer.removeEventListener("mousedown", this.onMouseDownInHeaderFooter);
         selection.removeEventListener("change", this.onComamndSelection);
@@ -132,6 +160,10 @@ class CommandInterface extends HTMLElement {
             editor.setAttribute("disabled", true);
         }
         editor.setAttribute("Placeholder", this.interpreter.command_registry[name].description)
+    }
+
+    onClose(){
+        this.remove();
     }
 
     onMouseDownInHeaderFooter(event) {

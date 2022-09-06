@@ -216,6 +216,9 @@ my-grid {
     border-right: 2px solid red;
 }
 
+.dragover {
+    border: solid var(--palette-beige);
+}
 </style>
 <div id="header-bar">
     <span id="header-left">
@@ -288,6 +291,8 @@ class Worksheet extends HTMLElement {
         this.onStep = this.onStep.bind(this);
         this.onRecordToggle = this.onRecordToggle.bind(this);
         this.onExternalLinkDragStart = this.onExternalLinkDragStart.bind(this);
+        this.onDragStart = this.onDragStart.bind(this);
+        this.onDragEnd = this.onDragEnd.bind(this);
         this.onDragOver = this.onDragOver.bind(this);
         this.onDragLeave = this.onDragLeave.bind(this);
         this.onDrop = this.onDrop.bind(this);
@@ -313,8 +318,6 @@ class Worksheet extends HTMLElement {
         this.addToHeader(this.uploadButton(), "left");
         this.addToHeader(this.downloadButton(), "left");
         this.addToHeader(this.eraseButton(), "right");
-        this.addToHeader(this.stepButton(), "right");
-        this.addToHeader(this.runButton(), "right");
         this.addToFooter(this.linkButton(), "right");
         const header = this.shadowRoot.querySelector("#header-bar");
         const footer = this.shadowRoot.querySelector("#footer-bar");
@@ -333,6 +336,8 @@ class Worksheet extends HTMLElement {
             this.onMouseDownInHeaderFooter(event);
         });
         name.addEventListener("dblclick", this.onNameDblClick);
+        this.addEventListener("dragstart", this.onDragStart); 
+        this.addEventListener("dragend", this.onDragEnd); 
         this.addEventListener("dragover", this.onDragOver);
         this.addEventListener("dragleave", this.onDragLeave);
         this.addEventListener("drop", this.onDrop);
@@ -351,6 +356,8 @@ class Worksheet extends HTMLElement {
         const footer = this.shadowRoot.querySelector("#footer-bar");
         const name = header.querySelector("span");
         name.removeEventListener("dblclick", this.onNameDblClick);
+        this.removeEventListener("dragstart", this.onDragStart);
+        this.removeEventListener("dragend", this.onDragEnd);
         this.removeEventListener("dragover", this.onDragOver);
         this.removeEventListener("dragleave", this.onDragLeave);
         this.removeEventListener("drop", this.onDrop);
@@ -458,6 +465,7 @@ class Worksheet extends HTMLElement {
         button.addEventListener("click", this.onRecordToggle);
         button.setAttribute("title", "start recording");
         button.setAttribute("data-clickable", true);
+        button.setAttribute("id", "record");
         return button;
     }
 
@@ -586,6 +594,12 @@ class Worksheet extends HTMLElement {
 
     onRecordToggle(){
         this.toggleAttribute("recording");
+        const record_icon = this.shadowRoot.querySelector("#record > svg");
+        if(this.hasAttribute("recording")){
+            record_icon.style.stroke = "red"; // TODO set to palette color
+        } else {
+            record_icon.style.stroke = "green"; // TODO set to palette color
+        }
     }
 
     onUpload(event) {
@@ -767,6 +781,20 @@ class Worksheet extends HTMLElement {
         event.dataTransfer.effectAllowed = "all";
     }
 
+    onDragStart(event){
+        // selection drags are handled by ap-sheet but we still need
+        // to know which worksheet is the source
+        event.dataTransfer.setData("sourceId", this.id);
+    }
+
+    onDragEnd(event){
+        // TODO: there must be a better way to highlight dragged over cells
+        // without having to remove the class from each one
+        this.shadowRoot.querySelectorAll("sheet-cell").forEach((cell) => {
+            cell.classList.remove("dragover");
+        })
+    }
+
     onDragOver(event) {
         event.stopPropagation();
         event.preventDefault();
@@ -790,8 +818,20 @@ class Worksheet extends HTMLElement {
             const iconSVG = template.content.childNodes[0];
             overlay.replaceChildren(iconSVG);
         } else if(event.dataTransfer.getData("selection-drag")){
-            console.log("dragging selection");
+            // make sure we are dragging over a cell
+            const target = event.originalTarget;
+            console.log(target.nodeName);
+            if(target.nodeName == "SHEET-CELL"){
+                target.classList.add("dragover");
+                target.addEventListener("dragleave", this._removeDragoverStyling); 
+            }
         }
+    }
+
+    _removeDragoverStyling(event){
+        console.log("removing");
+        event.target.classList.remove("dragover");
+        event.target.removeEventListener("dragleave", this._removeDragoverStyling);
     }
 
     onDragLeave(event) {
@@ -823,12 +863,18 @@ class Worksheet extends HTMLElement {
                 document.body.append(connection);
                 connection.setAttribute("target", this.id);
                 connection.setAttribute("sources", [sourceId]);
-                // add a record butto: TODO update to better icon
+                // add callstack and command related buttons
+                this.addToHeader(this.stepButton(), "right");
+                this.addToHeader(this.runButton(), "right");
                 this.addToHeader(this.recordButton(), "right");
             }
 
         } else if(event.dataTransfer.getData("selection-drag")){
             console.log("dropping selection")
+            console.log(event.target)
+            console.log(event.originalTarget)
+            console.log(JSON.parse(event.dataTransfer.getData("text/json")))
+            console.log(event.dataTransfer.getData("id"));
         } else if(event.dataTransfer.files) {
             // set the event.target.files to the dataTransfer.files
             // since that is what this.onUpload() expects

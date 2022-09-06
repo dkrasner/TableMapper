@@ -109,6 +109,14 @@ class CallStack extends Object {
             this.stack.push(instruction);
         }
     }
+
+    remove(index){
+        this.stack.splice(index, 1);
+        // if the COUNTER is now off the stack, move to -1
+        if(this.COUNTER == this.stack.length - 1){
+            this.reset();
+        }
+    }
 }
 
 

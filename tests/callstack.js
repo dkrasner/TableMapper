@@ -107,6 +107,32 @@ describe('Callstack', function () {
             assert.equal(callstack.COUNTER, 1);
             assert.equal(callstack.stack.length, 4);
         });
+        it('.remove() will remove an instruction without moving the counter', function () {
+            callstack.reset();
+            callstack.stack = [];
+            callstack.append([command, 0]);
+            callstack.append([command, 1]);
+            callstack.append([command, 3]);
+            callstack.jump(1);
+            assert.equal(callstack.COUNTER, 0);
+            assert.equal(callstack.stack.length, 3);
+            callstack.remove(1);
+            assert.equal(callstack.stack.length, 2);
+            assert.equal(callstack.COUNTER, 0);
+        });
+        it('.remove() will reset the counter if the last intruction is removed', function () {
+            callstack.reset();
+            callstack.stack = [];
+            callstack.append([command, 0]);
+            callstack.append([command, 1]);
+            callstack.append([command, 3]);
+            callstack.jump(2);
+            assert.equal(callstack.COUNTER, 1);
+            assert.equal(callstack.stack.length, 3);
+            callstack.remove(2);
+            assert.equal(callstack.stack.length, 2);
+            assert.equal(callstack.COUNTER, -1);
+        });
         it('.load() will load a new set of instructions and reset the counter', function () {
             callstack.load([[command, 0], [command, 1]]);
             assert.equal(callstack.COUNTER, -1);
