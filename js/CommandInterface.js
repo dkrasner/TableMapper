@@ -3,7 +3,6 @@
  * -------------------------------------------
  * Custom Element allowing for the selection and configuraiton of commands
  */
-import BasicInterpreter from "./interpreters.js";
 import icons from "./utils/icons.js";
 import createIconSVGFromString from "./utils/helpers.js";
 
@@ -67,7 +66,8 @@ const templateString = `
     }
 
     #close {
-        display: flex
+        display: flex;
+        cursor: pointer;
     }
 </style>
 <div class="wrapper">
@@ -85,9 +85,9 @@ const templateString = `
 `;
 
 class CommandInterface extends HTMLElement {
-    constructor() {
+    constructor(interpreter) {
         super();
-        this.interpreter = null;
+        this.interpreter = interpreter;
 
         // Setup template and shadow root
         const template = document.createElement("template");
@@ -101,6 +101,8 @@ class CommandInterface extends HTMLElement {
         this.onMouseUpAfterDrag = this.onMouseUpAfterDrag.bind(this);
         this.onComamndSelection = this.onComamndSelection.bind(this);
         this.onClose = this.onClose.bind(this);
+        this.onPreview = this.onPreview.bind(this);
+        this.onSave = this.onSave.bind(this);
     }
 
     connectedCallback() {
@@ -113,8 +115,6 @@ class CommandInterface extends HTMLElement {
             header.addEventListener("mousedown", this.onMouseDownInHeaderFooter);
             footer.addEventListener("mousedown", this.onMouseDownInHeaderFooter);
             selection.addEventListener("change", this.onComamndSelection);
-            // TODO: this might need to be set by WSConnection
-            this.interpreter = new BasicInterpreter();
             const command_registry = this.interpreter.command_registry;
             // add the options to the dropdown
             Object.keys(command_registry).forEach((name) => {
@@ -136,6 +136,11 @@ class CommandInterface extends HTMLElement {
             button.appendChild(svg);
             button.addEventListener("click", this.onClose);
             header.appendChild(button);
+            // add events listeners for the buttons
+            const preview_button = this.shadowRoot.querySelector("button#preview");
+            const save_button = this.shadowRoot.querySelector("button#save");
+            preview_button.addEventListener("click", this.onPreview);
+            save_button.addEventListener("click", this.onSave);
         }
     }
 
@@ -146,6 +151,10 @@ class CommandInterface extends HTMLElement {
         header.removeEventListener("mousedown", this.onMouseDownInHeaderFooter);
         footer.removeEventListener("mousedown", this.onMouseDownInHeaderFooter);
         selection.removeEventListener("change", this.onComamndSelection);
+        const preview_button = this.shadowRoot.querySelector("button#preview");
+        const save_button = this.shadowRoot.querySelector("button#save");
+        preview_button.removeEventListener("click", this.onPreview);
+        save_button.removeEventListener("click", this.onSave);
     }
 
 
@@ -164,6 +173,16 @@ class CommandInterface extends HTMLElement {
 
     onClose(){
         this.remove();
+    }
+
+    /* onPreview() and onSave are set by elements which utilise CommandInterface */
+
+    onPreview(event){
+        alert("Preview has not been set");
+    }
+
+    onSave(event){
+        alert("Save has not been set");
     }
 
     onMouseDownInHeaderFooter(event) {

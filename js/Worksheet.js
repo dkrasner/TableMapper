@@ -296,7 +296,7 @@ class Worksheet extends HTMLElement {
         this.onDragOver = this.onDragOver.bind(this);
         this.onDragLeave = this.onDragLeave.bind(this);
         this.onDrop = this.onDrop.bind(this);
-        this._removeDragoverStyling = this._removeDragoverStyling.bind(this);
+        this._removeDragDropStyling = this._removeDragDropStyling.bind(this);
         this.onCallStackStep = this.onCallStackStep.bind(this);
 
         // Bound serialization methods
@@ -799,46 +799,41 @@ class Worksheet extends HTMLElement {
     onDragOver(event) {
         event.stopPropagation();
         event.preventDefault();
-        const overlay = this.shadowRoot.querySelector(".overlay");
         // NOTE: dataTransfer payload can disappear in the debugger - fun!
         // Also detecting whether a drop event is file drop is not consistent across browsers
         // and is touchy in general
-        if (
-            event.dataTransfer.types.indexOf("Files") != -1 ||
-            event.dataTransfer.getData("worksheet-link")
-        ) {
-            overlay.classList.remove("hide");
+        if (event.dataTransfer.types.indexOf("Files") != -1) {
+            event.dataTransfer.dropEffect = "copy";
+            this._overlay(icons.fileUpload);
+        } else if(event.dataTransfer.getData("worksheet-link")){
             event.dataTransfer.dropEffect = "link";
-            let iconString = icons.link;
-            if (event.dataTransfer.types.indexOf("Files") != -1) {
-                event.dataTransfer.dropEffect = "copy";
-                iconString = icons.fileUpload;
-            }
-            const template = document.createElement("template");
-            template.innerHTML = iconString;
-            const iconSVG = template.content.childNodes[0];
-            overlay.replaceChildren(iconSVG);
+            this._overlay(icons.link);
         } else if(event.dataTransfer.getData("selection-drag")){
-            // make sure we are in record mode
-            // TODO: should we make sure there is a corresponding connection?
-            // make sure we are dragging over a cell
+            // we need to make sure that three conditions hold for a valid
+            // selection drag
+            // 1. the sheets are linked, ie a ws-connection element exists
+            //    with corresponding source and target
+            // 2. the target sheet is in record mode
+            // 3. the target element of the dragover is a sheet-cell element
             const target = event.originalTarget;
+            const connection = this._getConnection(
+                event.dataTransfer.getData("sourceId"),
+                event.target.id
+            );
             // we need to define the recording bool here otherwise event can
             // loose reference to target inside a condition - wtf?!
             const recording = event.target.hasAttribute("recording");
-            if(target.nodeName == "SHEET-CELL" && recording){
-                target.classList.add("dragover");
-                target.addEventListener("dragleave", this._removeDragoverStyling); 
-                target.addEventListener("drop", this._removeDragoverStyling); 
+            if(connection && recording){
+                console.log(target.nodeName);
+                if(target.nodeName == "SHEET-CELL"){
+                    target.classList.add("dragover");
+                    target.addEventListener("dragleave", this._removeDragDropStyling);
+                    target.addEventListener("drop", this._removeDragDropStyling);
+                }
+            } else {
+                this._overlay(icons.ban);
             }
         }
-    }
-
-    _removeDragoverStyling(event){
-        console.log("removing");
-        event.target.classList.remove("dragover");
-        event.target.removeEventListener("dragleave", this._removeDragoverStyling);
-        event.target.removeEventListener("drop", this._removeDragoverStyling);
     }
 
     onDragLeave(event) {
@@ -877,19 +872,24 @@ class Worksheet extends HTMLElement {
             }
 
         } else if(event.dataTransfer.getData("selection-drag")){
-            // make sure we are in record mode
-            // TODO: should we make sure there is a corresponding connection?
-            // make sure we are dragging over a cell
+            // we need to make sure that three conditions hold for a valid
+            // selection drag
+            // 1. the sheets are linked, ie a ws-connection element exists
+            //    with corresponding source and target
+            // 2. the target sheet is in record mode
+            // 3. the target element of the drop is a sheet-cell element
             const target = event.originalTarget;
+            const connection = this._getConnection(
+                event.dataTransfer.getData("sourceId"),
+                event.target.id
+            );
             // we need to define the recording bool here otherwise event can
             // loose reference to target inside a condition - wtf?!
             const recording = event.target.hasAttribute("recording");
-            if(target.nodeName == "SHEET-CELL" && recording){
-                console.log("dropping selection")
-                console.log(event.target)
-                console.log(event.originalTarget)
-                console.log(JSON.parse(event.dataTransfer.getData("text/json")))
-                console.log(event.dataTransfer.getData("id"));
+            if(connection && recording){
+                if(target.nodeName == "SHEET-CELL"){
+                    connection.openCommandInterface();
+                }
             }
         } else if(event.dataTransfer.files) {
             // set the event.target.files to the dataTransfer.files
@@ -898,6 +898,30 @@ class Worksheet extends HTMLElement {
             this.onUpload(event);
         }
     }
+
+    /**
+     * I handle adding and removing drag&drop styling for `sheet-cell` elements
+     * makign sure to remove the "dragover" css class and event handlers.
+     */
+    _removeDragDropStyling(event){
+        event.target.classList.remove("dragover");
+        event.target.removeEventListener("dragleave", this._removeDragDropStyling);
+        event.target.removeEventListener("drop", this._removeDragDropStyling);
+    }
+
+    /**
+      * I unhide the worksheet overlay to display provided svg icon string.
+      */
+    _overlay(iconString){
+        const overlay = this.shadowRoot.querySelector(".overlay");
+        overlay.classList.remove("hide");
+        const template = document.createElement("template");
+        template.innerHTML = iconString.trim();
+        const iconSVG = template.content.childNodes[0];
+        overlay.replaceChildren(iconSVG);
+    }
+
+    /** Handling source and target related icons **/
 
     addSource(id) {
         if(!this.shadowRoot.querySelector(`#footer-left > [data-source-id='${id}']`)){
@@ -951,19 +975,6 @@ class Worksheet extends HTMLElement {
         } else {
             this.removeTarget(targetId);
         }
-    }
-
-    /**
-     * Convert a DOM element attribute to a list
-     */
-    _attributeToList(name) {
-        let attr = this.getAttribute(name);
-        if (!attr) {
-            attr = [];
-        } else {
-            attr = attr.split(",");
-        }
-        return attr;
     }
 
     /**
@@ -1031,7 +1042,7 @@ class Worksheet extends HTMLElement {
     }
 
     fromCSV(aString) {
-        let data = CSVParser.parse(aString).data;
+        const data = CSVParser.parse(aString).data;
         if (data) {
             this.sheet.dataFrame.clear();
             this.sheet.dataFrame.corner.x = data[0].length - 1;
@@ -1042,7 +1053,7 @@ class Worksheet extends HTMLElement {
     }
 
     toCSV() {
-        let data = this.sheet.dataFrame.getDataArrayForFrame(
+        const data = this.sheet.dataFrame.getDataArrayForFrame(
             this.sheet.dataFrame
         );
         return CSVParser.unparse(data);

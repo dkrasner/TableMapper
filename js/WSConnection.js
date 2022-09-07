@@ -4,23 +4,32 @@
  * Custom Element describing connections between worksheets
  */
 import LeaderLine from "leader-line";
+import BasicInterpreter from "./interpreters.js";
+import CommandInterface from './CommandInterface.js';
+import { EndOfStackError, CallStack } from "./callStack.js";
 
 class WSConnection extends HTMLElement {
     constructor() {
         super();
 
+        this.interpreter = null;
         this.leaderLines = [];
 
         // Bound component methods
         this.updateLeaderLine = this.updateLeaderLine.bind(this);
         this.updateLinkedSheet = this.updateLinkedSheet.bind(this);
         this.onWorksheetMoved = this.onWorksheetMoved.bind(this);
+        this.openCommandInterface = this.openCommandInterface.bind(this);
+        this.onCommandInterfaceSave = this.onCommandInterfaceSave.bind(this);
     }
 
     connectedCallback() {
         if (this.isConnected) {
             this.updateLinkedSheet("", this.getAttribute("sources"));
             this.updateLinkedSheet("", this.getAttribute("target"));
+            // TODO: maybe this should be passed as a constructor arg
+            this.interpreter = new BasicInterpreter();
+            this.callStack = new CallStack(this.interpreter);
         }
     }
 
@@ -106,6 +115,17 @@ class WSConnection extends HTMLElement {
             return l.start.id == event.detail.id || l.end.id == event.detail.id;
         });
         lines.forEach((l) => {l.position().show()});
+    }
+
+    openCommandInterface(){
+        const ci = new CommandInterface(this.interpreter);
+        ci.onSave = this.onCommandInterfaceSave;
+        // TODO: deal with proper placement of the interface
+        document.body.append(ci);
+    }
+
+    onCommandInterfaceSave(event){
+        console.log("need to save to the callstack");
     }
 
     attributeChangedCallback(name, oldVal, newVal) {
