@@ -21,7 +21,11 @@ Reference {
 
     Frame = coordinate + ":" + coordinate
 
-    coordinate = upper+ digit*
+    coordinate = alnumCoord | cartesianCoord 
+
+    alnumCoord = upper+ digit*
+
+    cartesianCoord = "(" digit* space* "," space* digit* ")"
 }
 `;
 
@@ -52,8 +56,16 @@ const referenceSemantics = g.createSemantics().addOperation('interpret', {
         return s.sourceString;
     },
 
-    coordinate(column, row) {
+    coordinate(c) {
+        return c.interpret();
+    },
+
+    alnumCoord(column, row) {
         return [column.sourceString, row.sourceString];
+    },
+
+    cartesianCoord(leftParenthesis, x, space1, comma, space2, y, rightParenthesis){
+        return [x.sourceString, y.sourceString];
     },
 
     Frame(anchor, semiColonLIteral, corner){
