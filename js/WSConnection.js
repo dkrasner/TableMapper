@@ -20,7 +20,6 @@ class WSConnection extends HTMLElement {
         this.updateLinkedSheet = this.updateLinkedSheet.bind(this);
         this.onWorksheetMoved = this.onWorksheetMoved.bind(this);
         this.openCommandInterface = this.openCommandInterface.bind(this);
-        this.onCommandInterfaceSave = this.onCommandInterfaceSave.bind(this);
     }
 
     connectedCallback() {
@@ -117,15 +116,10 @@ class WSConnection extends HTMLElement {
         lines.forEach((l) => {l.position().show()});
     }
 
-    openCommandInterface(){
-        const ci = new CommandInterface(this.interpreter);
-        ci.onSave = this.onCommandInterfaceSave;
+    openCommandInterface(sources, target){
+        const ci = new CommandInterface(this.interpreter, this.callStack, sources, target);
         // TODO: deal with proper placement of the interface
         document.body.append(ci);
-    }
-
-    onCommandInterfaceSave(event){
-        console.log("need to save to the callstack");
     }
 
     attributeChangedCallback(name, oldVal, newVal) {

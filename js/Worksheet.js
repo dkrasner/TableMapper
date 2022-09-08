@@ -824,7 +824,6 @@ class Worksheet extends HTMLElement {
             // loose reference to target inside a condition - wtf?!
             const recording = event.target.hasAttribute("recording");
             if(connection && recording){
-                console.log(target.nodeName);
                 if(target.nodeName == "SHEET-CELL"){
                     target.classList.add("dragover");
                     target.addEventListener("dragleave", this._removeDragDropStyling);
@@ -878,17 +877,38 @@ class Worksheet extends HTMLElement {
             //    with corresponding source and target
             // 2. the target sheet is in record mode
             // 3. the target element of the drop is a sheet-cell element
-            const target = event.originalTarget;
+            const cell_target = event.originalTarget;
+            const source_id = event.dataTransfer.getData("sourceId")
+            const target_id= event.target.id
             const connection = this._getConnection(
-                event.dataTransfer.getData("sourceId"),
-                event.target.id
+                source_id,
+                target_id
             );
             // we need to define the recording bool here otherwise event can
             // loose reference to target inside a condition - wtf?!
             const recording = event.target.hasAttribute("recording");
             if(connection && recording){
-                if(target.nodeName == "SHEET-CELL"){
-                    connection.openCommandInterface();
+                if(cell_target.nodeName == "SHEET-CELL"){
+                    console.log(source_id);
+                    console.log(target_id);
+                    console.log(JSON.parse(event.dataTransfer.getData("text/json")));
+                    const drop_data = JSON.parse(event.dataTransfer.getData("text/json"));
+                    const source_origin = [
+                        drop_data.relativeFrameOrigin.x,
+                        drop_data.relativeFrameOrigin.y
+                    ]
+                    const source_corner = [
+                        drop_data.relativeFrameCorner.x,
+                        drop_data.relativeFrameCorner.y,
+                    ]
+                    const target_origin = [
+                        cell_target.getAttribute("data-relative-x"),
+                        cell_target.getAttribute("data-relative-y")
+                    ]
+                    // TODO: note we handling only one source at a time here
+                    const source_info = {id: source_id, origin: source_origin, corner: source_corner};
+                    const target_info = {id: target_id, origin: target_origin};
+                    connection.openCommandInterface(source_info, target_info);
                 }
             }
         } else if(event.dataTransfer.files) {

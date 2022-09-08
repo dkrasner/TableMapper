@@ -78,16 +78,20 @@ const templateString = `
     </div>
     <textarea id="editor" rows="5" cols="33"></textarea>
     <div id="footer">
-        <button id="preview">Preview</button>
-        <button id="save">Save</button>
+        <button id="see-it">See It</button>
+        <button id="do-it">Do It</button>
+        <button id="save-it">Save It</button>
     </div>
 </div>
 `;
 
 class CommandInterface extends HTMLElement {
-    constructor(interpreter) {
+    constructor(interpreter, callStack, sources, target) {
         super();
         this.interpreter = interpreter;
+        this.callStack = callStack;
+        this.sources = sources;
+        this.target = target;
 
         // Setup template and shadow root
         const template = document.createElement("template");
@@ -101,8 +105,9 @@ class CommandInterface extends HTMLElement {
         this.onMouseUpAfterDrag = this.onMouseUpAfterDrag.bind(this);
         this.onComamndSelection = this.onComamndSelection.bind(this);
         this.onClose = this.onClose.bind(this);
-        this.onPreview = this.onPreview.bind(this);
-        this.onSave = this.onSave.bind(this);
+        this.onSeeIt = this.onSeeIt.bind(this);
+        this.onDoIt = this.onDoIt.bind(this);
+        this.onSaveIt = this.onSaveIt.bind(this);
     }
 
     connectedCallback() {
@@ -137,10 +142,12 @@ class CommandInterface extends HTMLElement {
             button.addEventListener("click", this.onClose);
             header.appendChild(button);
             // add events listeners for the buttons
-            const preview_button = this.shadowRoot.querySelector("button#preview");
-            const save_button = this.shadowRoot.querySelector("button#save");
-            preview_button.addEventListener("click", this.onPreview);
-            save_button.addEventListener("click", this.onSave);
+            const seeit_button = this.shadowRoot.querySelector("button#see-it");
+            const doit_button = this.shadowRoot.querySelector("button#do-it");
+            const saveit_button = this.shadowRoot.querySelector("button#save-it");
+            seeit_button.addEventListener("click", this.onSeeIt);
+            doit_button.addEventListener("click", this.onDoIt);
+            saveit_button.addEventListener("click", this.onSaveIt);
         }
     }
 
@@ -151,10 +158,12 @@ class CommandInterface extends HTMLElement {
         header.removeEventListener("mousedown", this.onMouseDownInHeaderFooter);
         footer.removeEventListener("mousedown", this.onMouseDownInHeaderFooter);
         selection.removeEventListener("change", this.onComamndSelection);
-        const preview_button = this.shadowRoot.querySelector("button#preview");
-        const save_button = this.shadowRoot.querySelector("button#save");
-        preview_button.removeEventListener("click", this.onPreview);
-        save_button.removeEventListener("click", this.onSave);
+        const seeit_button = this.shadowRoot.querySelector("button#see-it");
+        seeit_button.removeEventListener("click", this.onSeeIt);
+        const doit_button = this.shadowRoot.querySelector("button#do-it");
+        doit_button.removeEventListener("click", this.onDoIt);
+        const saveit_button = this.shadowRoot.querySelector("button#save-it");
+        saveit_button.removeEventListener("click", this.onSaveIt);
     }
 
 
@@ -175,14 +184,21 @@ class CommandInterface extends HTMLElement {
         this.remove();
     }
 
-    /* onPreview() and onSave are set by elements which utilise CommandInterface */
+    /* onSeeIt() and onSave are set by elements which utilise CommandInterface */
 
-    onPreview(event){
-        alert("Preview has not been set");
+    onSeeIt(event){
+        alert("SeeIt has not been set");
     }
 
-    onSave(event){
-        alert("Save has not been set");
+    onSaveIt(event){
+        const command = this.shadowRoot.querySelector("select#available-commands").value;
+        const args = this.shadowRoot.querySelector("textarea#editor").value;
+        this.callStack.append([this.sources, this.target, command, args]);
+        console.log(this.callStack);
+    }
+
+    onDoIt(event){
+        alert("DoIt has not been set");
     }
 
     onMouseDownInHeaderFooter(event) {
