@@ -902,8 +902,8 @@ class Worksheet extends HTMLElement {
                         drop_data.relativeFrameCorner.y,
                     ]
                     const target_origin = [
-                        cell_target.getAttribute("data-relative-x"),
-                        cell_target.getAttribute("data-relative-y")
+                        parseInt(cell_target.getAttribute("data-relative-x")),
+                        parseInt(cell_target.getAttribute("data-relative-y"))
                     ]
                     // TODO: note we handling only one source at a time here
                     // but note source_info is an array so can be multuple sources in the future

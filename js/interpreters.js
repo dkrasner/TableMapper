@@ -132,7 +132,7 @@ const commandRegistry = {
 const labelIndex = (s) => {
     const index = letters.indexOf(s[0]) + (letters.length * (s.length - 1));
     if(!isNaN(index) && index > -1){
-        return index;
+        return index - 1;
     } else if(!isNaN(parseInt(s))){
         return parseInt(s);
     }
@@ -158,9 +158,9 @@ const getOriginCornerElement = (data) => {
     const ws = document.getElementById(id);
     // todo: sheet should really be able to handle tab references
     origin[0] = labelIndex(origin[0]);
-    origin[1] = parseInt(origin[1]) - 1;
+    origin[1] = parseInt(origin[1]);
     corner[0] = labelIndex(corner[0]);
-    corner[1] = parseInt(corner[1]) - 1;
+    corner[1] = parseInt(corner[1]);
     return [ws, origin, corner];
 }
 
