@@ -93,6 +93,11 @@ describe('Callstack', function () {
             callstack.jump(20);
             assert.equal(callstack.COUNTER, -1);
         });
+        it('.jumpLast() will set the counter to the last instruction', function () {
+            callstack.reset();
+            callstack.jumpLast();
+            assert.equal(callstack.COUNTER, callstack.stack.length - 1);
+        });
         it('.append() will append an instruction without moving the counter', function () {
             callstack.reset();
             callstack.jump(2);

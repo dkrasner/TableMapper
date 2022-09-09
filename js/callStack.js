@@ -88,6 +88,11 @@ class CallStack extends Object {
         }
     }i
 
+    /* I jump to the last command on the stack */
+    jumpLast(){
+        this.COUNTER = this.stack.length - 1;
+    }
+
     /* I load a new set of instruction and reset the counter */
     load(instructions, resetCounter=true){
         if(resetCounter){

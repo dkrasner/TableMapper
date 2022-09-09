@@ -906,8 +906,12 @@ class Worksheet extends HTMLElement {
                         cell_target.getAttribute("data-relative-y")
                     ]
                     // TODO: note we handling only one source at a time here
-                    const source_info = {id: source_id, origin: source_origin, corner: source_corner};
-                    const target_info = {id: target_id, origin: target_origin};
+                    // but note source_info is an array so can be multuple sources in the future
+                    const source_info = [
+                        {id: source_id, origin: source_origin, corner: source_corner}
+                    ];
+                    // NOTE: for target origin and corner are the same, ie a 1x1 frame, for the moment
+                    const target_info = {id: target_id, origin: target_origin, corner: target_origin};
                     connection.openCommandInterface(source_info, target_info);
                 }
             }

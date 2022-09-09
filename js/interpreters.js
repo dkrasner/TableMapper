@@ -26,7 +26,7 @@ class BasicInterpreter extends Object {
         return function(){
             const exec = this.command_registry[name].command;
             return exec(source, target, args);
-        };
+        }.bind(this);
     }
 
     matchAndInterpretCommand(s){
@@ -124,12 +124,17 @@ const commandRegistry = {
 
 
 // Utils
-/* I take a string like s="AA" and return its 'true'
-   column index */
+/**
+  * I take a string like s="AA" and return its 'true'
+  * column index. Otherwise I try to parse the string to an int.
+  * If all fails I return the original.
+  **/
 const labelIndex = (s) => {
     const index = letters.indexOf(s[0]) + (letters.length * (s.length - 1));
-    if(!isNaN(index)){
+    if(!isNaN(index) && index > -1){
         return index;
+    } else if(!isNaN(parseInt(s))){
+        return parseInt(s);
     }
     return s;
 };

@@ -15,6 +15,7 @@ const templateString = `
         z-index: 10000;
         background-color: var(--palette-lightblue);
         border: solid var(--palette-orange) 1.5px;
+        border-radius: 5px;
         left: 50%;
         top: 30%;
     }
@@ -65,9 +66,32 @@ const templateString = `
         pointer-events: none;
     }
 
+    button {
+        margin-right: 1px;
+        margin-left: 1px;
+    }
+
     #close {
         display: flex;
-        cursor: pointer;
+        cursor: default;
+    }
+
+    #see-it {
+        background-color: var(--palette-beige);
+    }
+
+    #do-it {
+        background-color: var(--palette-orange);
+        cursor: not-allowed;
+    }
+
+    #save-it {
+        background-color: var(--palette-cyan);
+    }
+
+    .unlock {
+        background-color: var(--palette-beige) !important;
+        cursor: default !important;
     }
 </style>
 <div class="wrapper">
@@ -92,6 +116,7 @@ class CommandInterface extends HTMLElement {
         this.callStack = callStack;
         this.sources = sources;
         this.target = target;
+        this.cache = null;
 
         // Setup template and shadow root
         const template = document.createElement("template");
@@ -106,8 +131,10 @@ class CommandInterface extends HTMLElement {
         this.onComamndSelection = this.onComamndSelection.bind(this);
         this.onClose = this.onClose.bind(this);
         this.onSeeIt = this.onSeeIt.bind(this);
+        this.onSawIt = this.onSawIt.bind(this);
         this.onDoIt = this.onDoIt.bind(this);
         this.onSaveIt = this.onSaveIt.bind(this);
+        this.getInstruction = this.getInstruction.bind(this);
     }
 
     connectedCallback() {
@@ -145,9 +172,14 @@ class CommandInterface extends HTMLElement {
             const seeit_button = this.shadowRoot.querySelector("button#see-it");
             const doit_button = this.shadowRoot.querySelector("button#do-it");
             const saveit_button = this.shadowRoot.querySelector("button#save-it");
-            seeit_button.addEventListener("click", this.onSeeIt);
+            // TODO these should be proper tooltips not titles
+            seeit_button.addEventListener("mousedown", this.onSeeIt);
+            seeit_button.addEventListener("mouseup", this.onSawIt);
+            seeit_button.setAttribute("title", "See what will happen before you commit!");
             doit_button.addEventListener("click", this.onDoIt);
+            doit_button.setAttribute("title", "Save it before you do it!");
             saveit_button.addEventListener("click", this.onSaveIt);
+            saveit_button.setAttribute("title", "Save it to the program");
         }
     }
 
@@ -159,7 +191,8 @@ class CommandInterface extends HTMLElement {
         footer.removeEventListener("mousedown", this.onMouseDownInHeaderFooter);
         selection.removeEventListener("change", this.onComamndSelection);
         const seeit_button = this.shadowRoot.querySelector("button#see-it");
-        seeit_button.removeEventListener("click", this.onSeeIt);
+        seeit_button.removeEventListener("mousedown", this.onSeeIt);
+        seeit_button.removeEventListener("mouseup", this.onSawIt);
         const doit_button = this.shadowRoot.querySelector("button#do-it");
         doit_button.removeEventListener("click", this.onDoIt);
         const saveit_button = this.shadowRoot.querySelector("button#save-it");
@@ -184,21 +217,70 @@ class CommandInterface extends HTMLElement {
         this.remove();
     }
 
-    /* onSeeIt() and onSave are set by elements which utilise CommandInterface */
-
+    /**
+      * I append the instruction to the call stack and run. But I also cache
+      * the original data in the target sub-frame. This cache is then used by
+      * onSawIt() to revert the isntruction result.
+      */
     onSeeIt(event){
-        alert("SeeIt has not been set");
+        const instruction = this.getInstruction();
+
+        // TODO!!!
+        const targetWS = document.getElementById(this.target.id);
+        // the target sub-frame is defined by target corner and the size the source sub-frame
+        // even if there are multiple sources, ex a join, all of theym have to have the same size
+        // so we can use the first one - TODO: is thia a bad assumption?
+        const size = {
+            x: parseInt(this.sources[0].corner[0]) - parseInt(this.sources[0].origin[0]),
+            y: parseInt(this.sources[0].corner[1]) - parseInt(this.sources[0].origin[1])
+        };
+        const origin = [
+            parseInt(this.target.origin[0]),
+            parseInt(this.target.origin[1])
+        ]
+        const corner = [
+            origin[0] + size.x,
+            origin[1] + size.y
+        ];
+        this.cache = targetWS.sheet.dataFrame.getDataSubFrame(
+            this.target.origin, corner
+        ).toArray();
+        this.callStack.append(instruction);
+        this.callStack.jumpLast();
+        this.callStack.run();
+    }
+
+    /**
+      * I remove the last instruction (NOTE: the assumption is that I follow
+      * onSeeit() directly, which might be a bad assumption...). Then I reset
+      * the target sub-frame to the cached data.
+      **/
+    onSawIt(event){
+        this.callStack.remove(this.callStack.length - 1);
+        const targetWS = document.getElementById(this.target.id);
+        const origin = [
+            parseInt(this.target.origin[0]),
+            parseInt(this.target.origin[1])
+        ]
+        targetWS.sheet.dataFrame.loadFromArray(this.cache, origin);
     }
 
     onSaveIt(event){
-        const command = this.shadowRoot.querySelector("select#available-commands").value;
-        const args = this.shadowRoot.querySelector("textarea#editor").value;
-        this.callStack.append([this.sources, this.target, command, args]);
+        // TODO: we don't check the validity of references or commands and allow saving
+        // nonsense to the callstack!
+        const instruction = this.getInstruction();
+        this.callStack.append(instruction);
+        // unlock the do-it button since after we save we can do
+        const doit_button = this.shadowRoot.querySelector("button#do-it");
+        doit_button.classList.add("unlock");
+        doit_button.setAttribute("title", "run the command");
         console.log(this.callStack);
     }
 
     onDoIt(event){
-        alert("DoIt has not been set");
+        // jump to the last instruction which is the one that was just saved
+        this.callStack.jumpLast();
+        this.callStack.run();
     }
 
     onMouseDownInHeaderFooter(event) {
@@ -227,6 +309,25 @@ class CommandInterface extends HTMLElement {
         this.style.setProperty("left", newLeft + "px");
     }
 
+    /**
+      * I handle any pre-processing necessary before the instruction
+      * is added to the callstack. Potentiall I should also check its
+      * validity: TODO
+      */
+    getInstruction(){
+        let command = this.shadowRoot.querySelector("select#available-commands").value;
+        const args = this.shadowRoot.querySelector("textarea#editor").value;
+        // TODO: this is a bit absurd! we are joining the source and target data
+        // into a string only to parse it all out later. I am leaving this in for now
+        // so that our 'view' on the callstack __is__ the callstack
+        const sources = this.sources.map((s) => {
+            return `${s.id}!(${s.origin[0]},${s.origin[1]}):(${s.corner[0]},${s.corner[1]})`;
+        }).join(",");
+        const target = `${this.target.id}!(${this.target.origin[0]},${this.target.origin[1]}):(${this.target.corner[0]},${this.target.corner[1]})`;
+        // TODO: do we really need command(args) or can we seperate them out command, args for ex 
+        command = `${command}(${args})`;
+        return [sources, target, command];
+    }
 
     attributeChangedCallback(name, oldVal, newVal) {
     }
