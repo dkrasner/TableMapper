@@ -13,7 +13,7 @@
                 <context-menu-item>Second Item</context-menu-item>
                 <context-menu-item>Third Item</context-menu-item>
                 <hr></hr>
-                <context-menu-item>
+                <context-menu-item class="with-submenu">
                     Fourth Item
                     <context-menu slot="submenu" class="context-submenu submenu-hidden">
                         <context-menu-item>First Submenu Item</context-menu-item>
@@ -31,6 +31,7 @@
             // Remove the active mouse listeners from the context menu
             // so that it stays on the screen
             document.querySelector('context-menu').disconnectedCallback();
+            document.querySelector('.with-submenu').showCaret();
         });
        </script>
     </body>
