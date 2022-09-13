@@ -12,6 +12,8 @@ class WSConnection extends HTMLElement {
     constructor() {
         super();
 
+        this.id;
+
         this.interpreter = null;
         this.callStack = null;
         this.leaderLines = [];
@@ -28,6 +30,7 @@ class WSConnection extends HTMLElement {
 
     connectedCallback() {
         if (this.isConnected) {
+            this.setAttribute("id", window.crypto.randomUUID());
             this.updateLinkedSheet("", this.getAttribute("sources"));
             this.updateLinkedSheet("", this.getAttribute("target"));
             // TODO: maybe this should be passed as a constructor arg
@@ -123,6 +126,15 @@ class WSConnection extends HTMLElement {
     openCommandInterface(sources, target){
         const ci = new CommandInterface(this.interpreter, this.callStack, sources, target);
         // TODO: deal with proper placement of the interface
+        ci.afterSave = () => {
+            // reload the callstacl instruction so that they appear in the open
+            // inspector
+            const inspector = document.querySelector(`work-sheet[ws-connector-id='${this.id}']`);
+            if(inspector){
+                inspector.sheet.dataFrame.clear();
+                inspector.sheet.dataFrame.loadFromArray(this.callStack.stack);
+            }
+        }
         document.body.append(ci);
     }
 
@@ -141,15 +153,22 @@ class WSConnection extends HTMLElement {
     }
 
     run(){
+        this.callStack.reset();
         this.callStack.run();
     }
 
     inspectCallstack(){
-        const stack_ws = document.createElement("work-sheet");
-        document.body.append(stack_ws);
-        stack_ws.updateName("The Commands");
-        stack_ws.sheet.dataFrame.clear();
-        stack_ws.sheet.dataFrame.loadFromArray(this.callStack.stack);
+        let inspector = document.querySelector(`work-sheet[ws-connector-id='${this.id}']`);
+        if(!inspector){
+            inspector = document.createElement("work-sheet");
+            document.body.append(inspector);
+            inspector.updateName("The Commands");
+            inspector.setAttribute("ws-connector-id", this.id);
+            inspector.sheet.dataFrame.clear();
+            if(this.callStack.stack.length > 0){
+                inspector.sheet.dataFrame.loadFromArray(this.callStack.stack);
+            }
+        }
     }
 
     attributeChangedCallback(name, oldVal, newVal) {

@@ -117,9 +117,25 @@ const replace = (sources, target, d) => {
 }
 
 const commandRegistry = {
-    "copy": {command: copy, description: "Copy the contents\n(This command takes no arguments)", args: false},
-    "replace": {command: replace, description: "Replace content with new", args: true},
-    "join": {command: join, description: "Join multiple sources using provided string", args: true}
+    "copy": {
+        command: copy,
+        description: "Copy the contents\n(This command takes no arguments)",
+        args: false
+    },
+    "replace": {
+        command: replace,
+        description: 'Replace content with new\n' +
+            'Use a dictionary where the keys and values specify\n' +
+            'what and with-what to replace, respectively.\n' +
+            '(Example: {"1": "ONE", "2": "TWO"} will replace 1 with ONE and 2 with TWO)\n'
+        ,
+        args: true
+    },
+    "join": {
+        command: join,
+        description: "Join multiple sources using provided string",
+        args: true
+    }
 }
 
 

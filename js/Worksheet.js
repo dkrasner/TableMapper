@@ -7,7 +7,6 @@
  * being done.
  **/
 
-import { EndOfStackError, CallStack } from "./callStack.js";
 import { labelIndex } from "./interpreters.js";
 import icons from "./utils/icons.js";
 import createIconSVGFromString from "./utils/helpers.js";
@@ -258,9 +257,6 @@ class Worksheet extends HTMLElement {
         // a randomly generated UUID
         this.id;
 
-        // the current callStack and available commandis
-        this.callStack;
-
         // generate a random palette for the worksheet
 
         // name for the worksheet. Note: this is the name found in the header area
@@ -298,7 +294,6 @@ class Worksheet extends HTMLElement {
         this.onDragLeave = this.onDragLeave.bind(this);
         this.onDrop = this.onDrop.bind(this);
         this._removeDragDropStyling = this._removeDragDropStyling.bind(this);
-        this.onCallStackStep = this.onCallStackStep.bind(this);
 
         // Bound serialization methods
         this.toCSV = this.toCSV.bind(this);
@@ -308,9 +303,6 @@ class Worksheet extends HTMLElement {
     connectedCallback() {
         // set the id; NOTE: at the moment this is a random UUID
         this.setAttribute("id", window.crypto.randomUUID());
-        const interpreter = new BasicInterpreter();
-        this.callStack = new CallStack(interpreter);
-        this.callStack.onStep = this.onCallStackStep;
 
         // Setup a ContextMenu handler for this sheet
         this.contextMenuHandler = new ContextMenuHandler(this);
@@ -645,66 +637,11 @@ class Worksheet extends HTMLElement {
         window.URL.revokeObjectURL(url);
     }
 
-    _getInstructions(){
-        // TODO! this is a temp solution since the callstack editor worksheet
-        // will become something else in the future
-        const targetConnection = [...document.querySelectorAll("ws-connection")].filter(
-            (ws) => {
-                return ws.getAttribute("sources").split(",").indexOf(this.id) > -1;
-            }
-        )[0];
-        const sourcesConnection = document.querySelector(`ws-connection[target="${this.id}"]`)
-        const sources = sourcesConnection.getAttribute("sources").split(",");
-        const target = targetConnection.getAttribute("target");
-
-        const nonEmptyCoords = Object.keys(this.sheet.dataFrame.store).filter(
-            (k) => {
-                return this.sheet.dataFrame.getAt(k.split(","));
-            }
-        );
-        const nonEmptyCols = [];
-        const nonEmptyRows = [];
-        nonEmptyCoords.forEach((coord) => {
-            const [c, r] = coord.split(",");
-            nonEmptyCols.push(parseInt(c));
-            nonEmptyRows.push(parseInt(r));
-        });
-        const maxCol = nonEmptyCols.sort()[nonEmptyCols.length - 1];
-        const maxRow = nonEmptyRows.sort()[nonEmptyRows.length - 1];
-
-        const instructions = [];
-        let c = 0;
-        let r = 0;
-
-        while (r <= maxRow) {
-            const row = [];
-            while (c <= maxCol) {
-                let entry = this.sheet.dataFrame.getAt([c, r]);
-                if (parseInt(c) == 0) {
-                    const tmp = [];
-                    const entry_list = entry.split(",");
-                    for (let i = 0; i < entry_list.length; i++) {
-                        tmp.push(`${sources[i]}!${entry_list[i]}`);
-                    }
-                    entry = tmp.join(",");
-                } else if (parseInt(c) == 1) {
-                    entry = `${target}!${entry}`;
-                }
-                row.push(entry);
-                c += 1;
-            }
-            instructions.push(row);
-            r += 1;
-            c = 0;
-        }
-        return instructions;
-    }
-
     // TODO: these callstack calls, and corresponding button icons, should be
     // removed and eventually live in a connection or commandInterface element UI
     onRun() {
         const ws = this._getConnection(this.id);
-        ws.step();
+        ws.run();
     }
 
     onStep() {
@@ -717,6 +654,7 @@ class Worksheet extends HTMLElement {
         ws.inspectCallstack();
     }
 
+    //TODO: sort out what to do with this
     onCallStackStep() {
         if (this.callStack.COUNTER > -1) {
             // hide the current selection since it might interfere with the tab/row highlight

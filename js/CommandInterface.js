@@ -134,6 +134,7 @@ class CommandInterface extends HTMLElement {
         this.onSawIt = this.onSawIt.bind(this);
         this.onDoIt = this.onDoIt.bind(this);
         this.onSaveIt = this.onSaveIt.bind(this);
+        this.afterSave = this.afterSave.bind(this);
         this.getInstruction = this.getInstruction.bind(this);
     }
 
@@ -245,9 +246,9 @@ class CommandInterface extends HTMLElement {
         this.cache = targetWS.sheet.dataFrame.getDataSubFrame(
             this.target.origin, corner
         );
-        this.callStack.append(instruction);
-        this.callStack.jumpLast();
-        this.callStack.run();
+        // TODO: we might want to add some sort of staging area to the callstack
+        const executable = this.callStack.interpreter.interpret(instruction);
+        executable();
     }
 
     /**
@@ -256,7 +257,6 @@ class CommandInterface extends HTMLElement {
       * the target sub-frame to the cached data.
       **/
     onSawIt(event){
-        this.callStack.remove(this.callStack.length - 1);
         const targetWS = document.getElementById(this.target.id);
         const origin = [
             this.target.origin[0],
@@ -274,7 +274,12 @@ class CommandInterface extends HTMLElement {
         const doit_button = this.shadowRoot.querySelector("button#do-it");
         doit_button.classList.add("unlock");
         doit_button.setAttribute("title", "run the command");
+        this.afterSave();
         console.log(this.callStack);
+    }
+
+    // to be called by a user of CommandInterface
+    afterSave(){
     }
 
     onDoIt(event){
