@@ -837,9 +837,6 @@ class Worksheet extends HTMLElement {
             const recording = event.target.hasAttribute("recording");
             if(connection && recording){
                 if(cell_target.nodeName == "SHEET-CELL"){
-                    console.log(source_id);
-                    console.log(target_id);
-                    console.log(JSON.parse(event.dataTransfer.getData("text/json")));
                     const drop_data = JSON.parse(event.dataTransfer.getData("text/json"));
                     const source_origin = [
                         drop_data.relativeFrameOrigin.x,
