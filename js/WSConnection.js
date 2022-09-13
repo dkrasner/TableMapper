@@ -13,6 +13,7 @@ class WSConnection extends HTMLElement {
         super();
 
         this.interpreter = null;
+        this.callStack = null;
         this.leaderLines = [];
 
         // Bound component methods
@@ -20,6 +21,9 @@ class WSConnection extends HTMLElement {
         this.updateLinkedSheet = this.updateLinkedSheet.bind(this);
         this.onWorksheetMoved = this.onWorksheetMoved.bind(this);
         this.openCommandInterface = this.openCommandInterface.bind(this);
+        this.step = this.step.bind(this);
+        this.run = this.run.bind(this);
+        this.inspectCallstack = this.inspectCallstack.bind(this);
     }
 
     connectedCallback() {
@@ -120,6 +124,32 @@ class WSConnection extends HTMLElement {
         const ci = new CommandInterface(this.interpreter, this.callStack, sources, target);
         // TODO: deal with proper placement of the interface
         document.body.append(ci);
+    }
+
+    // TODO: callStack interface should probably be moved to commandInterface element
+    // only here atm due to the UI step/run icons being on the target worksheet
+    step(){
+        try {
+            this.callStack.step();
+            this.callStack.execute();
+        } catch (e) {
+            if (e instanceof EndOfStackError) {
+                console.log(EndOfStackError);
+                this.callStack.reset();
+            } else throw e;
+        }
+    }
+
+    run(){
+        this.callStack.run();
+    }
+
+    inspectCallstack(){
+        const stack_ws = document.createElement("work-sheet");
+        document.body.append(stack_ws);
+        stack_ws.updateName("The Commands");
+        stack_ws.sheet.dataFrame.clear();
+        stack_ws.sheet.dataFrame.loadFromArray(this.callStack.stack);
     }
 
     attributeChangedCallback(name, oldVal, newVal) {

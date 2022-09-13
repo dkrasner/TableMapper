@@ -55,7 +55,7 @@ class CallStack extends Object {
        if there is a next command */
     execute(){
         if(this.COUNTER == -1){
-            throw EndOfStackError;
+            throw new EndOfStackError();
         }
         const entry = this.stack[this.COUNTER]
         const executable = this.interpreter.interpret(entry)

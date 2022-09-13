@@ -235,8 +235,8 @@ class CommandInterface extends HTMLElement {
             y: parseInt(this.sources[0].corner[1]) - parseInt(this.sources[0].origin[1])
         };
         const origin = [
-            parseInt(this.target.origin[0]),
-            parseInt(this.target.origin[1])
+            this.target.origin[0],
+            this.target.origin[1]
         ]
         const corner = [
             origin[0] + size.x,
@@ -244,7 +244,7 @@ class CommandInterface extends HTMLElement {
         ];
         this.cache = targetWS.sheet.dataFrame.getDataSubFrame(
             this.target.origin, corner
-        ).toArray();
+        );
         this.callStack.append(instruction);
         this.callStack.jumpLast();
         this.callStack.run();
@@ -259,10 +259,10 @@ class CommandInterface extends HTMLElement {
         this.callStack.remove(this.callStack.length - 1);
         const targetWS = document.getElementById(this.target.id);
         const origin = [
-            parseInt(this.target.origin[0]),
-            parseInt(this.target.origin[1])
+            this.target.origin[0],
+            this.target.origin[1]
         ]
-        targetWS.sheet.dataFrame.loadFromArray(this.cache, origin);
+        targetWS.sheet.dataFrame.copyFrom(this.cache, origin);
     }
 
     onSaveIt(event){

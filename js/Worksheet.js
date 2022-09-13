@@ -287,6 +287,7 @@ class Worksheet extends HTMLElement {
         this.onUpload = this.onUpload.bind(this);
         this.onDownload = this.onDownload.bind(this);
         this.onDelete = this.onDelete.bind(this);
+        this.onStackInspect = this.onStackInspect.bind(this);
         this.onRun = this.onRun.bind(this);
         this.onStep = this.onStep.bind(this);
         this.onRecordToggle = this.onRecordToggle.bind(this);
@@ -444,6 +445,16 @@ class Worksheet extends HTMLElement {
         button.appendChild(svg);
         button.addEventListener("click", this.onRun);
         button.setAttribute("title", "run commands");
+        button.setAttribute("data-clickable", true);
+        return button;
+    }
+
+    stackButton() {
+        const svg = createIconSVGFromString(icons.stack);
+        const button = document.createElement("span");
+        button.appendChild(svg);
+        button.addEventListener("click", this.onStackInspect);
+        button.setAttribute("title", "inspect the current commands");
         button.setAttribute("data-clickable", true);
         return button;
     }
@@ -689,23 +700,21 @@ class Worksheet extends HTMLElement {
         return instructions;
     }
 
+    // TODO: these callstack calls, and corresponding button icons, should be
+    // removed and eventually live in a connection or commandInterface element UI
     onRun() {
-        this.callStack.load(this._getInstructions());
-        this.callStack.run();
+        const ws = this._getConnection(this.id);
+        ws.step();
     }
 
     onStep() {
-        this.callStack.load(this._getInstructions(), false); // do not reset the counter
-        try {
-            this.callStack.step();
-            this.callStack.execute();
-        } catch (e) {
-            if (e instanceof EndOfStackError) {
-                console.log(EndOfStackError);
-                this.callStack.reset();
-                this.hideSelection();
-            } else throw e;
-        }
+        const ws = this._getConnection(this.id);
+        ws.step();
+    }
+
+    onStackInspect(){
+        const ws = this._getConnection(this.id);
+        ws.inspectCallstack();
     }
 
     onCallStackStep() {
@@ -817,8 +826,8 @@ class Worksheet extends HTMLElement {
             // 3. the target element of the dragover is a sheet-cell element
             const target = event.originalTarget;
             const connection = this._getConnection(
-                event.dataTransfer.getData("sourceId"),
-                event.target.id
+                event.target.id,
+                event.dataTransfer.getData("sourceId")
             );
             // we need to define the recording bool here otherwise event can
             // loose reference to target inside a condition - wtf?!
@@ -852,7 +861,7 @@ class Worksheet extends HTMLElement {
             const sourceId = event.dataTransfer.getData("id");
             // now create a new WSConnection element if it doesn't exist
             // if it does exist for this target then add the source to it
-            let connection = document.querySelector(`ws-connection[target="${this.id}"]`)
+            let connection = this._getConnection(this.id); 
             if(connection){
                 const sources = connection.getAttribute("sources").split(",");
                 if(sources.indexOf(sourceId) == -1){
@@ -865,6 +874,7 @@ class Worksheet extends HTMLElement {
                 connection.setAttribute("target", this.id);
                 connection.setAttribute("sources", [sourceId]);
                 // add callstack and command related buttons
+                this.addToHeader(this.stackButton(), "right");
                 this.addToHeader(this.stepButton(), "right");
                 this.addToHeader(this.runButton(), "right");
                 this.addToHeader(this.recordButton(), "right");
@@ -881,8 +891,8 @@ class Worksheet extends HTMLElement {
             const source_id = event.dataTransfer.getData("sourceId")
             const target_id= event.target.id
             const connection = this._getConnection(
-                source_id,
-                target_id
+                target_id,
+                source_id
             );
             // we need to define the recording bool here otherwise event can
             // loose reference to target inside a condition - wtf?!
@@ -988,7 +998,7 @@ class Worksheet extends HTMLElement {
         event.preventDefault();
         const sourceId = event.target.getAttribute("data-source-id");
         const targetId = event.target.getAttribute("data-target-id");
-        const connection = this._getConnection(sourceId, targetId);
+        const connection = this._getConnection(targetId, sourceId);
         const sources = connection.getAttribute("sources").split(",");
         if(sources.indexOf(sourceId) > -1){
             sources.splice(sources.indexOf(sourceId), 1);
@@ -1002,20 +1012,26 @@ class Worksheet extends HTMLElement {
     }
 
     /**
-      * I find the connection which corresponds to both the source and target
-      * provided. The assumption is that each sheet can be the source, or target,
-      * of multiple sheets. However, there can be **only one** connection between
-      * two sheets.
+      * I find the connection which corresponds to the target and source (if provided).
+      * The assumption is that each sheet can be the source of multiple sheets.
+      * However, there can be **only one** connection between two sheets and each sheet
+      * can be the target of **only one** connection.
       **/
-    _getConnection(sourceId, targetId){
-        const l = [...document.querySelectorAll(`ws-connection[target="${targetId}"]`)].filter(
-            (ws) => {
-                return ws.getAttribute("sources").split(",").indexOf(sourceId) > -1;
-            });
-        if(l.length == 1){
-            return l[0];
-        } else if(l.length > 1) {
-            throw `Multiple connections found between source ${sourceId} and target ${targetId}`; 
+    _getConnection(targetId, sourceId){
+        const connections = document.querySelectorAll(`ws-connection[target="${targetId}"]`);
+        if(connections.length == 0){
+            return;
+        }
+        if(connections.length > 1){
+            throw `Multiple connections found for the target ${targetId}`;
+        }
+        const wc = connections[0];
+        if(sourceId){
+            if(wc.getAttribute("sources").split(",").indexOf(sourceId) > -1){
+                return wc;
+            }
+        } else {
+            return wc;
         }
     }
 
