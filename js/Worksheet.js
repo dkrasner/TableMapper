@@ -598,11 +598,14 @@ class Worksheet extends HTMLElement {
 
     onRecordToggle(){
         this.toggleAttribute("recording");
+        const record_button = this.shadowRoot.querySelector("#record");
         const record_icon = this.shadowRoot.querySelector("#record > svg");
         if(this.hasAttribute("recording")){
             record_icon.style.stroke = "red"; // TODO set to palette color
+            record_button.setAttribute("title", "stop recording");
         } else {
             record_icon.style.stroke = "green"; // TODO set to palette color
+            record_button.setAttribute("title", "start recording");
         }
     }
 
