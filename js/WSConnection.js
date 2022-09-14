@@ -27,6 +27,12 @@ class WSConnection extends HTMLElement {
     disconnectedCallback() {
         this.updateLinkedSheet(this.getAttribute("sources"), "");
         this.updateLinkedSheet(this.getAttribute("target"), "");
+        // remove all the leaderlines
+        this.leaderLines.forEach((line) => {
+            line.start.removeTarget(line.end.id);
+            line.end.removeSource(line.start.id);
+            line.remove();
+        });
     }
 
     updateLeaderLine() {
@@ -36,8 +42,8 @@ class WSConnection extends HTMLElement {
             line.start.removeTarget(line.end.id);
             line.end.removeSource(line.start.id);
             line.remove();
-            this.leaderLines.pop(index);
         });
+        this.leaderLines = [];
         // update the leader line for each source
         let sources = this.getAttribute("sources");
         if(!sources){
@@ -76,7 +82,7 @@ class WSConnection extends HTMLElement {
         // check if the arrays are equal
         const temp = oldVal.filter((item) => {return newVal.indexOf(item) > -1});
         const areEqual = temp.length == oldVal.length && temp.length == newVal.length;
-        if (this.isConnected && !areEqual) {
+        if (!areEqual) {
             console.log("updating linked sheet", oldVal, newVal);
             oldVal.forEach((id) => {
                 const oldLinkedEl = document.getElementById(id);
@@ -112,6 +118,10 @@ class WSConnection extends HTMLElement {
         if (name === "sources" || name === "target") {
             this.updateLeaderLine();
             this.updateLinkedSheet(oldVal, newVal);
+            // if there are no sources nor target then remove the connection
+            if(newVal === ""){
+                this.remove();
+            }
         }
     }
 

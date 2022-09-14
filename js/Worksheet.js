@@ -566,6 +566,20 @@ class Worksheet extends HTMLElement {
         if (window.confirm(msg)) {
             this.remove();
         }
+        // tell any connections that I am no longer there
+        document.querySelectorAll('ws-connection').forEach((wsc) => {
+            if(wsc.getAttribute("target") == this.id){
+                wsc.setAttribute("target", "");
+            }
+            let sources = wsc.getAttribute("sources");
+            if(sources){
+                sources = sources.split(",");
+                if(sources.indexOf(this.id) > -1 ){
+                    sources.splice(sources.indexOf(this.id), 1);
+                    wsc.setAttribute("sources", sources);
+                }
+            }
+        })
     }
 
     onErase() {
