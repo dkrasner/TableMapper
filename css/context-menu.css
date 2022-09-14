@@ -1,18 +1,33 @@
+* {
+    box-sizing: border-box;
+}
+
 context-menu {
     /* Variables */
     --ctx-item-font-color: var(--palette-black);
-    --ctx-item-font-color-highlighted: var(--palette-white);
+    --ctx-item-font-color-highlighted: var(--palette-black);
     --ctx-item-background-color: var(--palette-white);
-    --ctx-item-background-color-highlighted: var(--palette-black);
+    --ctx-item-background-color-highlighted: var(--palette-cyan);
+    --ctx-item-font-color-active: var(--palette-white);
+    --ctx-item-background-color-active: var(--palette-black);
+    --ctx-menu-border-color: rgba(0, 0, 0, 0.4);
+    --ctx-menu-border-radius: 5px;
+    --ctx-menu-box-shadow: 6px 6px 14px -5px rgba(0,0,0,0.38);
     display: block;
     position: absolute;
     max-width: 450px;
-    border: 1px solid var(--ctx-item-background-color-highlighted);
-    background-color: white;
+    border: 1px solid var(--ctx-menu-border-color);
+    background-color: var(--palette-white);
+    border-radius: var(--ctx-menu-border-radius);
+    box-shadow: var(--ctx-menu-box-shadow);
+}
+
+context-menu-item > context-menu {
+    
 }
 
 context-menu,
-context-menu * {
+context-menu-item {
     box-sizing: border-box;
 }
 
@@ -31,16 +46,24 @@ context-menu-item {
     width: 100%;
     align-items: center;
     justify-content: space-between;
-    padding-left: 4px;
+    padding-left: 8px;
     padding-right: 4px;
-    padding-top: 2px;
-    padding-bottom: 2px;
-    background-color: var(--ctx-item-background-color);
+    padding-top: 4px;
+    padding-bottom: 4px;
     color: var(--ctx-item-font-color);
+    background-color: var(--palette-white);
 }
 
-context-menu-item + context-menu-item {
-    
+context-menu-item:last-child {
+    border-bottom-left-radius: var(--ctx-menu-border-radius);
+    border-bottom-right-radius: var(--ctx-menu-border-radius);
+    padding-bottom: 8px;
+}
+
+context-menu-item:first-child {
+    border-top-left-radius: var(--ctx-menu-border-radius);
+    border-top-right-radius: var(--ctx-menu-border-radius);
+    padding-top: 8px;
 }
 
 context-menu-item:hover {
@@ -49,8 +72,16 @@ context-menu-item:hover {
     cursor: pointer;
 }
 
+context-menu-item:hover.item-active {
+    background-color: var(--ctx-item-background-color-active);
+    color: var(--ctx-item-font-color-active);
+}
+
 context-menu hr {
     height: 1px;
-    background-color: black;
     width: 100%;
+    background-color: var(--ctx-menu-border-color);
+    margin: 0;
+    padding: 0;
+    border: 0;
 }
