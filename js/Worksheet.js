@@ -32,6 +32,10 @@ const templateString = `
     --sheet-bg-color: var(--palette-cyan);
 }
 
+:host([minimized="true"]) > div:not(#header-bar){
+    display: none;
+}
+
 #header-bar {
     cursor: grab;
     width: 100%;
@@ -356,6 +360,16 @@ class Worksheet extends HTMLElement {
         this.contextMenuHandler.removeListeners();
     }
 
+    attributeChangedCallback(name, oldVal, newVal) {
+        if (name === "minimized") {
+            Array.from(document.querySelectorAll("ws-connection")).forEach(
+                (connectionElement) => {
+                    connectionElement.renderLines();
+                }
+            );
+        }
+    }
+
     /* I add an element to the header.
        element: DOM element
        location: str (one of "left", "right")
@@ -603,15 +617,17 @@ class Worksheet extends HTMLElement {
         window.URL.revokeObjectURL(url);
     }
 
-    _getInstructions(){
+    _getInstructions() {
         // TODO! this is a temp solution since the callstack editor worksheet
         // will become something else in the future
-        const targetConnection = [...document.querySelectorAll("ws-connection")].filter(
-            (ws) => {
-                return ws.getAttribute("sources").split(",").indexOf(this.id) > -1;
-            }
-        )[0];
-        const sourcesConnection = document.querySelector(`ws-connection[target="${this.id}"]`)
+        const targetConnection = [
+            ...document.querySelectorAll("ws-connection"),
+        ].filter((ws) => {
+            return ws.getAttribute("sources").split(",").indexOf(this.id) > -1;
+        })[0];
+        const sourcesConnection = document.querySelector(
+            `ws-connection[target="${this.id}"]`
+        );
         const sources = sourcesConnection.getAttribute("sources").split(",");
         const target = targetConnection.getAttribute("target");
 
@@ -793,10 +809,12 @@ class Worksheet extends HTMLElement {
             const sourceId = event.dataTransfer.getData("id");
             // now create a new WSConnection element if it doesn't exist
             // if it does exist for this target then add the source to it
-            let connection = document.querySelector(`ws-connection[target="${this.id}"]`)
-            if(connection){
+            let connection = document.querySelector(
+                `ws-connection[target="${this.id}"]`
+            );
+            if (connection) {
                 const sources = connection.getAttribute("sources").split(",");
-                if(sources.indexOf(sourceId) == -1){
+                if (sources.indexOf(sourceId) == -1) {
                     sources.push(sourceId);
                     connection.setAttribute("sources", sources);
                 }
@@ -806,7 +824,6 @@ class Worksheet extends HTMLElement {
                 connection.setAttribute("target", this.id);
                 connection.setAttribute("sources", [sourceId]);
             }
-
         } else if (event.dataTransfer.files) {
             // set the event.target.files to the dataTransfer.files
             // since that is what this.onUpload() expects
@@ -816,9 +833,17 @@ class Worksheet extends HTMLElement {
     }
 
     addSource(id) {
-        if(!this.shadowRoot.querySelector(`#footer-left > [data-source-id='${id}']`)){
+        if (
+            !this.shadowRoot.querySelector(
+                `#footer-left > [data-source-id='${id}']`
+            )
+        ) {
             // add an icon with data about the source to the footer
-            const sourceSpan = this._createSourceTargetIconSpan("source", id, this.id);
+            const sourceSpan = this._createSourceTargetIconSpan(
+                "source",
+                id,
+                this.id
+            );
             this.addToFooter(sourceSpan, "left");
             return id;
         }
@@ -826,17 +851,27 @@ class Worksheet extends HTMLElement {
 
     removeSource(id) {
         // remove the source link
-        this.shadowRoot.querySelectorAll(`#footer-left > [data-source-id='${id}']`).forEach((item) => {
-            item.remove();
-        });
+        this.shadowRoot
+            .querySelectorAll(`#footer-left > [data-source-id='${id}']`)
+            .forEach((item) => {
+                item.remove();
+            });
         // make sure no outline styles linger
         this.style.outline = "initial";
     }
 
     addTarget(id) {
-        if(!this.shadowRoot.querySelector(`#footer-right > [data-target-id='${id}']`)){
+        if (
+            !this.shadowRoot.querySelector(
+                `#footer-right > [data-target-id='${id}']`
+            )
+        ) {
             // add an icon with data about the target to the footer
-            const targetSpan = this._createSourceTargetIconSpan("target", this.id, id);
+            const targetSpan = this._createSourceTargetIconSpan(
+                "target",
+                this.id,
+                id
+            );
             this.addToFooter(targetSpan, "right", true);
             return id;
         }
@@ -844,9 +879,11 @@ class Worksheet extends HTMLElement {
 
     removeTarget(id) {
         // remove the target link
-        this.shadowRoot.querySelectorAll(`#footer-right > [data-target-id='${id}']`).forEach((item) => {
-            item.remove();
-        });
+        this.shadowRoot
+            .querySelectorAll(`#footer-right > [data-target-id='${id}']`)
+            .forEach((item) => {
+                item.remove();
+            });
         // make sure no outline styles linger
         this.style.outline = "initial";
     }
@@ -858,7 +895,7 @@ class Worksheet extends HTMLElement {
         const targetId = event.target.getAttribute("data-target-id");
         const connection = this._getConnection(sourceId, targetId);
         const sources = connection.getAttribute("sources").split(",");
-        if(sources.indexOf(sourceId) > -1){
+        if (sources.indexOf(sourceId) > -1) {
             sources.splice(sources.indexOf(sourceId), 1);
             connection.setAttribute("sources", sources);
         }
@@ -883,20 +920,21 @@ class Worksheet extends HTMLElement {
     }
 
     /**
-      * I find the connection which corresponds to both the source and target
-      * provided. The assumption is that each sheet can be the source, or target,
-      * of multiple sheets. However, there can be **only one** connection between
-      * two sheets.
-      **/
-    _getConnection(sourceId, targetId){
-        const l = [...document.querySelectorAll(`ws-connection[target="${targetId}"]`)].filter(
-            (ws) => {
-                return ws.getAttribute("sources").split(",").indexOf(sourceId) > -1;
-            });
-        if(l.length == 1){
+     * I find the connection which corresponds to both the source and target
+     * provided. The assumption is that each sheet can be the source, or target,
+     * of multiple sheets. However, there can be **only one** connection between
+     * two sheets.
+     **/
+    _getConnection(sourceId, targetId) {
+        const l = [
+            ...document.querySelectorAll(`ws-connection[target="${targetId}"]`),
+        ].filter((ws) => {
+            return ws.getAttribute("sources").split(",").indexOf(sourceId) > -1;
+        });
+        if (l.length == 1) {
             return l[0];
-        } else if(l.length > 1) {
-            throw `Multiple connections found between source ${sourceId} and target ${targetId}`; 
+        } else if (l.length > 1) {
+            throw `Multiple connections found between source ${sourceId} and target ${targetId}`;
         }
     }
 
@@ -936,7 +974,10 @@ class Worksheet extends HTMLElement {
             unlinkIcon.style.display = "inherit";
             icon.style.display = "none";
             sheet.style.outline = "solid var(--palette-blue)";
-            iconSpan.setAttribute("title", `${type}: ${sheet.name} (${sheet.id})`);
+            iconSpan.setAttribute(
+                "title",
+                `${type}: ${sheet.name} (${sheet.id})`
+            );
         });
         iconSpan.addEventListener("mouseleave", () => {
             unlinkIcon.style.display = "none";
@@ -962,6 +1003,14 @@ class Worksheet extends HTMLElement {
             this.sheet.dataFrame
         );
         return CSVParser.unparse(data);
+    }
+
+    get isMinimized() {
+        return this.getAttribute("minimized") === "true";
+    }
+
+    static get observedAttributes() {
+        return ["minimized"];
     }
 }
 

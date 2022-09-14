@@ -112,7 +112,7 @@ class ContextMenu extends HTMLElement {
     }
 
     addSpacer() {
-        const item = document.createElement("li");
+        const item = document.createElement("hr");
         item.classList.add("context-menu-spacer");
         this.append(item);
         return this;

@@ -14,6 +14,7 @@ class WSConnection extends HTMLElement {
         // Bound component methods
         this.updateLeaderLine = this.updateLeaderLine.bind(this);
         this.updateLinkedSheet = this.updateLinkedSheet.bind(this);
+        this.renderLines = this.renderLines.bind(this);
         this.onWorksheetMoved = this.onWorksheetMoved.bind(this);
     }
 
@@ -40,42 +41,53 @@ class WSConnection extends HTMLElement {
         });
         // update the leader line for each source
         let sources = this.getAttribute("sources");
-        if(!sources){
+        if (!sources) {
             return;
         }
         sources = sources.split(",");
         // for now we remove all the lines and put them back as needed
         sources.forEach((id) => {
             const sourceElement = document.getElementById(id);
-            const destElement = document.getElementById(this.getAttribute("target"));
+            const destElement = document.getElementById(
+                this.getAttribute("target")
+            );
             if (sourceElement && destElement) {
                 console.log("Creating new leader-line between:");
                 console.log(sourceElement, destElement);
-                this.leaderLines.push(new LeaderLine(sourceElement, destElement));
+                this.leaderLines.push(
+                    new LeaderLine(sourceElement, destElement)
+                );
                 console.log(`Telling ${sourceElement.id} to add target`);
                 sourceElement.addTarget(destElement.id, destElement.name);
                 console.log(`Telling ${destElement.id} to add source`);
                 destElement.addSource(sourceElement.id, sourceElement.name);
             }
-        })
+        });
+    }
+
+    renderLines() {
+        this.leaderLines.forEach((line) => {
+            line.position().show();
+        });
     }
 
     updateLinkedSheet(oldVal, newVal) {
-        console.log("updateLinkedSheet called!");
-        console.log(`old: ${oldVal} new: ${newVal}`);
-        if(oldVal){
-            oldVal = oldVal.split(',');
+        if (oldVal) {
+            oldVal = oldVal.split(",");
         } else {
             oldVal = [];
         }
-        if(newVal){
-            newVal = newVal.split(',');
+        if (newVal) {
+            newVal = newVal.split(",");
         } else {
             newVal = [];
         }
         // check if the arrays are equal
-        const temp = oldVal.filter((item) => {return newVal.indexOf(item) > -1});
-        const areEqual = temp.length == oldVal.length && temp.length == newVal.length;
+        const temp = oldVal.filter((item) => {
+            return newVal.indexOf(item) > -1;
+        });
+        const areEqual =
+            temp.length == oldVal.length && temp.length == newVal.length;
         if (this.isConnected && !areEqual) {
             console.log("updating linked sheet", oldVal, newVal);
             oldVal.forEach((id) => {
@@ -101,11 +113,12 @@ class WSConnection extends HTMLElement {
 
     onWorksheetMoved(event) {
         // When the worksheet moves, we need to redraw the leaderLine
-        console.log("worksheet moved in connection element");
         const lines = this.leaderLines.filter((l) => {
             return l.start.id == event.detail.id || l.end.id == event.detail.id;
         });
-        lines.forEach((l) => {l.position().show()});
+        lines.forEach((l) => {
+            l.position().show();
+        });
     }
 
     attributeChangedCallback(name, oldVal, newVal) {
