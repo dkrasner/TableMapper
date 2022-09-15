@@ -21,6 +21,7 @@ class WSConnection extends HTMLElement {
         // Bound component methods
         this.updateLeaderLine = this.updateLeaderLine.bind(this);
         this.updateLinkedSheet = this.updateLinkedSheet.bind(this);
+        this.renderLines = this.renderLines.bind(this);
         this.onWorksheetMoved = this.onWorksheetMoved.bind(this);
         this.openCommandInterface = this.openCommandInterface.bind(this);
         this.step = this.step.bind(this);
@@ -42,6 +43,12 @@ class WSConnection extends HTMLElement {
     disconnectedCallback() {
         this.updateLinkedSheet(this.getAttribute("sources"), "");
         this.updateLinkedSheet(this.getAttribute("target"), "");
+        // remove all the leaderlines
+        this.leaderLines.forEach((line) => {
+            line.start.removeTarget(line.end.id);
+            line.end.removeSource(line.start.id);
+            line.remove();
+        });
     }
 
     updateLeaderLine() {
@@ -51,41 +58,53 @@ class WSConnection extends HTMLElement {
             line.start.removeTarget(line.end.id);
             line.end.removeSource(line.start.id);
             line.remove();
-            this.leaderLines.pop(index);
         });
+        this.leaderLines = [];
         // update the leader line for each source
         let sources = this.getAttribute("sources");
-        if(!sources){
+        if (!sources) {
             return;
         }
         sources = sources.split(",");
         // for now we remove all the lines and put them back as needed
         sources.forEach((id) => {
             const sourceElement = document.getElementById(id);
-            const destElement = document.getElementById(this.getAttribute("target"));
+            const destElement = document.getElementById(
+                this.getAttribute("target")
+            );
             if (sourceElement && destElement) {
                 this.leaderLines.push(new LeaderLine(sourceElement, destElement));
                 sourceElement.addTarget(destElement.id, destElement.name);
                 destElement.addSource(sourceElement.id, sourceElement.name);
             }
-        })
+        });
+    }
+
+    renderLines() {
+        this.leaderLines.forEach((line) => {
+            line.position().show();
+        });
     }
 
     updateLinkedSheet(oldVal, newVal) {
-        if(oldVal){
-            oldVal = oldVal.split(',');
+        if (oldVal) {
+            oldVal = oldVal.split(",");
         } else {
             oldVal = [];
         }
-        if(newVal){
-            newVal = newVal.split(',');
+        if (newVal) {
+            newVal = newVal.split(",");
         } else {
             newVal = [];
         }
         // check if the arrays are equal
-        const temp = oldVal.filter((item) => {return newVal.indexOf(item) > -1});
-        const areEqual = temp.length == oldVal.length && temp.length == newVal.length;
-        if (this.isConnected && !areEqual) {
+        const temp = oldVal.filter((item) => {
+            return newVal.indexOf(item) > -1;
+        });
+        const areEqual =
+            temp.length == oldVal.length && temp.length == newVal.length;
+        console.log("updating linked sheet", oldVal, newVal);
+        if (!areEqual) {
             oldVal.forEach((id) => {
                 const oldLinkedEl = document.getElementById(id);
                 if (oldLinkedEl) {
@@ -112,7 +131,9 @@ class WSConnection extends HTMLElement {
         const lines = this.leaderLines.filter((l) => {
             return l.start.id == event.detail.id || l.end.id == event.detail.id;
         });
-        lines.forEach((l) => {l.position().show()});
+        lines.forEach((l) => {
+            l.position().show();
+        });
     }
 
     openCommandInterface(sources, target){
@@ -167,6 +188,10 @@ class WSConnection extends HTMLElement {
         if (name === "sources" || name === "target") {
             this.updateLeaderLine();
             this.updateLinkedSheet(oldVal, newVal);
+            // if there are no sources nor target then remove the connection
+            if(newVal === ""){
+                this.remove();
+            }
         }
     }
 

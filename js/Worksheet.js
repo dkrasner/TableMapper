@@ -31,6 +31,10 @@ const templateString = `
     --sheet-bg-color: var(--palette-cyan);
 }
 
+:host([minimized="true"]) > div:not(#header-bar){
+    display: none;
+}
+
 #header-bar {
     cursor: grab;
     width: 100%;
@@ -358,6 +362,16 @@ class Worksheet extends HTMLElement {
         this.contextMenuHandler.removeListeners();
     }
 
+    attributeChangedCallback(name, oldVal, newVal) {
+        if (name === "minimized") {
+            Array.from(document.querySelectorAll("ws-connection")).forEach(
+                (connectionElement) => {
+                    connectionElement.renderLines();
+                }
+            );
+        }
+    }
+
     /* I add an element to the header.
        element: DOM element
        location: str (one of "left", "right")
@@ -590,6 +604,20 @@ class Worksheet extends HTMLElement {
         if (window.confirm(msg)) {
             this.remove();
         }
+        // tell any connections that I am no longer there
+        document.querySelectorAll('ws-connection').forEach((wsc) => {
+            if(wsc.getAttribute("target") == this.id){
+                wsc.setAttribute("target", "");
+            }
+            let sources = wsc.getAttribute("sources");
+            if(sources){
+                sources = sources.split(",");
+                if(sources.indexOf(this.id) > -1 ){
+                    sources.splice(sources.indexOf(this.id), 1);
+                    wsc.setAttribute("sources", sources);
+                }
+            }
+        })
     }
 
     onErase() {
@@ -805,7 +833,7 @@ class Worksheet extends HTMLElement {
             let connection = this._getConnection(this.id); 
             if(connection){
                 const sources = connection.getAttribute("sources").split(",");
-                if(sources.indexOf(sourceId) == -1){
+                if (sources.indexOf(sourceId) == -1) {
                     sources.push(sourceId);
                     connection.setAttribute("sources", sources);
                 }
@@ -820,7 +848,6 @@ class Worksheet extends HTMLElement {
                 this.addToHeader(this.runButton(), "right");
                 this.addToHeader(this.recordButton(), "right");
             }
-
         } else if(event.dataTransfer.getData("selection-drag")){
             // we need to make sure that three conditions hold for a valid
             // selection drag
@@ -896,9 +923,17 @@ class Worksheet extends HTMLElement {
     /** Handling source and target related icons **/
 
     addSource(id) {
-        if(!this.shadowRoot.querySelector(`#footer-left > [data-source-id='${id}']`)){
+        if (
+            !this.shadowRoot.querySelector(
+                `#footer-left > [data-source-id='${id}']`
+            )
+        ) {
             // add an icon with data about the source to the footer
-            const sourceSpan = this._createSourceTargetIconSpan("source", id, this.id);
+            const sourceSpan = this._createSourceTargetIconSpan(
+                "source",
+                id,
+                this.id
+            );
             this.addToFooter(sourceSpan, "left");
             return id;
         }
@@ -906,17 +941,27 @@ class Worksheet extends HTMLElement {
 
     removeSource(id) {
         // remove the source link
-        this.shadowRoot.querySelectorAll(`#footer-left > [data-source-id='${id}']`).forEach((item) => {
-            item.remove();
-        });
+        this.shadowRoot
+            .querySelectorAll(`#footer-left > [data-source-id='${id}']`)
+            .forEach((item) => {
+                item.remove();
+            });
         // make sure no outline styles linger
         this.style.outline = "initial";
     }
 
     addTarget(id) {
-        if(!this.shadowRoot.querySelector(`#footer-right > [data-target-id='${id}']`)){
+        if (
+            !this.shadowRoot.querySelector(
+                `#footer-right > [data-target-id='${id}']`
+            )
+        ) {
             // add an icon with data about the target to the footer
-            const targetSpan = this._createSourceTargetIconSpan("target", this.id, id);
+            const targetSpan = this._createSourceTargetIconSpan(
+                "target",
+                this.id,
+                id
+            );
             this.addToFooter(targetSpan, "right", true);
             return id;
         }
@@ -924,9 +969,11 @@ class Worksheet extends HTMLElement {
 
     removeTarget(id) {
         // remove the target link
-        this.shadowRoot.querySelectorAll(`#footer-right > [data-target-id='${id}']`).forEach((item) => {
-            item.remove();
-        });
+        this.shadowRoot
+            .querySelectorAll(`#footer-right > [data-target-id='${id}']`)
+            .forEach((item) => {
+                item.remove();
+            });
         // make sure no outline styles linger
         this.style.outline = "initial";
     }
@@ -938,7 +985,7 @@ class Worksheet extends HTMLElement {
         const targetId = event.target.getAttribute("data-target-id");
         const connection = this._getConnection(targetId, sourceId);
         const sources = connection.getAttribute("sources").split(",");
-        if(sources.indexOf(sourceId) > -1){
+        if (sources.indexOf(sourceId) > -1) {
             sources.splice(sources.indexOf(sourceId), 1);
             connection.setAttribute("sources", sources);
         }
@@ -1009,7 +1056,10 @@ class Worksheet extends HTMLElement {
             unlinkIcon.style.display = "inherit";
             icon.style.display = "none";
             sheet.style.outline = "solid var(--palette-blue)";
-            iconSpan.setAttribute("title", `${type}: ${sheet.name} (${sheet.id})`);
+            iconSpan.setAttribute(
+                "title",
+                `${type}: ${sheet.name} (${sheet.id})`
+            );
         });
         iconSpan.addEventListener("mouseleave", () => {
             unlinkIcon.style.display = "none";
@@ -1035,6 +1085,14 @@ class Worksheet extends HTMLElement {
             this.sheet.dataFrame
         );
         return CSVParser.unparse(data);
+    }
+
+    get isMinimized() {
+        return this.getAttribute("minimized") === "true";
+    }
+
+    static get observedAttributes() {
+        return ["minimized"];
     }
 }
 

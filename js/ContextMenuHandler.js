@@ -9,6 +9,7 @@ class ContextMenuHandler {
         // this.selectionContextMenu = this.selectionContextMenu.bind(this);
         this.worksheetContextMenu = this.worksheetContextMenu.bind(this);
         this.innerSheetContextMenu = this.innerSheetContextMenu.bind(this);
+        this.addMinimizeItemTo = this.addMinimizeItemTo.bind(this);
         this.setupListeners = this.setupListeners.bind(this);
         this.removeListeners = this.removeListeners.bind(this);
     }
@@ -38,11 +39,9 @@ class ContextMenuHandler {
         event.preventDefault();
         switch (event.originalTarget.tagName) {
             case "ROW-TAB":
-                event.stopPropagation();
                 this.tabContextMenu(event, "row");
                 break;
             case "COLUMN-TAB":
-                event.stopPropagation();
                 this.tabContextMenu(event, "column");
                 break;
         }
@@ -50,9 +49,15 @@ class ContextMenuHandler {
 
     worksheetContextMenu(event) {
         event.preventDefault();
-        console.log("worksheet");
-        console.log(event.originalTarget);
-        console.log(event);
+        console.log("Worksheet context caught!");
+        let currentMenu = document.querySelector(CONTEXT_MENU_EL_NAME);
+        if (!currentMenu) {
+            currentMenu = document.createElement(CONTEXT_MENU_EL_NAME);
+        } else {
+            currentMenu.addSpacer();
+        }
+        this.addMinimizeItemTo(currentMenu);
+        currentMenu.openAtMouseEvent(event);
         event.stopPropagation();
     }
 
@@ -80,6 +85,20 @@ class ContextMenuHandler {
             });
         }
         menu.openAtMouseEvent(event);
+    }
+
+    addMinimizeItemTo(aMenu) {
+        let name = "Minimize Worksheet";
+        let action = (e) => {
+            this.worksheet.setAttribute("minimized", "true");
+        };
+        if (this.worksheet.isMinimized) {
+            name = "Maximize Worksheet";
+            action = (e) => {
+                this.worksheet.removeAttribute("minimized");
+            };
+        }
+        aMenu.addListItem(name, action);
     }
 }
 
