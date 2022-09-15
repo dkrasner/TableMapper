@@ -38,26 +38,27 @@
             const source1 = newSheet("source 1");
             const source2 = newSheet("source 2");
             const target = newSheet("target");
-            const mapper = newSheet("mapper");
+            // add a connection
+            const connection = document.createElement("ws-connection");
+            // add callstack and command related buttons
+            target.addToHeader(target.stackButton(), "right");
+            target.addToHeader(target.stepButton(), "right");
+            target.addToHeader(target.runButton(), "right");
+            target.addToHeader(target.recordButton(), "right");
             target.onErase();
-            mapper.onErase();
-            mapper.sheet.dataFrame.loadFromArray(
-                [
-                    ["B3:B54", "B3:B3", "copy()"],
-                    ["C3:C54", "C3:C3" , "replace({', ': '-----'})"],
-                    ["D3:D54", "D3:D3", "copy()"],
-                    ["B3:B54,A3:A54", "E3:E3", "join(':::')"],
-                ]
-            );
             addEventListener('DOMContentLoaded', (event) => {
-                const connectionMapperTarget = document.createElement("ws-connection");
-                const connectionSourcesMapper = document.createElement("ws-connection");
-                document.body.append(connectionMapperTarget);
-                document.body.append(connectionSourcesMapper);
-                connectionMapperTarget.setAttribute("target", target.id);
-                connectionMapperTarget.setAttribute("sources", [mapper.id]);
-                connectionSourcesMapper.setAttribute("target", mapper.id);
-                connectionSourcesMapper.setAttribute("sources", [source1.id, source2.id]);
+                document.body.append(connection);
+                connection.setAttribute("target", target.id);
+                connection.setAttribute("sources", [source1.id, source2.id]);
+                // load the callstack
+                connection.callStack.load(
+                    [
+                        [`${source1.id}!(1,2):(1,53)`, `${target.id}!(1,2):(1,2)`, "copy()"],
+                        [`${source1.id}!(2,2):(2,53)`, `${target.id}!(2,2):(2,2)` , "replace({', ': '-----'})"],
+                        [`${source1.id}!(3,2):(3,53)`, `${target.id}!(3,2):(3,2)`, "copy()"],
+                        [`${source1.id}!(1,2):(1,53),${source2.id}!(0,2):(0,53)`, `${target.id}!(4,2):(4,2)`, "join(':::')"],
+                    ]
+                );
             });
         </script>
     </head>

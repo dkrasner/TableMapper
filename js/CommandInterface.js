@@ -204,9 +204,9 @@ class CommandInterface extends HTMLElement {
     onComamndSelection(event){
         const name = event.target.value;
         const editor = this.shadowRoot.querySelector("#editor");
-        const command_info = this.interpreter.command_registry[name];
+        const commandInfo = this.interpreter.command_registry[name];
         editor.value = "";
-        if(command_info.args){
+        if(commandInfo.args){
             editor.removeAttribute("disabled");
         } else {
             editor.setAttribute("disabled", true);
