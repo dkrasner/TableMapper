@@ -7,7 +7,6 @@
  * being done.
  **/
 
-import { EndOfStackError, CallStack } from "./callStack.js";
 import { labelIndex } from "./interpreters.js";
 import icons from "./utils/icons.js";
 import createIconSVGFromString from "./utils/helpers.js";
@@ -220,6 +219,9 @@ my-grid {
     border-right: 2px solid red;
 }
 
+.dragover {
+    border: solid var(--palette-beige);
+}
 </style>
 <div id="header-bar">
     <span id="header-left">
@@ -259,9 +261,6 @@ class Worksheet extends HTMLElement {
         // a randomly generated UUID
         this.id;
 
-        // the current callStack and available commandis
-        this.callStack;
-
         // generate a random palette for the worksheet
 
         // name for the worksheet. Note: this is the name found in the header area
@@ -288,13 +287,17 @@ class Worksheet extends HTMLElement {
         this.onUpload = this.onUpload.bind(this);
         this.onDownload = this.onDownload.bind(this);
         this.onDelete = this.onDelete.bind(this);
+        this.onStackInspect = this.onStackInspect.bind(this);
         this.onRun = this.onRun.bind(this);
         this.onStep = this.onStep.bind(this);
+        this.onRecordToggle = this.onRecordToggle.bind(this);
         this.onExternalLinkDragStart = this.onExternalLinkDragStart.bind(this);
+        this.onDragStart = this.onDragStart.bind(this);
+        this.onDragEnd = this.onDragEnd.bind(this);
         this.onDragOver = this.onDragOver.bind(this);
         this.onDragLeave = this.onDragLeave.bind(this);
         this.onDrop = this.onDrop.bind(this);
-        this.onCallStackStep = this.onCallStackStep.bind(this);
+        this._removeDragDropStyling = this._removeDragDropStyling.bind(this);
 
         // Bound serialization methods
         this.toCSV = this.toCSV.bind(this);
@@ -304,9 +307,6 @@ class Worksheet extends HTMLElement {
     connectedCallback() {
         // set the id; NOTE: at the moment this is a random UUID
         this.setAttribute("id", window.crypto.randomUUID());
-        const interpreter = new BasicInterpreter();
-        this.callStack = new CallStack(interpreter);
-        this.callStack.onStep = this.onCallStackStep;
 
         // Setup a ContextMenu handler for this sheet
         this.contextMenuHandler = new ContextMenuHandler(this);
@@ -316,8 +316,6 @@ class Worksheet extends HTMLElement {
         this.addToHeader(this.uploadButton(), "left");
         this.addToHeader(this.downloadButton(), "left");
         this.addToHeader(this.eraseButton(), "right");
-        this.addToHeader(this.stepButton(), "right");
-        this.addToHeader(this.runButton(), "right");
         this.addToFooter(this.linkButton(), "right");
         const header = this.shadowRoot.querySelector("#header-bar");
         const footer = this.shadowRoot.querySelector("#footer-bar");
@@ -336,6 +334,8 @@ class Worksheet extends HTMLElement {
             this.onMouseDownInHeaderFooter(event);
         });
         name.addEventListener("dblclick", this.onNameDblClick);
+        this.addEventListener("dragstart", this.onDragStart); 
+        this.addEventListener("dragend", this.onDragEnd); 
         this.addEventListener("dragover", this.onDragOver);
         this.addEventListener("dragleave", this.onDragLeave);
         this.addEventListener("drop", this.onDrop);
@@ -354,6 +354,8 @@ class Worksheet extends HTMLElement {
         const footer = this.shadowRoot.querySelector("#footer-bar");
         const name = header.querySelector("span");
         name.removeEventListener("dblclick", this.onNameDblClick);
+        this.removeEventListener("dragstart", this.onDragStart);
+        this.removeEventListener("dragend", this.onDragEnd);
         this.removeEventListener("dragover", this.onDragOver);
         this.removeEventListener("dragleave", this.onDragLeave);
         this.removeEventListener("drop", this.onDrop);
@@ -453,6 +455,16 @@ class Worksheet extends HTMLElement {
         return button;
     }
 
+    stackButton() {
+        const svg = createIconSVGFromString(icons.stack);
+        const button = document.createElement("span");
+        button.appendChild(svg);
+        button.addEventListener("click", this.onStackInspect);
+        button.setAttribute("title", "inspect the current commands");
+        button.setAttribute("data-clickable", true);
+        return button;
+    }
+
     stepButton() {
         const svg = createIconSVGFromString(icons.walk);
         const button = document.createElement("span");
@@ -460,6 +472,18 @@ class Worksheet extends HTMLElement {
         button.addEventListener("click", this.onStep);
         button.setAttribute("title", "step to next command");
         button.setAttribute("data-clickable", true);
+        return button;
+    }
+
+    recordButton() {
+        const svg = createIconSVGFromString(icons.record);
+        const button = document.createElement("span");
+        svg.style.stroke = "green"; // TODO set to palette color
+        button.appendChild(svg);
+        button.addEventListener("click", this.onRecordToggle);
+        button.setAttribute("title", "start recording");
+        button.setAttribute("data-clickable", true);
+        button.setAttribute("id", "record");
         return button;
     }
 
@@ -600,6 +624,19 @@ class Worksheet extends HTMLElement {
         this.sheet.dataFrame.clear();
     }
 
+    onRecordToggle(){
+        this.toggleAttribute("recording");
+        const record_button = this.shadowRoot.querySelector("#record");
+        const record_icon = this.shadowRoot.querySelector("#record > svg");
+        if(this.hasAttribute("recording")){
+            record_icon.style.stroke = "red"; // TODO set to palette color
+            record_button.setAttribute("title", "stop recording");
+        } else {
+            record_icon.style.stroke = "green"; // TODO set to palette color
+            record_button.setAttribute("title", "start recording");
+        }
+    }
+
     onUpload(event) {
         const file = event.target.files[0];
         const reader = new FileReader();
@@ -631,82 +668,24 @@ class Worksheet extends HTMLElement {
         window.URL.revokeObjectURL(url);
     }
 
-    _getInstructions() {
-        // TODO! this is a temp solution since the callstack editor worksheet
-        // will become something else in the future
-        const targetConnection = [
-            ...document.querySelectorAll("ws-connection"),
-        ].filter((ws) => {
-            return ws.getAttribute("sources").split(",").indexOf(this.id) > -1;
-        })[0];
-        const sourcesConnection = document.querySelector(
-            `ws-connection[target="${this.id}"]`
-        );
-        const sources = sourcesConnection.getAttribute("sources").split(",");
-        const target = targetConnection.getAttribute("target");
-
-        const nonEmptyCoords = Object.keys(this.sheet.dataFrame.store).filter(
-            (k) => {
-                return this.sheet.dataFrame.getAt(k.split(","));
-            }
-        );
-        const nonEmptyCols = [];
-        const nonEmptyRows = [];
-        nonEmptyCoords.forEach((coord) => {
-            const [c, r] = coord.split(",");
-            nonEmptyCols.push(parseInt(c));
-            nonEmptyRows.push(parseInt(r));
-        });
-        const maxCol = nonEmptyCols.sort()[nonEmptyCols.length - 1];
-        const maxRow = nonEmptyRows.sort()[nonEmptyRows.length - 1];
-
-        const instructions = [];
-        let c = 0;
-        let r = 0;
-
-        while (r <= maxRow) {
-            const row = [];
-            while (c <= maxCol) {
-                let entry = this.sheet.dataFrame.getAt([c, r]);
-                if (parseInt(c) == 0) {
-                    const tmp = [];
-                    const entry_list = entry.split(",");
-                    for (let i = 0; i < entry_list.length; i++) {
-                        tmp.push(`${sources[i]}!${entry_list[i]}`);
-                    }
-                    entry = tmp.join(",");
-                } else if (parseInt(c) == 1) {
-                    entry = `${target}!${entry}`;
-                }
-                row.push(entry);
-                c += 1;
-            }
-            instructions.push(row);
-            r += 1;
-            c = 0;
-        }
-        return instructions;
-    }
-
+    // TODO: these callstack calls, and corresponding button icons, should be
+    // removed and eventually live in a connection or commandInterface element UI
     onRun() {
-        this.callStack.load(this._getInstructions());
-        this.callStack.run();
+        const ws = this._getConnection(this.id);
+        ws.run();
     }
 
     onStep() {
-        this.callStack.load(this._getInstructions(), false); // do not reset the counter
-        try {
-            this.callStack.step();
-            this.callStack.execute();
-        } catch (e) {
-            if (e instanceof EndOfStackError) {
-                console.log(EndOfStackError);
-                this.callStack.reset();
-                this.hideSelection();
-            } else throw e;
-        }
+        const ws = this._getConnection(this.id);
+        ws.step();
     }
 
+    onStackInspect(){
+        const ws = this._getConnection(this.id);
+        ws.inspectCallstack();
+    }
+
+    //TODO: sort out what to do with this
     onCallStackStep() {
         if (this.callStack.COUNTER > -1) {
             // hide the current selection since it might interfere with the tab/row highlight
@@ -781,28 +760,56 @@ class Worksheet extends HTMLElement {
         event.dataTransfer.effectAllowed = "all";
     }
 
+    onDragStart(event){
+        // selection drags are handled by ap-sheet but we still need
+        // to know which worksheet is the source
+        event.dataTransfer.setData("sourceId", this.id);
+    }
+
+    onDragEnd(event){
+        // TODO: there must be a better way to highlight dragged over cells
+        // without having to remove the class from each one
+        this.shadowRoot.querySelectorAll("sheet-cell").forEach((cell) => {
+            cell.classList.remove("dragover");
+        })
+    }
+
     onDragOver(event) {
         event.stopPropagation();
         event.preventDefault();
-        const overlay = this.shadowRoot.querySelector(".overlay");
         // NOTE: dataTransfer payload can disappear in the debugger - fun!
         // Also detecting whether a drop event is file drop is not consistent across browsers
         // and is touchy in general
-        if (
-            event.dataTransfer.types.indexOf("Files") != -1 ||
-            event.dataTransfer.getData("worksheet-link")
-        ) {
-            overlay.classList.remove("hide");
+        if (event.dataTransfer.types.indexOf("Files") != -1) {
+            event.dataTransfer.dropEffect = "copy";
+            this._overlay(icons.fileUpload);
+        } else if(event.dataTransfer.getData("worksheet-link")){
             event.dataTransfer.dropEffect = "link";
-            let iconString = icons.link;
-            if (event.dataTransfer.types.indexOf("Files") != -1) {
-                event.dataTransfer.dropEffect = "copy";
-                iconString = icons.fileUpload;
+            this._overlay(icons.link);
+        } else if(event.dataTransfer.getData("selection-drag")){
+            // we need to make sure that three conditions hold for a valid
+            // selection drag
+            // 1. the sheets are linked, ie a ws-connection element exists
+            //    with corresponding source and target
+            // 2. the target sheet is in record mode
+            // 3. the target element of the dragover is a sheet-cell element
+            const target = event.originalTarget;
+            const connection = this._getConnection(
+                event.target.id,
+                event.dataTransfer.getData("sourceId")
+            );
+            // we need to define the recording bool here otherwise event can
+            // loose reference to target inside a condition - wtf?!
+            const recording = event.target.hasAttribute("recording");
+            if(connection && recording){
+                if(target.nodeName == "SHEET-CELL"){
+                    target.classList.add("dragover");
+                    target.addEventListener("dragleave", this._removeDragDropStyling);
+                    target.addEventListener("drop", this._removeDragDropStyling);
+                }
+            } else {
+                this._overlay(icons.ban);
             }
-            const template = document.createElement("template");
-            template.innerHTML = iconString;
-            const iconSVG = template.content.childNodes[0];
-            overlay.replaceChildren(iconSVG);
         }
     }
 
@@ -823,10 +830,8 @@ class Worksheet extends HTMLElement {
             const sourceId = event.dataTransfer.getData("id");
             // now create a new WSConnection element if it doesn't exist
             // if it does exist for this target then add the source to it
-            let connection = document.querySelector(
-                `ws-connection[target="${this.id}"]`
-            );
-            if (connection) {
+            let connection = this._getConnection(this.id); 
+            if(connection){
                 const sources = connection.getAttribute("sources").split(",");
                 if (sources.indexOf(sourceId) == -1) {
                     sources.push(sourceId);
@@ -837,14 +842,85 @@ class Worksheet extends HTMLElement {
                 document.body.append(connection);
                 connection.setAttribute("target", this.id);
                 connection.setAttribute("sources", [sourceId]);
+                // add callstack and command related buttons
+                this.addToHeader(this.stackButton(), "right");
+                this.addToHeader(this.stepButton(), "right");
+                this.addToHeader(this.runButton(), "right");
+                this.addToHeader(this.recordButton(), "right");
             }
-        } else if (event.dataTransfer.files) {
+        } else if(event.dataTransfer.getData("selection-drag")){
+            // we need to make sure that three conditions hold for a valid
+            // selection drag
+            // 1. the sheets are linked, ie a ws-connection element exists
+            //    with corresponding source and target
+            // 2. the target sheet is in record mode
+            // 3. the target element of the drop is a sheet-cell element
+            const cell_target = event.originalTarget;
+            const source_id = event.dataTransfer.getData("sourceId")
+            const target_id= event.target.id
+            const connection = this._getConnection(
+                target_id,
+                source_id
+            );
+            // we need to define the recording bool here otherwise event can
+            // loose reference to target inside a condition - wtf?!
+            const recording = event.target.hasAttribute("recording");
+            if(connection && recording){
+                if(cell_target.nodeName == "SHEET-CELL"){
+                    const drop_data = JSON.parse(event.dataTransfer.getData("text/json"));
+                    const source_origin = [
+                        drop_data.relativeFrameOrigin.x,
+                        drop_data.relativeFrameOrigin.y
+                    ]
+                    const source_corner = [
+                        drop_data.relativeFrameCorner.x,
+                        drop_data.relativeFrameCorner.y,
+                    ]
+                    const target_origin = [
+                        parseInt(cell_target.getAttribute("data-relative-x")),
+                        parseInt(cell_target.getAttribute("data-relative-y"))
+                    ]
+                    // TODO: note we handling only one source at a time here
+                    // but note source_info is an array so can be multuple sources in the future
+                    const source_info = [
+                        {id: source_id, origin: source_origin, corner: source_corner}
+                    ];
+                    // NOTE: for target origin and corner are the same, ie a 1x1 frame, for the moment
+                    const target_info = {id: target_id, origin: target_origin, corner: target_origin};
+                    connection.openCommandInterface(source_info, target_info);
+                }
+            }
+        } else if(event.dataTransfer.files) {
             // set the event.target.files to the dataTransfer.files
             // since that is what this.onUpload() expects
             event.target.files = event.dataTransfer.files;
             this.onUpload(event);
         }
     }
+
+    /**
+     * I handle adding and removing drag&drop styling for `sheet-cell` elements
+     * makign sure to remove the "dragover" css class and event handlers.
+     */
+    _removeDragDropStyling(event){
+        event.target.classList.remove("dragover");
+        event.target.removeEventListener("dragleave", this._removeDragDropStyling);
+        event.target.removeEventListener("drop", this._removeDragDropStyling);
+    }
+
+    /**
+      * I unhide the worksheet overlay to display provided svg icon string.
+      */
+    _overlay(iconString){
+        const overlay = this.shadowRoot.querySelector(".overlay");
+        overlay.classList.remove("hide");
+        const template = document.createElement("template");
+        template.innerHTML = iconString.trim();
+        const iconSVG = template.content.childNodes[0];
+        overlay.replaceChildren(iconSVG);
+    }
+
+    /** Handling source and target related icons **/
 
     addSource(id) {
         if (
@@ -907,7 +983,7 @@ class Worksheet extends HTMLElement {
         event.preventDefault();
         const sourceId = event.target.getAttribute("data-source-id");
         const targetId = event.target.getAttribute("data-target-id");
-        const connection = this._getConnection(sourceId, targetId);
+        const connection = this._getConnection(targetId, sourceId);
         const sources = connection.getAttribute("sources").split(",");
         if (sources.indexOf(sourceId) > -1) {
             sources.splice(sources.indexOf(sourceId), 1);
@@ -921,34 +997,26 @@ class Worksheet extends HTMLElement {
     }
 
     /**
-     * Convert a DOM element attribute to a list
-     */
-    _attributeToList(name) {
-        let attr = this.getAttribute(name);
-        if (!attr) {
-            attr = [];
-        } else {
-            attr = attr.split(",");
+      * I find the connection which corresponds to the target and source (if provided).
+      * The assumption is that each sheet can be the source of multiple sheets.
+      * However, there can be **only one** connection between two sheets and each sheet
+      * can be the target of **only one** connection.
+      **/
+    _getConnection(targetId, sourceId){
+        const connections = document.querySelectorAll(`ws-connection[target="${targetId}"]`);
+        if(connections.length == 0){
+            return;
         }
-        return attr;
-    }
-
-    /**
-     * I find the connection which corresponds to both the source and target
-     * provided. The assumption is that each sheet can be the source, or target,
-     * of multiple sheets. However, there can be **only one** connection between
-     * two sheets.
-     **/
-    _getConnection(sourceId, targetId) {
-        const l = [
-            ...document.querySelectorAll(`ws-connection[target="${targetId}"]`),
-        ].filter((ws) => {
-            return ws.getAttribute("sources").split(",").indexOf(sourceId) > -1;
-        });
-        if (l.length == 1) {
-            return l[0];
-        } else if (l.length > 1) {
-            throw `Multiple connections found between source ${sourceId} and target ${targetId}`;
+        if(connections.length > 1){
+            throw `Multiple connections found for the target ${targetId}`;
+        }
+        const wc = connections[0];
+        if(sourceId){
+            if(wc.getAttribute("sources").split(",").indexOf(sourceId) > -1){
+                return wc;
+            }
+        } else {
+            return wc;
         }
     }
 
@@ -1002,7 +1070,7 @@ class Worksheet extends HTMLElement {
     }
 
     fromCSV(aString) {
-        let data = CSVParser.parse(aString).data;
+        const data = CSVParser.parse(aString).data;
         if (data) {
             this.sheet.dataFrame.clear();
             this.sheet.dataFrame.corner.x = data[0].length - 1;
@@ -1013,7 +1081,7 @@ class Worksheet extends HTMLElement {
     }
 
     toCSV() {
-        let data = this.sheet.dataFrame.getDataArrayForFrame(
+        const data = this.sheet.dataFrame.getDataArrayForFrame(
             this.sheet.dataFrame
         );
         return CSVParser.unparse(data);

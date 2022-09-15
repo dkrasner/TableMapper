@@ -18,21 +18,31 @@ const semanticMatchFailTest = (str, semanticType) => {
     assert.isFalse(typeMatch.succeeded());
 };
 
-const generateRandomReference = () => {
+const generateRandomReference = (alnum=true) => {
     const id = crypto.randomUUID();
-    const anchor = [generateRandomUpperCase(), Math.round(Math.random()*1000).toString()]
-    const corner = [generateRandomUpperCase(), Math.round(Math.random()*1000).toString()]
-    const s = `${id}!${anchor.join("")}:${corner.join("")}`;
+    let anchor;
+    let corner;
+    let s;
+    if(alnum){
+        // of the form AAA:100
+        anchor = [generateRandomUpperCase(), Math.round(Math.random()*1000).toString()]
+        corner = [generateRandomUpperCase(), Math.round(Math.random()*1000).toString()]
+        s = `${id}!${anchor.join("")}:${corner.join("")}`;
+    } else {
+        // of the form (100,100)
+        anchor = [Math.round(Math.random()*1000).toString(), Math.round(Math.random()*1000).toString()]
+        corner = [Math.round(Math.random()*1000).toString(), Math.round(Math.random()*1000).toString()]
+        s = `${id}!(${anchor.join(",")}):(${corner.join(",")})`;
+    }
     return {ref: s, id: id, anchor: anchor, corner: corner};
 };
 
-const generateRandomNamedReference = () => {
-    const ref = generateRandomReference();
+const generateRandomNamedReference = (alnum=true) => {
+    const ref = generateRandomReference(alnum);
     const name = generateRandomUpperCase(); // this will do for a name
     ref.name = name;
     ref.ref = `<${name}>` + ref.ref;
     return ref;
-    
 };
 
 const generateRandomUpperCase = () => {
@@ -51,19 +61,25 @@ const generateRandomUpperCase = () => {
 describe('Reference Grammar and Semantics', function () {
     describe('Grammar', function () {
         it('(unnamed) Reference match', function () {
-            const r = generateRandomReference();
-            const s = r.ref;
+            let r = generateRandomReference();
+            let s = r.ref;
+            matchTest(s);
+            r = generateRandomReference(false);
+            s = r.ref;
             matchTest(s);
         });
         it('(unnamed) Reference match multiple reference list', function () {
             const r1 = generateRandomReference();
             const r2 = generateRandomReference();
-            const r3 = generateRandomReference();
+            const r3 = generateRandomReference(false);
             matchTest([r1.ref, r2.ref, r3.ref].join(','));
         });
         it('(named) Reference match', function () {
-            const r = generateRandomReference();
-            const s = "<thisismyname>" + r.ref;
+            let r = generateRandomReference();
+            let s = "<thisismyname>" + r.ref;
+            matchTest(s);
+            r = generateRandomReference(false);
+            s = "<thisismyname>" + r.ref;
             matchTest(s);
         });
         it('(named) Reference match multiple reference list', function () {
@@ -107,16 +123,24 @@ describe('Reference Grammar and Semantics', function () {
             semanticMatchTest("ABB1", "coordinate");
             semanticMatchTest("AAA100", "coordinate");
         });
-        it('Coordinates can have only capital letters, no num', function () {
+        it('Coordinates letters are capital', function () {
             semanticMatchTest("A", "coordinate");
             semanticMatchTest("ABB", "coordinate");
         });
         it('Coordinates match fail "ALPHA+:NUM+"', function () {
             semanticMatchFailTest("AAA:100", "coordinate");
         });
-        it('Frame is a ":" separated pair of coordinates', function () {
+        it('Coordinates match "(NUM+,NUM+)"', function () {
+            semanticMatchTest("(10,100)", "coordinate");
+            semanticMatchTest("(10 ,  100)", "coordinate");
+        });
+        it('Frame is a ":" separated pair of (alnum) coordinates', function () {
             semanticMatchTest("A100:BB10", "Frame");
             semanticMatchTest("A:BB", "Frame");
+        });
+        it('Frame is a ":" separated pair of (cartesian) coordinates', function () {
+            semanticMatchTest("(10,100):(10,100)", "Frame");
+            semanticMatchFailTest("(10,100)", "Frame");
         });
         it('Sheet ID is a UUID', function () {
             for(let i = 0; i <= 10; i++){
@@ -142,7 +166,7 @@ describe('Reference Grammar and Semantics', function () {
         it('(unnamed)Reference match list', function () {
             const r1 = generateRandomReference();
             const r2 = generateRandomReference();
-            const r3 = generateRandomReference();
+            const r3 = generateRandomReference(false);
             const s = [r1.ref, r2.ref, r3.ref].join(',');
             const m = g.match(s);
             const result = semantics(m).interpret();
@@ -168,7 +192,7 @@ describe('Reference Grammar and Semantics', function () {
         it('(named)Reference match list', function () {
             const r1 = generateRandomNamedReference();
             const r2 = generateRandomNamedReference();
-            const r3 = generateRandomNamedReference();
+            const r3 = generateRandomNamedReference(false);
             const s = [r1.ref, r2.ref, r3.ref].join(',');
             const m = g.match(s);
             const result = semantics(m).interpret();

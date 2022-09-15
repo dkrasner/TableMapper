@@ -5,8 +5,10 @@ import {commandGrammar} from './ohm/command.js';
 import {commandSemantics} from './ohm/command.js';
 
 class BasicInterpreter extends Object {
-    constructor(){
+    constructor(command_registry=commandRegistry){
         super();
+
+        this.command_registry = command_registry;
 
         this.interpret = this.interpret.bind(this);
         this.matchAndInterpretCommand = this.matchAndInterpretCommand.bind(this);
@@ -22,9 +24,9 @@ class BasicInterpreter extends Object {
         source = this.matchAndInterpretReference(source);
         target = this.matchAndInterpretReference(target)[0].slice(1);
         return function(){
-            const exec = commandRegistry[name];
+            const exec = this.command_registry[name].command;
             return exec(source, target, args);
-        };
+        }.bind(this);
     }
 
     matchAndInterpretCommand(s){
@@ -115,19 +117,40 @@ const replace = (sources, target, d) => {
 }
 
 const commandRegistry = {
-    "copy": copy,
-    "replace": replace,
-    "join": join
+    "copy": {
+        command: copy,
+        description: "Copy the contents\n(This command takes no arguments)",
+        args: false
+    },
+    "replace": {
+        command: replace,
+        description: 'Replace content with new\n' +
+            'Use a dictionary where the keys and values specify\n' +
+            'what and with-what to replace, respectively.\n' +
+            '(Example: {"1": "ONE", "2": "TWO"} will replace 1 with ONE and 2 with TWO)\n'
+        ,
+        args: true
+    },
+    "join": {
+        command: join,
+        description: "Join multiple sources using provided string",
+        args: true
+    }
 }
 
 
 // Utils
-/* I take a string like s="AA" and return its 'true'
-   column index */
+/**
+  * I take a string like s="AA" and return its 'true'
+  * column index. Otherwise I try to parse the string to an int.
+  * If all fails I return the original.
+  **/
 const labelIndex = (s) => {
     const index = letters.indexOf(s[0]) + (letters.length * (s.length - 1));
-    if(!isNaN(index)){
-        return index;
+    if(!isNaN(index) && index > -1){
+        return index - 1;
+    } else if(!isNaN(parseInt(s))){
+        return parseInt(s);
     }
     return s;
 };
@@ -151,9 +174,9 @@ const getOriginCornerElement = (data) => {
     const ws = document.getElementById(id);
     // todo: sheet should really be able to handle tab references
     origin[0] = labelIndex(origin[0]);
-    origin[1] = parseInt(origin[1]) - 1;
+    origin[1] = parseInt(origin[1]);
     corner[0] = labelIndex(corner[0]);
-    corner[1] = parseInt(corner[1]) - 1;
+    corner[1] = parseInt(corner[1]);
     return [ws, origin, corner];
 }
 

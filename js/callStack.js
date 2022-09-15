@@ -55,7 +55,7 @@ class CallStack extends Object {
        if there is a next command */
     execute(){
         if(this.COUNTER == -1){
-            throw EndOfStackError;
+            throw new EndOfStackError();
         }
         const entry = this.stack[this.COUNTER]
         const executable = this.interpreter.interpret(entry)
@@ -88,6 +88,11 @@ class CallStack extends Object {
         }
     }i
 
+    /* I jump to the last command on the stack */
+    jumpLast(){
+        this.COUNTER = this.stack.length - 1;
+    }
+
     /* I load a new set of instruction and reset the counter */
     load(instructions, resetCounter=true){
         if(resetCounter){
@@ -107,6 +112,14 @@ class CallStack extends Object {
         // TODO: throw warning or error here if check fails?
         if(instruction){
             this.stack.push(instruction);
+        }
+    }
+
+    remove(index){
+        this.stack.splice(index, 1);
+        // if the COUNTER is now off the stack, move to -1
+        if(this.COUNTER == this.stack.length - 1){
+            this.reset();
         }
     }
 }

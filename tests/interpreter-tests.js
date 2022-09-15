@@ -8,14 +8,15 @@ import crypto from 'crypto';
 // NOTE: we need the following two imports for the worksheet and sheet
 // to be available
 import Worksheet from '../js/Worksheet.js';
+import BasicInterpreter from "../js/interpreters.js";
+import { EndOfStackError, CallStack } from "../js/callStack.js";
 import '../ap-sheet/src/GridSheet.js';
 
-
-describe.skip("Interpreter Tests", () => {
+describe("Interpreter Tests", () => {
     let sourceWS;
     let anotherSourceWS;
     let targetWS;
-    let mapperWS;
+    let callstack;
     const dataDict = {
         "0,0": "a0",
         "1,0": "b0",
@@ -34,19 +35,23 @@ describe.skip("Interpreter Tests", () => {
         // sourceWS.onErase();
         targetWS = document.createElement('work-sheet');
         // targetWS.onErase();
-        mapperWS = document.createElement('work-sheet');
         // mapperWS.onErase();
         document.body.append(sourceWS);
         document.body.append(anotherSourceWS);
         document.body.append(targetWS);
-        document.body.append(mapperWS);
+        // add callstack and command related buttons
+        targetWS.addToHeader(targetWS.stackButton(), "right");
+        targetWS.addToHeader(targetWS.stepButton(), "right");
+        targetWS.addToHeader(targetWS.runButton(), "right");
+        targetWS.addToHeader(targetWS.recordButton(), "right");
         // NOTE: bc of some Node nonsense we need to generate
         // the ids manually, otherwise they are not guaranteed to be
         // standard UUID format
         sourceWS.id = crypto.randomUUID();
         anotherSourceWS.id = crypto.randomUUID();
         targetWS.id = crypto.randomUUID();
-        mapperWS.id = crypto.randomUUID();
+        const interpreter = new BasicInterpreter();
+        callstack = new CallStack(interpreter);
     });
     describe("Running basic commands test", () => {
         it("Worksheet elements exist and have an ap-sheet ref", () => {
@@ -56,41 +61,36 @@ describe.skip("Interpreter Tests", () => {
             assert.exists(targetWS);
             assert.exists(targetWS.sheet);
             assert.exists(targetWS.sheet.dataFrame);
-            assert.exists(mapperWS);
-            assert.exists(mapperWS.sheet);
-            assert.exists(mapperWS.sheet.dataFrame);
+            assert.exists(callstack);
+
         });
         it("Can clear all Worksheet data", () => {
             sourceWS.onErase();
             expect(sourceWS.sheet.dataFrame.store).to.eql({});
             targetWS.onErase();
             expect(targetWS.sheet.dataFrame.store).to.eql({});
-            mapperWS.onErase();
-            expect(mapperWS.sheet.dataFrame.store).to.eql({});
-            mapperWS.addSource(sourceWS.id, "source");
-            assert.equal(mapperWS.getAttribute("sources"), sourceWS.id);
-            mapperWS.addTarget(targetWS.id, "target");
-            assert.equal(mapperWS.getAttribute("targets"), targetWS.id);
         });
-        it("Can setup source, mapper Worksheets", () => {
+        it("Can setup source and callstack", () => {
             sourceWS.sheet.dataFrame.loadFromArray(dataArray);
             expect(sourceWS.sheet.dataFrame.store).to.eql(dataDict);
-            mapperWS.sheet.dataFrame.putAt([0, 0], "A1:C2");
-            mapperWS.sheet.dataFrame.putAt([1, 0], "A1:A1");
-            mapperWS.sheet.dataFrame.putAt([2, 0], "copy()");
-            expect(mapperWS.sheet.dataFrame.store).to.eql(
-                {"0,0": "A1:C2", "1,0": "A1:A1", "2,0": "copy()"}
-            );
+            const instructions = [
+                [`${sourceWS.id}!(0,0):(2,2)`, `${targetWS.id}!(0,0):(0,0)`, "copy()"]
+            ]
+            callstack.load(instructions);
+            expect(callstack.stack).to.eql(instructions);
         });
         it("Running the copy command populates target Worksheet", () => {
-            mapperWS.onRun();
+            callstack.run();
             expect(targetWS.sheet.dataFrame.store).to.eql(dataDict);
             targetWS.onErase();
             expect(targetWS.sheet.dataFrame.store).to.eql({});
         });
         it("Running the replace command populates target Worksheet", () => {
-            mapperWS.sheet.dataFrame.putAt([2, 0], "replace({'a': 'AAA'})");
-            mapperWS.onRun();
+            const instructions = [
+                [`${sourceWS.id}!(0,0):(2,2)`, `${targetWS.id}!(0,0):(0,0)`, "replace({'a': 'AAA'})"],
+            ]
+            callstack.load(instructions);
+            callstack.run();
             const result = {
                 "0,0": "AAA0",
                 "1,0": "b0",
@@ -104,13 +104,12 @@ describe.skip("Interpreter Tests", () => {
             expect(targetWS.sheet.dataFrame.store).to.eql({});
         });
         it("Running copy and replace commands populates target Worksheet", () => {
-            mapperWS.sheet.dataFrame.putAt([0, 0], "A1:C2");
-            mapperWS.sheet.dataFrame.putAt([1, 0], "A1:A1");
-            mapperWS.sheet.dataFrame.putAt([2, 0], "copy()");
-            mapperWS.sheet.dataFrame.putAt([0, 1], "A1:C2");
-            mapperWS.sheet.dataFrame.putAt([1, 1], "D1:D1");
-            mapperWS.sheet.dataFrame.putAt([2, 1], "replace({'a': 'AAA'})");
-            mapperWS.onRun();
+            const instructions = [
+                [`${sourceWS.id}!(0,0):(2,2)`, `${targetWS.id}!(0,0):(0,0)`, "copy()"],
+                [`${sourceWS.id}!(0,0):(2,2)`, `${targetWS.id}!(3,0):(3,0)`, "replace({'a': 'AAA'})"],
+            ]
+            callstack.load(instructions);
+            callstack.run();
             const result = {
                 "0,0": "a0",
                 "1,0": "b0",
@@ -130,13 +129,13 @@ describe.skip("Interpreter Tests", () => {
             expect(targetWS.sheet.dataFrame.store).to.eql({});
         });
         it("Stepping through copy and replace commands populates target Worksheet", () => {
-            mapperWS.sheet.dataFrame.putAt([0, 0], "A1:C2");
-            mapperWS.sheet.dataFrame.putAt([1, 0], "A1:A1");
-            mapperWS.sheet.dataFrame.putAt([2, 0], "copy()");
-            mapperWS.sheet.dataFrame.putAt([0, 1], "A1:C2");
-            mapperWS.sheet.dataFrame.putAt([1, 1], "D1:D1");
-            mapperWS.sheet.dataFrame.putAt([2, 1], "replace({'a': 'AAA'})");
-            mapperWS.onStep();
+            const instructions = [
+                [`${sourceWS.id}!(0,0):(2,2)`, `${targetWS.id}!(0,0):(0,0)`, "copy()"],
+                [`${sourceWS.id}!(0,0):(2,2)`, `${targetWS.id}!(3,0):(3,0)`, "replace({'a': 'AAA'})"],
+            ]
+            callstack.load(instructions);
+            callstack.step();
+            callstack.execute();
             expect(targetWS.sheet.dataFrame.store).to.eql(dataDict);
             const result = {
                 "0,0": "a0",
@@ -152,7 +151,8 @@ describe.skip("Interpreter Tests", () => {
                 "4,1": "b1",
                 "5,1": "c1",
             };
-            mapperWS.onStep();
+            callstack.step();
+            callstack.execute();
             expect(targetWS.sheet.dataFrame.store).to.eql(result);
             targetWS.onErase();
             expect(targetWS.sheet.dataFrame.store).to.eql({});
@@ -164,8 +164,6 @@ describe.skip("Interpreter Tests", () => {
             assert.exists(anotherSourceWS.sheet.dataFrame);
             anotherSourceWS.onErase();
             expect(anotherSourceWS.sheet.dataFrame.store).to.eql({});
-            mapperWS.addSource(anotherSourceWS.id, "anotherSource");
-            assert.equal(mapperWS.getAttribute("sources"), [sourceWS.id, anotherSourceWS.id].join(','));
             anotherSourceWS.sheet.dataFrame.loadFromArray(dataArray);
             expect(anotherSourceWS.sheet.dataFrame.store).to.eql(dataDict);
             sourceWS.onErase();
@@ -173,12 +171,11 @@ describe.skip("Interpreter Tests", () => {
             expect(sourceWS.sheet.dataFrame.store).to.eql(dataDict);
             targetWS.onErase();
 
-            // now populate the mapper with the join command
-            mapperWS.onErase();
-            mapperWS.sheet.dataFrame.putAt([0, 0], "A1:C2,A1:C2");
-            mapperWS.sheet.dataFrame.putAt([1, 0], "A1:A1");
-            mapperWS.sheet.dataFrame.putAt([2, 0], "join(',')");
-            mapperWS.onRun();
+            const instructions = [
+                [`${sourceWS.id}!(0,0):(2,1),${anotherSourceWS.id}!(0,0):(2,1)`, `${targetWS.id}!(0,0):(0,0)`, "join(',')"],
+            ]
+            callstack.load(instructions);
+            callstack.run();
             const result = {
                 "0,0": "a0,a0",
                 "1,0": "b0,b0",
@@ -190,13 +187,11 @@ describe.skip("Interpreter Tests", () => {
             expect(targetWS.sheet.dataFrame.store).to.eql(result);
             targetWS.onErase();
             expect(targetWS.sheet.dataFrame.store).to.eql({});
-            mapperWS.removeSource(anotherSourceWS.id);
         });
     });
 
     after(() => {
         sourceWS.remove();
         targetWS.remove();
-        mapperWS.remove();
     });
 });
