@@ -4,11 +4,11 @@ const CONTEXT_ITEM_EL_NAME = "context-menu-item";
 const templateString = `
 <style>
     :host {
+        box-sizing: border-box;
         display: flex;
         flex-direction: column;
         position: absolute;
         z-index: 10000;
-        padding-bottom: 8px;
         min-width: 200px;
     }
 
@@ -76,11 +76,11 @@ class ContextMenu extends HTMLElement {
         }
 
         // Remove any existing context menus in the document
-        Array.from(document.querySelectorAll(CONTEXT_MENU_EL_NAME))
-            .filter((element) => {
-                return element !== this;
-            })
-            .forEach((element) => element.remove());
+        // Array.from(document.querySelectorAll(CONTEXT_MENU_EL_NAME))
+        //     .filter((element) => {
+        //         return element !== this;
+        //     })
+        //     .forEach((element) => element.remove());
     }
 
     disconnectedCallback() {
@@ -112,18 +112,20 @@ class ContextMenu extends HTMLElement {
     }
 
     addSpacer() {
-        const item = document.createElement("li");
+        const item = document.createElement("hr");
         item.classList.add("context-menu-spacer");
         this.append(item);
         return this;
     }
 
     handleOutsideClick() {
-        this.remove();
+        if (!this.isSubmenu) {
+            this.remove();
+        }
     }
 
     handleEscapeKey(event) {
-        if (event.key == "Escape") {
+        if (event.key == "Escape" && !this.isSubmenu) {
             this.remove();
         }
     }
@@ -133,14 +135,20 @@ class ContextMenu extends HTMLElement {
         this.style.left = `${event.pageX}px`;
         document.body.append(this);
     }
+
+    get isSubmenu() {
+        return this.hasAttribute("slot");
+    }
 }
 
 const itemTemplateString = `
 <style>
     :host {
+        box-sizing: border-box;
         display: flex;
         position: relative;
     }
+
     .submenu-area {
         display: none;
         position: absolute;
@@ -158,6 +166,12 @@ const itemTemplateString = `
         width: 100%;
     }
 
+    .label-area,
+    .label,
+    .caret {
+        user-select: none;
+    }
+
     .caret.hidden {
         display: none;
     }
@@ -165,6 +179,7 @@ const itemTemplateString = `
         display: block;
         margin-left: auto;
     }
+}
 </style>
 <div class="label-area">
     <span class="label"><slot></slot></span>
@@ -187,11 +202,41 @@ class ContextMenuItem extends HTMLElement {
 
         // Bound methods
         this.showCaret = this.showCaret.bind(this);
+        this.onMouseDown = this.onMouseDown.bind(this);
+        this.highlightActive = this.highlightActive.bind(this);
+        this.unHighlightActive = this.unHighlightActive.bind(this);
     }
 
     showCaret() {
         const caretEl = this.shadowRoot.querySelector(".caret");
         caretEl.classList.remove("hidden");
+    }
+
+    connectedCallback() {
+        if (this.isConnected) {
+            this.addEventListener("mousedown", this.onMouseDown);
+        }
+    }
+
+    disconnectedCallback() {
+        this.removeEventListener("mousedown", this.onMouseDown);
+    }
+
+    onMouseDown(event) {
+        event.stopPropagation();
+        this.highlightActive();
+        this.addEventListener("mouseleave", this.unHighlightActive);
+        this.addEventListener("mouseup", this.unHighlightActive);
+    }
+
+    highlightActive() {
+        this.classList.add("item-active");
+    }
+
+    unHighlightActive() {
+        this.removeEventListener("mouseleave", this.unHighlightActive);
+        this.removeEventListener("mouseup", this.unHighlightActive);
+        this.classList.remove("item-active");
     }
 }
 
