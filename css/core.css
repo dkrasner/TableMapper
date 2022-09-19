@@ -23,3 +23,22 @@ svg#sheet:hover{
     width: 50px;
     height:50px;
 }
+
+/* =ErrorDisplay
+ --------------------------------------------- */
+.error-container {
+    display: flex;
+    padding: 10px;
+    border: 1px solid rgba(0, 0, 0, 0.4);
+    border-radius: 3px;
+    position: absolute;
+    left: -105%;
+    bottom: -105%;
+    transform: translate(0, 0);
+    transition: transform 0.3s linear;
+}
+
+.error-container.error-show {
+    transform: translate(5%, 5%);
+    transition: transform 0.3s linear;
+}

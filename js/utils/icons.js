@@ -1,25 +1,23 @@
 /**
-   * Icons used in the projects
-   * --------------------------
-   **/
+ * Icons used in the projects
+ * --------------------------
+ **/
 
-
-const eraser= `
+const eraser = `
 <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-eraser" width="44" height="44" viewBox="0 0 24 24" stroke-width="1.5" stroke="#2c3e50" fill="none" stroke-linecap="round" stroke-linejoin="round">
   <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
   <path d="M19 19h-11l-4 -4a1 1 0 0 1 0 -1.41l10 -10a1 1 0 0 1 1.41 0l5 5a1 1 0 0 1 0 1.41l-9 9" />
   <line x1="18" y1="12.3" x2="11.7" y2="6" />
 </svg>`;
 
-const remove= `
+const remove = `
 <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-square-x" width="44" height="44" viewBox="0 0 24 24" stroke-width="1.5" stroke="#2c3e50" fill="none" stroke-linecap="round" stroke-linejoin="round">
   <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
   <rect x="4" y="4" width="16" height="16" rx="2" />
   <path d="M10 10l4 4m0 -4l-4 4" />
 </svg>`;
 
-
-const sheet= `
+const sheet = `
 <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-table" width="44" height="44" viewBox="0 0 24 24" stroke-width="1.5" stroke="#2c3e50" fill="none" stroke-linecap="round" stroke-linejoin="round">
   <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
   <rect x="4" y="4" width="16" height="16" rx="2" />
@@ -27,8 +25,7 @@ const sheet= `
   <line x1="10" y1="4" x2="10" y2="20" />
 </svg>`;
 
-
-const run= `
+const run = `
 <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-run" width="44" height="44" viewBox="0 0 24 24" stroke-width="1.5" stroke="#000000" fill="none" stroke-linecap="round" stroke-linejoin="round">
   <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
   <circle cx="13" cy="4" r="1" />
@@ -36,7 +33,6 @@ const run= `
   <path d="M15 21l0 -4l-4 -3l1 -6" />
   <path d="M7 12l0 -3l5 -1l3 3l3 1" />
 </svg>`;
-
 
 const walk = `
 <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-walk" width="44" height="44" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
@@ -47,7 +43,7 @@ const walk = `
   <path d="M6 12l2 -3l4 -1l3 3l3 1" />
 </svg>`;
 
-const externalLink= `
+const externalLink = `
 <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-external-link" width="44" height="44" viewBox="0 0 24 24" stroke-width="1.5" stroke="#000000" fill="none" stroke-linecap="round" stroke-linejoin="round">
   <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
   <path d="M11 7h-5a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-5" />
@@ -55,12 +51,12 @@ const externalLink= `
   <polyline points="15 4 20 4 20 9" />
 </svg>`;
 
-const sheetImport= `<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-table-import" width="44" height="44" viewBox="0 0 24 24" stroke-width="1.5" stroke="#000000" fill="none" stroke-linecap="round" stroke-linejoin="round">
+const sheetImport = `<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-table-import" width="44" height="44" viewBox="0 0 24 24" stroke-width="1.5" stroke="#000000" fill="none" stroke-linecap="round" stroke-linejoin="round">
   <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
   <path d="M4 13.5v-7.5a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-6m-8 -10h16m-10 -6v11.5m-8 3.5h7m-3 -3l3 3l-3 3" />
 </svg>`;
 
-const sheetExport= `<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-table-export" width="44" height="44" viewBox="0 0 24 24" stroke-width="1.5" stroke="#000000" fill="none" stroke-linecap="round" stroke-linejoin="round">
+const sheetExport = `<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-table-export" width="44" height="44" viewBox="0 0 24 24" stroke-width="1.5" stroke="#000000" fill="none" stroke-linecap="round" stroke-linejoin="round">
   <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
   <path d="M11.5 20h-5.5a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v7.5m-16 -3.5h16m-10 -6v16m4 -1h7m-3 -3l3 3l-3 3" />
 </svg>`;
@@ -79,7 +75,6 @@ const link = `<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler ic
   <path d="M10 14a3.5 3.5 0 0 0 5 0l4 -4a3.5 3.5 0 0 0 -5 -5l-.5 .5" />
   <path d="M14 10a3.5 3.5 0 0 0 -5 0l-4 4a3.5 3.5 0 0 0 5 5l.5 -.5" />
 </svg>`;
-
 
 const unlink = `<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-unlink" width="44" height="44" viewBox="0 0 24 24" stroke-width="1.5" stroke="#000000" fill="none" stroke-linecap="round" stroke-linejoin="round">
   <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
@@ -137,7 +132,15 @@ const stack = `<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler i
   <polyline points="4 16 12 20 20 16" />
 </svg>`;
 
+const alert = `<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-alert-octagon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+   <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+   <path d="M8.7 3h6.6c.3 0 .5 .1 .7 .3l4.7 4.7c.2 .2 .3 .4 .3 .7v6.6c0 .3 -.1 .5 -.3 .7l-4.7 4.7c-.2 .2 -.4 .3 -.7 .3h-6.6c-.3 0 -.5 -.1 -.7 -.3l-4.7 -4.7c-.2 -.2 -.3 -.4 -.3 -.7v-6.6c0 -.3 .1 -.5 .3 -.7l4.7 -4.7c.2 -.2 .4 -.3 .7 -.3z"></path>
+   <line x1="12" y1="8" x2="12" y2="12"></line>
+   <line x1="12" y1="16" x2="12.01" y2="16"></line>
+</svg>`;
+
 const icons = {
+    alert: alert,
     ban: ban,
     eraser: eraser,
     circleX: circleX,
@@ -154,11 +157,7 @@ const icons = {
     link: link,
     unlink: unlink,
     fileUpload: fileUpload,
-    fileDownload: fileDownload
+    fileDownload: fileDownload,
 };
 
-
-export{
-    icons,
-    icons as default
-}
+export { icons, icons as default };
