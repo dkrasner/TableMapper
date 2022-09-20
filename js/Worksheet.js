@@ -286,6 +286,10 @@ class Worksheet extends HTMLElement {
         this.onErase = this.onErase.bind(this);
         this.onUpload = this.onUpload.bind(this);
         this.onDownload = this.onDownload.bind(this);
+        this.downloadCSV = this.downloadCSV.bind(this);
+        this.downloadExcel = this.downloadExcel.bind(this);
+        this.openDownloadDialog = this.openDownloadDialog.bind(this);
+        this.closeDownloadDialog = this.closeDownloadDialog.bind(this);
         this.onDelete = this.onDelete.bind(this);
         this.onStackInspect = this.onStackInspect.bind(this);
         this.onRun = this.onRun.bind(this);
@@ -302,6 +306,8 @@ class Worksheet extends HTMLElement {
         // Bound serialization methods
         this.toCSV = this.toCSV.bind(this);
         this.fromCSV = this.fromCSV.bind(this);
+        this.fromExcel = this.fromExcel.bind(this);
+        this.toExcel = this.toExcel.bind(this);
     }
 
     connectedCallback() {
@@ -651,22 +657,7 @@ class Worksheet extends HTMLElement {
                 if(ftype == 'csv'){
                     this.fromCSV(loadEv.target.result);
                 } else {
-                    const wb = XLSX.read(
-                        loadEv.target.result,
-                        { type: rABS ? "binary" : "array" }
-                    );
-                    // TODO we only take the first sheet
-                    const wsName = wb.SheetNames[0];
-                    const ws = wb.Sheets[wsName];
-                    const wsArray = XLSX.utils.sheet_to_json(
-                        ws,
-                        {header: 1} // this will give us an nd-array
-                    );
-                    this.onErase();
-                    this.sheet.dataFrame.loadFromArray(wsArray);
-                    // update the file name to include the sheet/tab
-                    fileName = fileName.replace(`.${ftype}`, `[${wsName}]`);
-                    console.log(rABS, wb.SheetNames);
+                    fileName = this.fromExcel(loadEv.target.results);
                 }
                 // set the name of the sheet to the file name; TODO: do we want this?
                 this.updateName(fileName);
@@ -693,29 +684,56 @@ class Worksheet extends HTMLElement {
         }
     }
 
-    onDownload(type="csv") {
-        if(type == 'csv'){
-            const csv = this.toCSV();
-            const anchor = document.createElement("a");
-            anchor.style.display = "none";
-            const blob = new Blob([csv], { type: "text/csv" });
-            const url = window.URL.createObjectURL(blob);
-            anchor.href = url;
-            anchor.download = `${this.name}.csv`;
-            document.body.append(anchor);
-            anchor.click();
-            window.URL.revokeObjectURL(url);
-        } else if(type == "xlsx"){
-            const wb = XLSX.utils.book_new();
-            const ws = XLSX.utils.aoa_to_sheet(
-                this.sheet.dataFrame.getDataArrayForFrame(
-                    this.sheet.dataFrame
-                )
-            )
-            XLSX.utils.book_append_sheet(wb, ws, "Sheet_1");
-            XLSX.writeFile(wb, `${this.name}.xlsx`);
+    onDownload() {
+        this.openDownloadDialog();
+    }
+
+    downloadCSV(){
+        this.closeDownloadDialog();
+        const csv = this.toCSV();
+        const anchor = document.createElement("a");
+        anchor.style.display = "none";
+        const blob = new Blob([csv], { type: "text/csv" });
+        const url = window.URL.createObjectURL(blob);
+        anchor.href = url;
+        anchor.download = `${this.name}.csv`;
+        document.body.append(anchor);
+        anchor.click();
+        window.URL.revokeObjectURL(url);
+    }
+
+    downloadExcel(){
+        this.closeDownloadDialog();
+        const wb = this.toExcel();
+        XLSX.writeFile(wb, `${this.name}.xlsx`);
+    }
+
+    openDownloadDialog(){
+        const dialog = document.createElement('dialog');
+        const form = document.createElement('form');
+        const div = document.createElement('div');
+        const csvButton = document.createElement('button');
+        csvButton.textContent = "CSV";
+        const excelButton = document.createElement('button');
+        excelButton.textContent = "XLSX";
+        div.append(csvButton);
+        div.append(excelButton);
+        form.append(div);
+        dialog.append(form);
+        dialog.setAttribute('id', `${this.id}_download_dialog`);
+        document.body.append(dialog);
+        csvButton.addEventListener(('click'), this.downloadCSV);
+        excelButton.addEventListener(('click'), this.downloadExcel);
+        dialog.showModal();
+    }
+
+    closeDownloadDialog(){
+        const dialog = document.getElementById(`${this.id}_download_dialog`);
+        if(dialog){
+            dialog.remove();
         }
     }
+
 
     // TODO: these callstack calls, and corresponding button icons, should be
     // removed and eventually live in a connection or commandInterface element UI
@@ -1134,6 +1152,45 @@ class Worksheet extends HTMLElement {
             this.sheet.dataFrame
         );
         return CSVParser.unparse(data);
+    }
+
+    fromExcel(aString){
+        // TODO: if the field is an excel date field xlsx converts it
+        // automatically, to either a numerical value or a date string
+        // I can't see a way around this and it might be a by-product of how
+        // excel data is actually stored tbd... 
+        const wb = XLSX.read(
+            aString,
+            {
+                type: rABS ? "binary" : "array",
+                cellText:false,
+                cellDates:true,
+            }
+        );
+        // TODO we only take the first sheet
+        const wsName = wb.SheetNames[0];
+        const ws = wb.Sheets[wsName];
+        const wsArray = XLSX.utils.sheet_to_json(
+            ws,
+            {header: 1} // this will give us an nd-array
+        );
+        this.onErase();
+        this.sheet.dataFrame.loadFromArray(wsArray);
+        // update the file name to include the sheet/tab
+        fileName = fileName.replace(`.${ftype}`, `[${wsName}]`);
+        return fileName;
+
+    }
+
+    toExcel(){
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.aoa_to_sheet(
+            this.sheet.dataFrame.getDataArrayForFrame(
+                this.sheet.dataFrame
+            )
+        )
+        XLSX.utils.book_append_sheet(wb, ws, "Sheet_1");
+        return wb;
     }
 
     get isMinimized() {
