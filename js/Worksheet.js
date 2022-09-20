@@ -10,7 +10,7 @@
 import { labelIndex } from "./interpreters.js";
 import icons from "./utils/icons.js";
 import createIconSVGFromString from "./utils/helpers.js";
-import BasicInterpreter from "./interpreters.js";
+import * as XLSX from 'xlsx';
 import CSVParser from "papaparse";
 import ContextMenuHandler from "./ContextMenuHandler.js";
 
@@ -638,34 +638,83 @@ class Worksheet extends HTMLElement {
     }
 
     onUpload(event) {
+        // supported file formats
+        const formats = ['csv', 'xlsx', 'xls'];
+        const rexp = new RegExp(`(?:${formats.join('|')})$`);
         const file = event.target.files[0];
-        const reader = new FileReader();
-        reader.addEventListener("load", (loadEv) => {
-            this.fromCSV(loadEv.target.result);
-        });
-        reader.addEventListener("error", (e) => {
-            console.error(e);
-            alert("An error occurred reading this file");
-            return;
-        });
-
-        // Will trigger the reader.load event
-        reader.readAsText(file);
-        // set the name of the sheet to the file name; TODO: do we want this?
-        this.updateName(file.name);
+        let fileName = file.name;
+        if(rexp.test(fileName)){
+            const ftype = rexp.exec(fileName)[0];
+            const reader = new FileReader();
+            const rABS = !!reader.readAsBinaryString;
+            reader.addEventListener("load", (loadEv) => {
+                if(ftype == 'csv'){
+                    this.fromCSV(loadEv.target.result);
+                } else {
+                    const wb = XLSX.read(
+                        loadEv.target.result,
+                        { type: rABS ? "binary" : "array" }
+                    );
+                    // TODO we only take the first sheet
+                    const wsName = wb.SheetNames[0];
+                    const ws = wb.Sheets[wsName];
+                    const wsArray = XLSX.utils.sheet_to_json(
+                        ws,
+                        {header: 1} // this will give us an nd-array
+                    );
+                    this.onErase();
+                    this.sheet.dataFrame.loadFromArray(wsArray);
+                    // update the file name to include the sheet/tab
+                    fileName = fileName.replace(`.${ftype}`, `[${wsName}]`);
+                    console.log(rABS, wb.SheetNames);
+                }
+                // set the name of the sheet to the file name; TODO: do we want this?
+                this.updateName(fileName);
+            });
+            reader.addEventListener("error", (e) => {
+                console.error(e);
+                alert("An error occurred reading this file");
+                return;
+            });
+            if(ftype == 'csv'){
+                // Will trigger the reader.load event
+                reader.readAsText(file);
+            } else {
+                // excel files
+                if(rABS){
+                    reader.readAsBinaryString(file)
+                } else {
+                    reader.readAsArrayBuffer(file);
+                }
+            }
+        } else {
+            alert(`I only support ${formats.join(', ')} type files!`);
+            // TODO perhaps we should throw an error here
+        }
     }
 
-    onDownload() {
-        const csv = this.toCSV();
-        const anchor = document.createElement("a");
-        anchor.style.display = "none";
-        const blob = new Blob([csv], { type: "text/csv" });
-        const url = window.URL.createObjectURL(blob);
-        anchor.href = url;
-        anchor.download = `${this.name}.csv`;
-        document.body.append(anchor);
-        anchor.click();
-        window.URL.revokeObjectURL(url);
+    onDownload(type="csv") {
+        if(type == 'csv'){
+            const csv = this.toCSV();
+            const anchor = document.createElement("a");
+            anchor.style.display = "none";
+            const blob = new Blob([csv], { type: "text/csv" });
+            const url = window.URL.createObjectURL(blob);
+            anchor.href = url;
+            anchor.download = `${this.name}.csv`;
+            document.body.append(anchor);
+            anchor.click();
+            window.URL.revokeObjectURL(url);
+        } else if(type == "xlsx"){
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(
+                this.sheet.dataFrame.getDataArrayForFrame(
+                    this.sheet.dataFrame
+                )
+            )
+            XLSX.utils.book_append_sheet(wb, ws, "Sheet_1");
+            XLSX.writeFile(wb, `${this.name}.xlsx`);
+        }
     }
 
     // TODO: these callstack calls, and corresponding button icons, should be
