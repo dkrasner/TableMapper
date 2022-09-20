@@ -222,6 +222,7 @@ my-grid {
 .dragover {
     border: solid var(--palette-beige);
 }
+
 </style>
 <div id="header-bar">
     <span id="header-left">
@@ -657,7 +658,12 @@ class Worksheet extends HTMLElement {
                 if(ftype == 'csv'){
                     this.fromCSV(loadEv.target.result);
                 } else {
-                    fileName = this.fromExcel(loadEv.target.results);
+                    fileName = this.fromExcel(
+                        loadEv.target.result,
+                        rABS,
+                        fileName,
+                        ftype
+                    );
                 }
                 // set the name of the sheet to the file name; TODO: do we want this?
                 this.updateName(fileName);
@@ -704,26 +710,33 @@ class Worksheet extends HTMLElement {
 
     downloadExcel(){
         this.closeDownloadDialog();
-        const wb = this.toExcel();
-        XLSX.writeFile(wb, `${this.name}.xlsx`);
+        const [wb, fileName] = this.toExcel();
+        XLSX.writeFile(wb, `${fileName}.xlsx`);
     }
 
     openDownloadDialog(){
-        const dialog = document.createElement('dialog');
-        const form = document.createElement('form');
-        const div = document.createElement('div');
-        const csvButton = document.createElement('button');
+        const dialog = document.createElement("dialog");
+        const div = document.createElement("div");
+        const csvButton = document.createElement("button");
         csvButton.textContent = "CSV";
-        const excelButton = document.createElement('button');
+        const excelButton = document.createElement("button");
         excelButton.textContent = "XLSX";
         div.append(csvButton);
         div.append(excelButton);
-        form.append(div);
-        dialog.append(form);
-        dialog.setAttribute('id', `${this.id}_download_dialog`);
+        dialog.append(div);
+        dialog.setAttribute("id", `${this.id}_download_dialog`);
         document.body.append(dialog);
-        csvButton.addEventListener(('click'), this.downloadCSV);
-        excelButton.addEventListener(('click'), this.downloadExcel);
+        // create a close/remove icon
+        const svg = createIconSVGFromString(icons.remove);
+        const removeButton = document.createElement("span");
+        removeButton.appendChild(svg);
+        removeButton.setAttribute("title", "cancel");
+        removeButton.setAttribute("data-clickable", true);
+        removeButton.setAttribute("id", "remove");
+        dialog.append(removeButton);
+        removeButton.addEventListener("click", this.closeDownloadDialog);
+        csvButton.addEventListener("click", this.downloadCSV);
+        excelButton.addEventListener("click", this.downloadExcel);
         dialog.showModal();
     }
 
@@ -1154,7 +1167,7 @@ class Worksheet extends HTMLElement {
         return CSVParser.unparse(data);
     }
 
-    fromExcel(aString){
+    fromExcel(aString, rABS, fileName, ftype){
         // TODO: if the field is an excel date field xlsx converts it
         // automatically, to either a numerical value or a date string
         // I can't see a way around this and it might be a by-product of how
@@ -1189,8 +1202,17 @@ class Worksheet extends HTMLElement {
                 this.sheet.dataFrame
             )
         )
-        XLSX.utils.book_append_sheet(wb, ws, "Sheet_1");
-        return wb;
+        // TODO get proper name here for the sheet
+        let sheetName = "Sheet1";
+        const sheetRE = /\[(.*)\]$/;
+        const m = this.name.match(sheetRE);
+        let fileName = this.name;
+        if(m){
+            sheetName = m[1];
+            fileName = fileName.replace(sheetRE, "");
+        }
+        XLSX.utils.book_append_sheet(wb, ws, sheetName);
+        return [wb, fileName];
     }
 
     get isMinimized() {
