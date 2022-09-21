@@ -18,11 +18,14 @@ class WSConnection extends HTMLElement {
         this.callStack = null;
         this.leaderLines = [];
 
+        this.resizeObserver;
+
         // Bound component methods
         this.updateLeaderLine = this.updateLeaderLine.bind(this);
         this.updateLinkedSheet = this.updateLinkedSheet.bind(this);
         this.renderLines = this.renderLines.bind(this);
         this.onWorksheetMoved = this.onWorksheetMoved.bind(this);
+        this.onWorksheetResized = this.onWorksheetResized.bind(this);
         this.openCommandInterface = this.openCommandInterface.bind(this);
         this.step = this.step.bind(this);
         this.run = this.run.bind(this);
@@ -37,6 +40,7 @@ class WSConnection extends HTMLElement {
             // TODO: maybe this should be passed as a constructor arg
             this.interpreter = new BasicInterpreter();
             this.callStack = new CallStack(this.interpreter);
+            this.resizeObserver = new ResizeObserver(this.onWorksheetResized);
         }
     }
 
@@ -112,6 +116,7 @@ class WSConnection extends HTMLElement {
                         "worksheet-moved",
                         this.onWorksheetMoved
                     );
+                    this.resizeObserver.unobserve(oldLinkedEl);
                 }
             });
             newVal.forEach((id) => {
@@ -121,6 +126,7 @@ class WSConnection extends HTMLElement {
                         "worksheet-moved",
                         this.onWorksheetMoved
                     );
+                    this.resizeObserver.observe(newLinkedEl);
                 }
             });
         }
@@ -131,6 +137,19 @@ class WSConnection extends HTMLElement {
         const lines = this.leaderLines.filter((l) => {
             return l.start.id == event.detail.id || l.end.id == event.detail.id;
         });
+        this.updateLines(lines);
+    }
+
+    onWorksheetResized(entries) {
+        // When worksheets resize, we need to redraw the leaderLines
+        const ids = entries.map((e) => {return e.target.id});
+        const lines = this.leaderLines.filter((l) => {
+            return ids.indexOf(l.start.id) > -1 || ids.indexOf(l.end.id) > -1;
+        });
+        this.updateLines(lines);
+    }
+
+    updateLines(lines){
         lines.forEach((l) => {
             l.position().show();
         });
