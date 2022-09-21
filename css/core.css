@@ -34,6 +34,7 @@ dialog {
 dialog div {
     display: flex;
     justify-content: space-around;
+    margin-top: 5px;
 }
 
 dialog button {

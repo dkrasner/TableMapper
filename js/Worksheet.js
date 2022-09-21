@@ -290,7 +290,9 @@ class Worksheet extends HTMLElement {
         this.downloadCSV = this.downloadCSV.bind(this);
         this.downloadExcel = this.downloadExcel.bind(this);
         this.openDownloadDialog = this.openDownloadDialog.bind(this);
-        this.closeDownloadDialog = this.closeDownloadDialog.bind(this);
+        this.openExcelUploadDialog = this.openExcelUploadDialog.bind(this);
+        this._basicDialog = this._basicDialog.bind(this);
+        this.closeDialog = this.closeDialog.bind(this);
         this.onDelete = this.onDelete.bind(this);
         this.onStackInspect = this.onStackInspect.bind(this);
         this.onRun = this.onRun.bind(this);
@@ -656,17 +658,15 @@ class Worksheet extends HTMLElement {
             const rABS = !!reader.readAsBinaryString;
             reader.addEventListener("load", (loadEv) => {
                 if(ftype == 'csv'){
-                    this.fromCSV(loadEv.target.result);
+                    this.fromCSV(loadEv.target.result, filename);
                 } else {
-                    fileName = this.fromExcel(
+                    this.fromExcel(
                         loadEv.target.result,
                         rABS,
                         fileName,
                         ftype
                     );
                 }
-                // set the name of the sheet to the file name; TODO: do we want this?
-                this.updateName(fileName);
             });
             reader.addEventListener("error", (e) => {
                 console.error(e);
@@ -695,7 +695,7 @@ class Worksheet extends HTMLElement {
     }
 
     downloadCSV(){
-        this.closeDownloadDialog();
+        this.closeDialog();
         const csv = this.toCSV();
         const anchor = document.createElement("a");
         anchor.style.display = "none";
@@ -709,44 +709,10 @@ class Worksheet extends HTMLElement {
     }
 
     downloadExcel(){
-        this.closeDownloadDialog();
+        this.closeDialog();
         const [wb, fileName] = this.toExcel();
         XLSX.writeFile(wb, `${fileName}.xlsx`);
     }
-
-    openDownloadDialog(){
-        const dialog = document.createElement("dialog");
-        const div = document.createElement("div");
-        const csvButton = document.createElement("button");
-        csvButton.textContent = "CSV";
-        const excelButton = document.createElement("button");
-        excelButton.textContent = "XLSX";
-        div.append(csvButton);
-        div.append(excelButton);
-        dialog.append(div);
-        dialog.setAttribute("id", `${this.id}_download_dialog`);
-        document.body.append(dialog);
-        // create a close/remove icon
-        const svg = createIconSVGFromString(icons.remove);
-        const removeButton = document.createElement("span");
-        removeButton.appendChild(svg);
-        removeButton.setAttribute("title", "cancel");
-        removeButton.setAttribute("data-clickable", true);
-        removeButton.setAttribute("id", "remove");
-        dialog.append(removeButton);
-        removeButton.addEventListener("click", this.closeDownloadDialog);
-        csvButton.addEventListener("click", this.downloadCSV);
-        excelButton.addEventListener("click", this.downloadExcel);
-        dialog.showModal();
-    }
-
-    closeDownloadDialog(){
-        const dialog = document.getElementById(`${this.id}_download_dialog`);
-        if(dialog){
-            dialog.remove();
-        }
-    }
-
 
     // TODO: these callstack calls, and corresponding button icons, should be
     // removed and eventually live in a connection or commandInterface element UI
@@ -1149,7 +1115,7 @@ class Worksheet extends HTMLElement {
         return iconSpan;
     }
 
-    fromCSV(aString) {
+    fromCSV(aString, fileName) {
         const data = CSVParser.parse(aString).data;
         if (data) {
             this.sheet.dataFrame.clear();
@@ -1157,6 +1123,8 @@ class Worksheet extends HTMLElement {
             this.sheet.dataFrame.corner.y = data.length - 1;
             this.sheet.dataFrame.loadFromArray(data);
             this.sheet.render();
+            // set the name of the sheet to the file name; TODO: do we want this?
+            this.updateName(fileName);
         }
     }
 
@@ -1171,7 +1139,7 @@ class Worksheet extends HTMLElement {
         // TODO: if the field is an excel date field xlsx converts it
         // automatically, to either a numerical value or a date string
         // I can't see a way around this and it might be a by-product of how
-        // excel data is actually stored tbd... 
+        // excel data is actually stored tbd...
         const wb = XLSX.read(
             aString,
             {
@@ -1180,20 +1148,86 @@ class Worksheet extends HTMLElement {
                 cellDates:true,
             }
         );
-        // TODO we only take the first sheet
-        const wsName = wb.SheetNames[0];
-        const ws = wb.Sheets[wsName];
-        const wsArray = XLSX.utils.sheet_to_json(
-            ws,
-            {header: 1} // this will give us an nd-array
-        );
-        this.onErase();
-        this.sheet.dataFrame.loadFromArray(wsArray);
-        // update the file name to include the sheet/tab
-        fileName = fileName.replace(`.${ftype}`, `[${wsName}]`);
-        return fileName;
-
+        // ask which sheet to load since we only do one
+        this.openExcelUploadDialog(wb, (event) => {
+            const ws = wb.Sheets[event.target.value];
+            if(ws){
+                const wsArray = XLSX.utils.sheet_to_json(
+                    ws,
+                    {header: 1} // this will give us an nd-array
+                );
+                this.onErase();
+                this.sheet.dataFrame.loadFromArray(wsArray);
+                // update the file name to include the sheet/tab
+                fileName = fileName.replace(`.${ftype}`, `[${event.target.value}]`);
+                fileName = fileName.replace(/\[.+\]$/, `[${event.target.value}]`);
+                // set the name of the sheet to the file name; TODO: do we want this?
+                this.updateName(fileName);
+            }
+        });
     }
+
+    openExcelUploadDialog(workbook, callback){
+        const dialog = this._basicDialog(`${this.id}_excel_dialog`);
+        const form = document.createElement("form");
+        const select = document.createElement("select");
+        const option = document.createElement("option");
+        option.textContent = "Choose a sheet...";
+        option.setAttribute("disabled", "");
+        option.setAttribute("selected", "");
+        select.append(option);
+        workbook.SheetNames.forEach((name) => {
+            const option = document.createElement("option");
+            option.textContent = name;
+            select.append(option);
+        })
+        form.append(select);
+        dialog.firstChild.append(form);
+        select.addEventListener("change", callback);
+        dialog.showModal();
+    }
+
+    openDownloadDialog(){
+        const dialog = this._basicDialog(`${this.id}_download_dialog`);
+        const csvButton = document.createElement("button");
+        csvButton.textContent = "CSV";
+        const excelButton = document.createElement("button");
+        excelButton.textContent = "XLSX";
+        dialog.firstChild.append(csvButton);
+        dialog.firstChild.append(excelButton);
+        csvButton.addEventListener("click", this.downloadCSV);
+        excelButton.addEventListener("click", this.downloadExcel);
+        dialog.showModal();
+    }
+
+    _basicDialog(id){
+        const dialog = document.createElement("dialog");
+        const div = document.createElement("div");
+        dialog.append(div);
+        dialog.setAttribute("id", id);
+        document.body.append(dialog);
+        // create a close/remove icon
+        const svg = createIconSVGFromString(icons.remove);
+        const removeButton = document.createElement("span");
+        removeButton.appendChild(svg);
+        removeButton.setAttribute("title", "cancel");
+        removeButton.setAttribute("data-clickable", true);
+        removeButton.setAttribute("id", "remove");
+        dialog.append(removeButton);
+        removeButton.addEventListener(
+            "click",
+            () => this.closeDialog(id)
+        );
+        return dialog;
+    }
+
+    closeDialog(id){
+        const dialog = document.getElementById(id);
+        if(dialog){
+            dialog.remove();
+        }
+    }
+
 
     toExcel(){
         const wb = XLSX.utils.book_new();
