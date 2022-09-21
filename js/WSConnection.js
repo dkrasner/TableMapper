@@ -137,9 +137,7 @@ class WSConnection extends HTMLElement {
         const lines = this.leaderLines.filter((l) => {
             return l.start.id == event.detail.id || l.end.id == event.detail.id;
         });
-        lines.forEach((l) => {
-            l.position().show();
-        });
+        this.updateLines(lines);
     }
 
     onWorksheetResized(entries) {
@@ -148,6 +146,10 @@ class WSConnection extends HTMLElement {
         const lines = this.leaderLines.filter((l) => {
             return ids.indexOf(l.start.id) > -1 || ids.indexOf(l.end.id) > -1;
         });
+        this.updateLines(lines);
+    }
+
+    updateLines(lines){
         lines.forEach((l) => {
             l.position().show();
         });
