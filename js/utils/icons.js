@@ -137,8 +137,50 @@ const stack = `<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler i
   <polyline points="4 16 12 20 20 16" />
 </svg>`;
 
+const affiliate = `<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-affiliate" width="44" height="44" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M5.931 6.936l1.275 4.249m5.607 5.609l4.251 1.275" />
+  <path d="M11.683 12.317l5.759 -5.759" />
+  <circle cx="5.5" cy="5.5" r="1.5" />
+  <circle cx="18.5" cy="5.5" r="1.5" />
+  <circle cx="18.5" cy="18.5" r="1.5" />
+  <circle cx="8.5" cy="15.5" r="4.5" />
+</svg>`;
+
+const command = `<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-command" width="44" height="44" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M7 9a2 2 0 1 1 2 -2v10a2 2 0 1 1 -2 -2h10a2 2 0 1 1 -2 2v-10a2 2 0 1 1 2 2h-10" />
+</svg>`;
+
+
+const maximize = `<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-arrows-maximize" width="44" height="44" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <polyline points="16 4 20 4 20 8" />
+  <line x1="14" y1="10" x2="20" y2="4" />
+  <polyline points="8 20 4 20 4 16" />
+  <line x1="4" y1="20" x2="10" y2="14" />
+  <polyline points="16 20 20 20 20 16" />
+  <line x1="14" y1="14" x2="20" y2="20" />
+  <polyline points="8 4 4 4 4 8" />
+  <line x1="4" y1="4" x2="10" y2="10" />
+</svg>`;
+
+const minimize = `<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-arrows-minimize" width="44" height="44" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <polyline points="5 9 9 9 9 5" />
+  <line x1="3" y1="3" x2="9" y2="9" />
+  <polyline points="5 15 9 15 9 19" />
+  <line x1="3" y1="21" x2="9" y2="15" />
+  <polyline points="19 9 15 9 15 5" />
+  <line x1="15" y1="9" x2="21" y2="3" />
+  <polyline points="19 15 15 15 15 19" />
+  <line x1="15" y1="15" x2="21" y2="21" />
+</svg>`;
+
 const icons = {
+    affiliate: affiliate,
     ban: ban,
+    command: command,
     eraser: eraser,
     circleX: circleX,
     record: record,
@@ -154,7 +196,9 @@ const icons = {
     link: link,
     unlink: unlink,
     fileUpload: fileUpload,
-    fileDownload: fileDownload
+    fileDownload: fileDownload,
+    maximize: maximize,
+    minimize: minimize,
 };
 
 

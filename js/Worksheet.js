@@ -31,7 +31,7 @@ const templateString = `
     --sheet-bg-color: var(--palette-cyan);
 }
 
-:host([minimized="true"]) > div:not(#header-bar){
+:host([minimized]) > div:not(#header-bar){
     display: none;
 }
 
@@ -315,6 +315,7 @@ class Worksheet extends HTMLElement {
         this.addToHeader(this.trashButton(), "left");
         this.addToHeader(this.uploadButton(), "left");
         this.addToHeader(this.downloadButton(), "left");
+        this.addToHeader(this.maximizeMinimizeButton(), "right");
         this.addToHeader(this.eraseButton(), "right");
         this.addToFooter(this.linkButton(), "right");
         const header = this.shadowRoot.querySelector("#header-bar");
@@ -351,7 +352,7 @@ class Worksheet extends HTMLElement {
     disconnectedCallback() {
         // remove event listeners
         const header = this.shadowRoot.querySelector("#header-bar");
-        const footer = this.shadowRoot.querySelector("#footer-bar");
+        // const footer = this.shadowRoot.querySelector("#footer-bar");
         const name = header.querySelector("span");
         name.removeEventListener("dblclick", this.onNameDblClick);
         this.removeEventListener("dragstart", this.onDragStart);
@@ -369,6 +370,16 @@ class Worksheet extends HTMLElement {
                     connectionElement.renderLines();
                 }
             );
+            const header = this.shadowRoot.querySelector("#header-bar");
+            const button = header.querySelector("#min-max");
+            let title = "minimize this worksheet";
+            let svg = createIconSVGFromString(icons.minimize);
+            if(this.hasAttribute("minimized")){
+                title = "maximize this worksheet";
+                svg = createIconSVGFromString(icons.maximize);
+            }
+            button.setAttribute("title", title);
+            button.querySelector("svg").replaceWith(svg);
         }
     }
 
@@ -401,6 +412,17 @@ class Worksheet extends HTMLElement {
     }
 
     /* default header/footer buttons */
+    maximizeMinimizeButton() {
+        const svg = createIconSVGFromString(icons.minimize);
+        const button = document.createElement("span");
+        button.appendChild(svg);
+        button.addEventListener("click", () => {this.toggleAttribute("minimized");});
+        button.setAttribute("title", "minimize the worksheet");
+        button.setAttribute("data-clickable", true);
+        button.setAttribute("id", "min-max");
+        return button;
+    }
+
     trashButton() {
         const svg = createIconSVGFromString(icons.trash);
         const button = document.createElement("span");
@@ -476,12 +498,12 @@ class Worksheet extends HTMLElement {
     }
 
     recordButton() {
-        const svg = createIconSVGFromString(icons.record);
+        const svg = createIconSVGFromString(icons.command);
         const button = document.createElement("span");
         svg.style.stroke = "green"; // TODO set to palette color
         button.appendChild(svg);
         button.addEventListener("click", this.onRecordToggle);
-        button.setAttribute("title", "start recording");
+        button.setAttribute("title", "start adding commands");
         button.setAttribute("data-clickable", true);
         button.setAttribute("id", "record");
         return button;
@@ -502,6 +524,7 @@ class Worksheet extends HTMLElement {
         return button;
     }
 
+    // the callbacks
     onMouseDownInHeaderFooter(event) {
         // drag event propagation can be touchy so make sure we are not clicking or dragging
         // any children of header/footer
@@ -630,10 +653,10 @@ class Worksheet extends HTMLElement {
         const record_icon = this.shadowRoot.querySelector("#record > svg");
         if(this.hasAttribute("recording")){
             record_icon.style.stroke = "red"; // TODO set to palette color
-            record_button.setAttribute("title", "stop recording");
+            record_button.setAttribute("title", "stop");
         } else {
             record_icon.style.stroke = "green"; // TODO set to palette color
-            record_button.setAttribute("title", "start recording");
+            record_button.setAttribute("title", "start adding commands");
         }
     }
 
@@ -1088,7 +1111,7 @@ class Worksheet extends HTMLElement {
     }
 
     get isMinimized() {
-        return this.getAttribute("minimized") === "true";
+        return this.hasAttribute("minimized");
     }
 
     static get observedAttributes() {
