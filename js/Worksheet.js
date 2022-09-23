@@ -658,7 +658,7 @@ class Worksheet extends HTMLElement {
             const rABS = !!reader.readAsBinaryString;
             reader.addEventListener("load", (loadEv) => {
                 if(ftype == 'csv'){
-                    this.fromCSV(loadEv.target.result, filename);
+                    this.fromCSV(loadEv.target.result, fileName);
                 } else {
                     this.fromExcel(
                         loadEv.target.result,
@@ -1119,8 +1119,16 @@ class Worksheet extends HTMLElement {
         const data = CSVParser.parse(aString).data;
         if (data) {
             this.sheet.dataFrame.clear();
-            this.sheet.dataFrame.corner.x = data[0].length - 1;
-            this.sheet.dataFrame.corner.y = data.length - 1;
+            this.sheet.dataFrame.corner.x = Math.max(
+                Math.max(
+                    ...data.map((row) => {return row.length})
+                ) - 1,
+                this.sheet.dataFrame.corner.x
+            );
+            this.sheet.dataFrame.corner.y = Math.max(
+                data.length - 1,
+                this.sheet.dataFrame.corner.y
+            );
             this.sheet.dataFrame.loadFromArray(data);
             this.sheet.render();
             // set the name of the sheet to the file name; TODO: do we want this?
@@ -1157,6 +1165,16 @@ class Worksheet extends HTMLElement {
                     {header: 1} // this will give us an nd-array
                 );
                 this.onErase();
+                this.sheet.dataFrame.corner.x = Math.max(
+                    Math.max(
+                        ...wsArray.map((row) => {return row.length})
+                    ) - 1,
+                    this.sheet.dataFrame.corner.x
+                );
+                this.sheet.dataFrame.corner.y = Math.max(
+                    wsArray.length - 1,
+                    this.sheet.dataFrame.corner.y
+                );
                 this.sheet.dataFrame.loadFromArray(wsArray);
                 // update the file name to include the sheet/tab
                 fileName = fileName.replace(`.${ftype}`, `[${event.target.value}]`);
