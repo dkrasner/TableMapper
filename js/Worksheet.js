@@ -10,7 +10,6 @@
 import { labelIndex } from "./interpreters.js";
 import icons from "./utils/icons.js";
 import createIconSVGFromString from "./utils/helpers.js";
-import BasicInterpreter from "./interpreters.js";
 import CSVParser from "papaparse";
 import ContextMenuHandler from "./ContextMenuHandler.js";
 
@@ -528,18 +527,21 @@ class Worksheet extends HTMLElement {
     onMouseDownInHeaderFooter(event) {
         // drag event propagation can be touchy so make sure we are not clicking or dragging
         // any children of header/footer
-        if (
-            event.target.id == "footer-bar" ||
-            event.target.id == "header-bar"
-        ) {
-            // dispatch an event to put the sheet in focus
-            const focusEvent = new CustomEvent("newSheetFocus", {
-                bubbles: true,
-                detail: { target: this },
-            });
-            this.dispatchEvent(focusEvent);
-            document.addEventListener("mousemove", this.onMouseMove);
-            document.addEventListener("mouseup", this.onMouseUpAfterDrag);
+        // only left click for the move here
+        if(event.button == 0){
+            if (
+                event.target.id == "footer-bar" ||
+                    event.target.id == "header-bar"
+            ) {
+                // dispatch an event to put the sheet in focus
+                const focusEvent = new CustomEvent("newSheetFocus", {
+                    bubbles: true,
+                    detail: { target: this },
+                });
+                this.dispatchEvent(focusEvent);
+                document.addEventListener("mousemove", this.onMouseMove);
+                document.addEventListener("mouseup", this.onMouseUpAfterDrag);
+            }
         }
     }
 
@@ -558,7 +560,7 @@ class Worksheet extends HTMLElement {
 
         // Trigger a custom move event so that
         // implementors of the Worksheet can react
-        let moveEvent = new CustomEvent("worksheet-moved", {
+        const moveEvent = new CustomEvent("worksheet-moved", {
             bubbles: true,
             detail: {
                 id: this.id,

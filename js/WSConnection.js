@@ -7,23 +7,47 @@ import LeaderLine from "leader-line";
 import BasicInterpreter from "./interpreters.js";
 import CommandInterface from './CommandInterface.js';
 import { EndOfStackError, CallStack } from "./callStack.js";
+import icons from "./utils/icons.js";
+
+const templateString = `
+<style>
+:host {
+    position: absolute;
+    z-index: 1000;
+}
+</style>
+<div>
+    ${icons.affiliate}
+</div>
+`;
 
 class WSConnection extends HTMLElement {
     constructor() {
         super();
 
+        this.template = document.createElement("template");
+        this.template.innerHTML = templateString;
+        this.attachShadow({ mode: "open", delegatesFocus: true });
+        this.shadowRoot.appendChild(this.template.content.cloneNode(true));
+
         this.id;
 
         this.interpreter = null;
         this.callStack = null;
-        this.leaderLines = [];
+        // leaderline are pairs (source-connection, connection-target)
+        this.leaderLinePairs = [];
 
         this.resizeObserver;
 
         // Bound component methods
         this.updateLeaderLine = this.updateLeaderLine.bind(this);
         this.updateLinkedSheet = this.updateLinkedSheet.bind(this);
+        this.setInitialPosition = this.setInitialPosition.bind(this);
+        this.removeLines = this.removeLines.bind(this);
         this.renderLines = this.renderLines.bind(this);
+        this.onMousedown = this.onMousedown.bind(this);
+        this.onMousemove = this.onMousemove.bind(this);
+        this.onMouseupAfterDrag = this.onMouseupAfterDrag.bind(this);
         this.onWorksheetMoved = this.onWorksheetMoved.bind(this);
         this.onWorksheetResized = this.onWorksheetResized.bind(this);
         this.openCommandInterface = this.openCommandInterface.bind(this);
@@ -41,29 +65,34 @@ class WSConnection extends HTMLElement {
             this.interpreter = new BasicInterpreter();
             this.callStack = new CallStack(this.interpreter);
             this.resizeObserver = new ResizeObserver(this.onWorksheetResized);
+            this.addEventListener("mousedown", this.onMousedown);
         }
     }
 
     disconnectedCallback() {
         this.updateLinkedSheet(this.getAttribute("sources"), "");
         this.updateLinkedSheet(this.getAttribute("target"), "");
-        // remove all the leaderlines
-        this.leaderLines.forEach((line) => {
-            line.start.removeTarget(line.end.id);
-            line.end.removeSource(line.start.id);
-            line.remove();
-        });
+        this.removeLines();
+        this.removeEventListener("mousedown", this.onMousedown);
+    }
+
+    setInitialPosition(){
+        // if a target is not present for whatever reason, then just set default position
+        // set the initial position to the middle of the target ws - TODO?
+        const targetElement = document.getElementById(
+            this.getAttribute("target")
+        );
+        if(targetElement){
+            const rect = targetElement.getBoundingClientRect();
+            const x = rect.left + rect.width/2 ;
+            const y = rect.top + rect.height/2 
+            this.style.setProperty("top", `${y}px`);
+            this.style.setProperty("left", `${x}px`);
+        }
     }
 
     updateLeaderLine() {
-        this.leaderLines.forEach((line, index) => {
-            // when we remove the lines tell the corresponding worksheets to
-            // remove the link icons
-            line.start.removeTarget(line.end.id);
-            line.end.removeSource(line.start.id);
-            line.remove();
-        });
-        this.leaderLines = [];
+        this.removeLines();
         // update the leader line for each source
         let sources = this.getAttribute("sources");
         if (!sources) {
@@ -77,7 +106,12 @@ class WSConnection extends HTMLElement {
                 this.getAttribute("target")
             );
             if (sourceElement && destElement) {
-                this.leaderLines.push(new LeaderLine(sourceElement, destElement));
+                this.leaderLinePairs.push(
+                    [
+                        new LeaderLine(sourceElement, this),
+                        new LeaderLine(this, destElement)
+                    ]
+                );
                 sourceElement.addTarget(destElement.id, destElement.name);
                 destElement.addSource(sourceElement.id, sourceElement.name);
             }
@@ -85,8 +119,24 @@ class WSConnection extends HTMLElement {
     }
 
     renderLines() {
-        this.leaderLines.forEach((line) => {
-            line.position().show();
+        this.leaderLinePairs.forEach((pair) => {
+            for(const line of pair){
+                line.position().show();
+            }
+        });
+    }
+
+    removeLines(){
+        this.leaderLinePairs.forEach((p) => {
+            // when we remove the lines tell the corresponding worksheets to
+            // remove the link icons
+            // source
+            p[0].start.removeTarget(p[1].end.id);
+            // target
+            p[1].end.removeSource(p[0].start.id);
+            p[0].remove();
+            p[1].remove();
+            this.leaderLinePairs = [];
         });
     }
 
@@ -132,26 +182,57 @@ class WSConnection extends HTMLElement {
         }
     }
 
+    // the callbacks
+
+    onMousedown(event) {
+        // only left click for the move here
+        if(event.button == 0){
+            document.addEventListener("mousemove", this.onMousemove);
+            document.addEventListener("mouseup", this.onMouseupAfterDrag);
+        }
+    }
+
+    onMouseupAfterDrag() {
+        document.removeEventListener("mouseup", this.onmouseupAfterDrag);
+        document.removeEventListener("mousemove", this.onMousemove);
+    }
+
+    onMousemove(event) {
+        const currentLeft = this.getBoundingClientRect().left;
+        const currentTop = this.getBoundingClientRect().top;
+        const newTop = currentTop + event.movementY;
+        const newLeft = currentLeft + event.movementX;
+        this.style.setProperty("top", newTop + "px");
+        this.style.setProperty("left", newLeft + "px");
+        this.updateLeaderLine();
+    }
+
     onWorksheetMoved(event) {
         // When the worksheet moves, we need to redraw the leaderLine
-        const lines = this.leaderLines.filter((l) => {
-            return l.start.id == event.detail.id || l.end.id == event.detail.id;
+        const lines = this.leaderLinePairs.filter((p) => {
+            const isSourceLine = p[0].start.id == event.detail.id || p[1].end.id == event.detail.id;
+            const isTargetLine = p[1].start.id == event.detail.id || p[1].end.id == event.detail.id;
+            return isSourceLine || isTargetLine;
         });
-        this.updateLines(lines);
+        this.updateLinePairs(lines);
     }
 
     onWorksheetResized(entries) {
         // When worksheets resize, we need to redraw the leaderLines
         const ids = entries.map((e) => {return e.target.id});
-        const lines = this.leaderLines.filter((l) => {
-            return ids.indexOf(l.start.id) > -1 || ids.indexOf(l.end.id) > -1;
+        const pairs = this.leaderLinePairs.filter((p) => {
+            const isSourceLine = ids.indexOf(p[0].start.id) > -1 || ids.indexOf(p[0].end.id) > -1;
+            const isTargetLine = ids.indexOf(p[1].start.id) > -1 || ids.indexOf(p[1].end.id) > -1;
+            return isSourceLine || isTargetLine;
         });
-        this.updateLines(lines);
+        this.updateLinePairs(pairs);
     }
 
-    updateLines(lines){
-        lines.forEach((l) => {
-            l.position().show();
+    updateLinePairs(pairs){
+        pairs.forEach((p) => {
+            p.forEach((l) => {
+                l.position().show();
+            })
         });
     }
 
@@ -204,6 +285,10 @@ class WSConnection extends HTMLElement {
     }
 
     attributeChangedCallback(name, oldVal, newVal) {
+        if (name === "target"){
+            // a new target means a new connection, set its position
+            this.setInitialPosition();
+        }
         if (name === "sources" || name === "target") {
             this.updateLeaderLine();
             this.updateLinkedSheet(oldVal, newVal);
