@@ -14,6 +14,7 @@ const templateString = `
 :host {
     position: absolute;
     z-index: 1000;
+    cursor: grab;
 }
 </style>
 <div>
@@ -34,16 +35,16 @@ class WSConnection extends HTMLElement {
 
         this.interpreter = null;
         this.callStack = null;
-        // leaderline are pairs (source-connection, connection-target)
-        this.leaderLinePairs = [];
+        this.leaderLines = [];
 
         this.resizeObserver;
 
         // Bound component methods
+        this.hide = this.hide.bind(this);
+        this.unhide = this.unhide.bind(this);
         this.updateLeaderLine = this.updateLeaderLine.bind(this);
         this.updateLinkedSheet = this.updateLinkedSheet.bind(this);
         this.setInitialPosition = this.setInitialPosition.bind(this);
-        this.removeLines = this.removeLines.bind(this);
         this.renderLines = this.renderLines.bind(this);
         this.onMousedown = this.onMousedown.bind(this);
         this.onMousemove = this.onMousemove.bind(this);
@@ -66,19 +67,39 @@ class WSConnection extends HTMLElement {
             this.callStack = new CallStack(this.interpreter);
             this.resizeObserver = new ResizeObserver(this.onWorksheetResized);
             this.addEventListener("mousedown", this.onMousedown);
+            this.hide();
+            // set the initial position to the middle of the target ws - TODO?
+            // this.setInitialPosition();
         }
     }
 
     disconnectedCallback() {
         this.updateLinkedSheet(this.getAttribute("sources"), "");
         this.updateLinkedSheet(this.getAttribute("target"), "");
-        this.removeLines();
+        // remove all the leaderlines
+        this.leaderLines.forEach((line) => {
+            line.start.removeTarget(line.end.id);
+            line.end.removeSource(line.start.id);
+            line.remove();
+        });
         this.removeEventListener("mousedown", this.onMousedown);
+    }
+
+    hide() {
+        this.style.setProperty("display", "none");
+    }
+
+    unhide(event) {
+        // we use the click event to set the position of
+        // of connection
+        const rect = event.target.getBoundingClientRect();
+        this.style.setProperty("top", `${rect.y}px`);
+        this.style.setProperty("left", `${rect.x}px`);
+        this.style.setProperty("display", "initial");
     }
 
     setInitialPosition(){
         // if a target is not present for whatever reason, then just set default position
-        // set the initial position to the middle of the target ws - TODO?
         const targetElement = document.getElementById(
             this.getAttribute("target")
         );
@@ -92,7 +113,14 @@ class WSConnection extends HTMLElement {
     }
 
     updateLeaderLine() {
-        this.removeLines();
+        this.leaderLines.forEach((line, index) => {
+            // when we remove the lines tell the corresponding worksheets to
+            // remove the link icons
+            line.start.removeTarget(line.end.id);
+            line.end.removeSource(line.start.id);
+            line.remove();
+        });
+        this.leaderLines = [];
         // update the leader line for each source
         let sources = this.getAttribute("sources");
         if (!sources) {
@@ -106,12 +134,7 @@ class WSConnection extends HTMLElement {
                 this.getAttribute("target")
             );
             if (sourceElement && destElement) {
-                this.leaderLinePairs.push(
-                    [
-                        new LeaderLine(sourceElement, this),
-                        new LeaderLine(this, destElement)
-                    ]
-                );
+                this.leaderLines.push(new LeaderLine(sourceElement, destElement));
                 sourceElement.addTarget(destElement.id, destElement.name);
                 destElement.addSource(sourceElement.id, sourceElement.name);
             }
@@ -119,24 +142,8 @@ class WSConnection extends HTMLElement {
     }
 
     renderLines() {
-        this.leaderLinePairs.forEach((pair) => {
-            for(const line of pair){
-                line.position().show();
-            }
-        });
-    }
-
-    removeLines(){
-        this.leaderLinePairs.forEach((p) => {
-            // when we remove the lines tell the corresponding worksheets to
-            // remove the link icons
-            // source
-            p[0].start.removeTarget(p[1].end.id);
-            // target
-            p[1].end.removeSource(p[0].start.id);
-            p[0].remove();
-            p[1].remove();
-            this.leaderLinePairs = [];
+        this.leaderLines.forEach((line) => {
+            line.position().show();
         });
     }
 
@@ -204,35 +211,28 @@ class WSConnection extends HTMLElement {
         const newLeft = currentLeft + event.movementX;
         this.style.setProperty("top", newTop + "px");
         this.style.setProperty("left", newLeft + "px");
-        this.updateLeaderLine();
     }
 
     onWorksheetMoved(event) {
         // When the worksheet moves, we need to redraw the leaderLine
-        const lines = this.leaderLinePairs.filter((p) => {
-            const isSourceLine = p[0].start.id == event.detail.id || p[1].end.id == event.detail.id;
-            const isTargetLine = p[1].start.id == event.detail.id || p[1].end.id == event.detail.id;
-            return isSourceLine || isTargetLine;
+        const lines = this.leaderLines.filter((l) => {
+            return l.start.id == event.detail.id || l.end.id == event.detail.id;
         });
-        this.updateLinePairs(lines);
+        this.updateLines(lines);
     }
 
     onWorksheetResized(entries) {
         // When worksheets resize, we need to redraw the leaderLines
         const ids = entries.map((e) => {return e.target.id});
-        const pairs = this.leaderLinePairs.filter((p) => {
-            const isSourceLine = ids.indexOf(p[0].start.id) > -1 || ids.indexOf(p[0].end.id) > -1;
-            const isTargetLine = ids.indexOf(p[1].start.id) > -1 || ids.indexOf(p[1].end.id) > -1;
-            return isSourceLine || isTargetLine;
+        const lines = this.leaderLines.filter((l) => {
+            return ids.indexOf(l.start.id) > -1 || ids.indexOf(l.end.id) > -1;
         });
-        this.updateLinePairs(pairs);
+        this.updateLines(lines);
     }
 
-    updateLinePairs(pairs){
-        pairs.forEach((p) => {
-            p.forEach((l) => {
-                l.position().show();
-            })
+    updateLines(lines){
+        lines.forEach((l) => {
+            l.position().show();
         });
     }
 
@@ -284,16 +284,77 @@ class WSConnection extends HTMLElement {
         }
     }
 
-    attributeChangedCallback(name, oldVal, newVal) {
-        if (name === "target"){
-            // a new target means a new connection, set its position
-            this.setInitialPosition();
+    onRecordToggle(){
+        this.toggleAttribute("recording");
+        const record_button = this.shadowRoot.querySelector("#record");
+        const record_icon = this.shadowRoot.querySelector("#record > svg");
+        if(this.hasAttribute("recording")){
+            record_icon.style.stroke = "red"; // TODO set to palette color
+            record_button.setAttribute("title", "stop");
+        } else {
+            record_icon.style.stroke = "green"; // TODO set to palette color
+            record_button.setAttribute("title", "start adding commands");
         }
+    }
+
+    // the buttons
+    runButton() {
+        const svg = createIconSVGFromString(icons.run);
+        const button = document.createElement("span");
+        button.appendChild(svg);
+        button.addEventListener("click", this.run);
+        button.setAttribute("title", "run commands");
+        button.setAttribute("data-clickable", true);
+        return button;
+    }
+
+    stackButton() {
+        const svg = createIconSVGFromString(icons.stack);
+        const button = document.createElement("span");
+        button.appendChild(svg);
+        button.addEventListener("click", this.inspectCallstack);
+        button.setAttribute("title", "inspect the current commands");
+        button.setAttribute("data-clickable", true);
+        return button;
+    }
+
+    stepButton() {
+        const svg = createIconSVGFromString(icons.walk);
+        const button = document.createElement("span");
+        button.appendChild(svg);
+        button.addEventListener("click", this.step);
+        button.setAttribute("title", "step to next command");
+        button.setAttribute("data-clickable", true);
+        return button;
+    }
+
+    recordButton() {
+        const svg = createIconSVGFromString(icons.command);
+        const button = document.createElement("span");
+        svg.style.stroke = "green"; // TODO set to palette color
+        button.appendChild(svg);
+        button.addEventListener("click", this.onRecordToggle);
+        button.setAttribute("title", "start adding commands");
+        button.setAttribute("data-clickable", true);
+        button.setAttribute("id", "record");
+        return button;
+    }
+
+    attributeChangedCallback(name, oldVal, newVal) {
         if (name === "sources" || name === "target") {
             this.updateLeaderLine();
             this.updateLinkedSheet(oldVal, newVal);
             // if there are no sources nor target then remove the connection
+            // but first tell the target (if exists) to remove the connection
+            // button
             if(newVal === ""){
+                if(name === "sources"){
+                    // TODO: this could be an event that worksheet listens to
+                    const targetElement = document.getElementById(
+                        this.getAttribute("target")
+                    );
+                    targetElement.removeButton("connection-button");
+                }
                 this.remove();
             }
         }

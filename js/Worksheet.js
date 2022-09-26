@@ -270,6 +270,7 @@ class Worksheet extends HTMLElement {
         // bind methods
         this.addToFooter = this.addToFooter.bind(this);
         this.addToHeader = this.addToHeader.bind(this);
+        this.removeButton = this.removeButton.bind(this);
         this.addSource = this.addSource.bind(this);
         this.removeSource = this.removeSource.bind(this);
         this.addTarget = this.addTarget.bind(this);
@@ -286,10 +287,6 @@ class Worksheet extends HTMLElement {
         this.onUpload = this.onUpload.bind(this);
         this.onDownload = this.onDownload.bind(this);
         this.onDelete = this.onDelete.bind(this);
-        this.onStackInspect = this.onStackInspect.bind(this);
-        this.onRun = this.onRun.bind(this);
-        this.onStep = this.onStep.bind(this);
-        this.onRecordToggle = this.onRecordToggle.bind(this);
         this.onExternalLinkDragStart = this.onExternalLinkDragStart.bind(this);
         this.onDragStart = this.onDragStart.bind(this);
         this.onDragEnd = this.onDragEnd.bind(this);
@@ -410,6 +407,14 @@ class Worksheet extends HTMLElement {
         }
     }
 
+    removeButton(id){
+        // recall our buttons are not necessary DOM <button> elements
+        const button = this.shadowRoot.querySelector(`[id="${id}"]`);
+        if(button){
+            button.remove();
+        }
+    }
+
     /* default header/footer buttons */
     maximizeMinimizeButton() {
         const svg = createIconSVGFromString(icons.minimize);
@@ -466,48 +471,6 @@ class Worksheet extends HTMLElement {
         return button;
     }
 
-    runButton() {
-        const svg = createIconSVGFromString(icons.run);
-        const button = document.createElement("span");
-        button.appendChild(svg);
-        button.addEventListener("click", this.onRun);
-        button.setAttribute("title", "run commands");
-        button.setAttribute("data-clickable", true);
-        return button;
-    }
-
-    stackButton() {
-        const svg = createIconSVGFromString(icons.stack);
-        const button = document.createElement("span");
-        button.appendChild(svg);
-        button.addEventListener("click", this.onStackInspect);
-        button.setAttribute("title", "inspect the current commands");
-        button.setAttribute("data-clickable", true);
-        return button;
-    }
-
-    stepButton() {
-        const svg = createIconSVGFromString(icons.walk);
-        const button = document.createElement("span");
-        button.appendChild(svg);
-        button.addEventListener("click", this.onStep);
-        button.setAttribute("title", "step to next command");
-        button.setAttribute("data-clickable", true);
-        return button;
-    }
-
-    recordButton() {
-        const svg = createIconSVGFromString(icons.command);
-        const button = document.createElement("span");
-        svg.style.stroke = "green"; // TODO set to palette color
-        button.appendChild(svg);
-        button.addEventListener("click", this.onRecordToggle);
-        button.setAttribute("title", "start adding commands");
-        button.setAttribute("data-clickable", true);
-        button.setAttribute("id", "record");
-        return button;
-    }
-
     linkButton() {
         const svg = createIconSVGFromString(icons.link);
         const button = document.createElement("span");
@@ -520,6 +483,20 @@ class Worksheet extends HTMLElement {
         button.addEventListener("dragend", (event) => {
             event.stopPropagation();
         });
+        return button;
+    }
+
+    connectionButton() {
+        const svg = createIconSVGFromString(icons.affiliate);
+        const button = document.createElement("span");
+        button.appendChild(svg);
+        button.addEventListener("click", (event) => {
+            const connection = this._getConnection(this.id);
+            connection.unhide(event);
+        });
+        button.setAttribute("title", "open connector");
+        button.setAttribute("data-clickable", true);
+        button.setAttribute("id", "connection-button");
         return button;
     }
 
@@ -649,19 +626,6 @@ class Worksheet extends HTMLElement {
         this.sheet.dataFrame.clear();
     }
 
-    onRecordToggle(){
-        this.toggleAttribute("recording");
-        const record_button = this.shadowRoot.querySelector("#record");
-        const record_icon = this.shadowRoot.querySelector("#record > svg");
-        if(this.hasAttribute("recording")){
-            record_icon.style.stroke = "red"; // TODO set to palette color
-            record_button.setAttribute("title", "stop");
-        } else {
-            record_icon.style.stroke = "green"; // TODO set to palette color
-            record_button.setAttribute("title", "start adding commands");
-        }
-    }
-
     onUpload(event) {
         const file = event.target.files[0];
         const reader = new FileReader();
@@ -691,23 +655,6 @@ class Worksheet extends HTMLElement {
         document.body.append(anchor);
         anchor.click();
         window.URL.revokeObjectURL(url);
-    }
-
-    // TODO: these callstack calls, and corresponding button icons, should be
-    // removed and eventually live in a connection or commandInterface element UI
-    onRun() {
-        const ws = this._getConnection(this.id);
-        ws.run();
-    }
-
-    onStep() {
-        const ws = this._getConnection(this.id);
-        ws.step();
-    }
-
-    onStackInspect(){
-        const ws = this._getConnection(this.id);
-        ws.inspectCallstack();
     }
 
     //TODO: sort out what to do with this
@@ -868,10 +815,7 @@ class Worksheet extends HTMLElement {
                 connection.setAttribute("target", this.id);
                 connection.setAttribute("sources", [sourceId]);
                 // add callstack and command related buttons
-                this.addToHeader(this.stackButton(), "right");
-                this.addToHeader(this.stepButton(), "right");
-                this.addToHeader(this.runButton(), "right");
-                this.addToHeader(this.recordButton(), "right");
+                this.addToHeader(this.connectionButton(), "right");
             }
         } else if(event.dataTransfer.getData("selection-drag")){
             // we need to make sure that three conditions hold for a valid
@@ -889,7 +833,7 @@ class Worksheet extends HTMLElement {
             );
             // we need to define the recording bool here otherwise event can
             // loose reference to target inside a condition - wtf?!
-            const recording = event.target.hasAttribute("recording");
+            const recording = connection.hasAttribute("recording");
             if(connection && recording){
                 if(cell_target.nodeName == "SHEET-CELL"){
                     const drop_data = JSON.parse(event.dataTransfer.getData("text/json"));
