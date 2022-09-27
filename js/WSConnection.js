@@ -325,6 +325,9 @@ class WSConnection extends HTMLElement {
                 ["Sources", "Target", "Command"]
             ];
             inspector.sheet.setAttribute("lockedrows", 1);
+            // make the sheet read only
+            inspector.sheet.setAttribute("lockedrows", 1);
+            inspector.sheet.setAttribute("read-only-view", "");
             if(this.callStack.stack.length > 0){
                 data = data.concat(this.callStack.stack);
             }
