@@ -311,8 +311,8 @@ class Worksheet extends HTMLElement {
         this.addToHeader(this.trashButton(), "left");
         this.addToHeader(this.uploadButton(), "left");
         this.addToHeader(this.downloadButton(), "left");
-        this.addToHeader(this.maximizeMinimizeButton(), "right");
         this.addToHeader(this.eraseButton(), "right");
+        this.addToHeader(this.maximizeMinimizeButton(), "right");
         this.addToFooter(this.linkButton(), "right");
         const header = this.shadowRoot.querySelector("#header-bar");
         const footer = this.shadowRoot.querySelector("#footer-bar");
@@ -488,6 +488,7 @@ class Worksheet extends HTMLElement {
 
     connectionButton() {
         const svg = createIconSVGFromString(icons.affiliate);
+        svg.style.setProperty("stroke", "var(--palette-orange)");
         const button = document.createElement("span");
         button.appendChild(svg);
         button.addEventListener("click", (event) => {
@@ -772,8 +773,7 @@ class Worksheet extends HTMLElement {
             );
             // we need to define the recording bool here otherwise event can
             // loose reference to target inside a condition - wtf?!
-            const recording = event.target.hasAttribute("recording");
-            if(connection && recording){
+            if(connection && connection.hasAttribute("recording")){
                 if(target.nodeName == "SHEET-CELL"){
                     target.classList.add("dragover");
                     target.addEventListener("dragleave", this._removeDragDropStyling);
@@ -815,7 +815,7 @@ class Worksheet extends HTMLElement {
                 connection.setAttribute("target", this.id);
                 connection.setAttribute("sources", [sourceId]);
                 // add callstack and command related buttons
-                this.addToHeader(this.connectionButton(), "right");
+                this.addToFooter(this.connectionButton(), "left", true);
             }
         } else if(event.dataTransfer.getData("selection-drag")){
             // we need to make sure that three conditions hold for a valid
@@ -833,8 +833,7 @@ class Worksheet extends HTMLElement {
             );
             // we need to define the recording bool here otherwise event can
             // loose reference to target inside a condition - wtf?!
-            const recording = connection.hasAttribute("recording");
-            if(connection && recording){
+            if(connection && connection.hasAttribute("recording")){
                 if(cell_target.nodeName == "SHEET-CELL"){
                     const drop_data = JSON.parse(event.dataTransfer.getData("text/json"));
                     const source_origin = [

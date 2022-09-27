@@ -6,6 +6,7 @@
 import LeaderLine from "leader-line";
 import BasicInterpreter from "./interpreters.js";
 import CommandInterface from './CommandInterface.js';
+import createIconSVGFromString from "./utils/helpers.js";
 import { EndOfStackError, CallStack } from "./callStack.js";
 import icons from "./utils/icons.js";
 
@@ -16,9 +17,40 @@ const templateString = `
     z-index: 1000;
     cursor: grab;
 }
+
+span[data-clickable="true"]{
+    cursor: pointer;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    padding-left: 7px;
+    padding-right: 7px;
+}
+
+span[data-clickable="true"] svg{
+    width: 20px;
+    height: 20px;
+    pointer-events: none;
+}
+
+.row {
+    display: flex;
+    justify-content: space-between;
+}
+
+.middle-row{
+    justify-content: center;
+}
+
+
 </style>
 <div>
-    ${icons.affiliate}
+    <div class="row top-row">
+    </div>
+    <div class="row middle-row">
+    </div>
+    <div class="row bottom-row">
+    </div>
+
 </div>
 `;
 
@@ -44,17 +76,22 @@ class WSConnection extends HTMLElement {
         this.unhide = this.unhide.bind(this);
         this.updateLeaderLine = this.updateLeaderLine.bind(this);
         this.updateLinkedSheet = this.updateLinkedSheet.bind(this);
-        this.setInitialPosition = this.setInitialPosition.bind(this);
         this.renderLines = this.renderLines.bind(this);
+        // moving and resizing
         this.onMousedown = this.onMousedown.bind(this);
         this.onMousemove = this.onMousemove.bind(this);
         this.onMouseupAfterDrag = this.onMouseupAfterDrag.bind(this);
         this.onWorksheetMoved = this.onWorksheetMoved.bind(this);
         this.onWorksheetResized = this.onWorksheetResized.bind(this);
+        // callstack related methods
         this.openCommandInterface = this.openCommandInterface.bind(this);
-        this.step = this.step.bind(this);
-        this.run = this.run.bind(this);
-        this.inspectCallstack = this.inspectCallstack.bind(this);
+        this.onStep = this.onStep.bind(this);
+        this.onRun = this.onRun.bind(this);
+        this.onInspectCallstack = this.onInspectCallstack.bind(this);
+        this.onRecordToggle = this.onRecordToggle.bind(this);
+        this.onAffiliateMouseover = this.onAffiliateMouseover.bind(this);
+        // icons and buttons
+        this.affiliateIcon = this.affiliateIcon.bind(this);
     }
 
     connectedCallback() {
@@ -66,10 +103,19 @@ class WSConnection extends HTMLElement {
             this.interpreter = new BasicInterpreter();
             this.callStack = new CallStack(this.interpreter);
             this.resizeObserver = new ResizeObserver(this.onWorksheetResized);
+            // TODO: maybe this move-events should be only on the affiliate icon
             this.addEventListener("mousedown", this.onMousedown);
+            // add the buttons
+            const topRow = this.shadowRoot.querySelector("div.top-row");
+            const middleRow = this.shadowRoot.querySelector("div.middle-row");
+            const bottomRow = this.shadowRoot.querySelector("div.bottom-row");
+            topRow.append(this.stackButton());
+            topRow.append(this.hideButton());
+            middleRow.append(this.affiliateIcon());
+            bottomRow.append(this.recordButton());
+            bottomRow.append(this.stepButton());
+            bottomRow.append(this.runButton());
             this.hide();
-            // set the initial position to the middle of the target ws - TODO?
-            // this.setInitialPosition();
         }
     }
 
@@ -96,20 +142,6 @@ class WSConnection extends HTMLElement {
         this.style.setProperty("top", `${rect.y}px`);
         this.style.setProperty("left", `${rect.x}px`);
         this.style.setProperty("display", "initial");
-    }
-
-    setInitialPosition(){
-        // if a target is not present for whatever reason, then just set default position
-        const targetElement = document.getElementById(
-            this.getAttribute("target")
-        );
-        if(targetElement){
-            const rect = targetElement.getBoundingClientRect();
-            const x = rect.left + rect.width/2 ;
-            const y = rect.top + rect.height/2 
-            this.style.setProperty("top", `${y}px`);
-            this.style.setProperty("left", `${x}px`);
-        }
     }
 
     updateLeaderLine() {
@@ -253,7 +285,9 @@ class WSConnection extends HTMLElement {
 
     // TODO: callStack interface should probably be moved to commandInterface element
     // only here atm due to the UI step/run icons being on the target worksheet
-    step(){
+    onStep(event){
+        event.stopPropagation();
+        event.preventDefault();
         try {
             this.callStack.step();
             this.callStack.execute();
@@ -265,12 +299,16 @@ class WSConnection extends HTMLElement {
         }
     }
 
-    run(){
+    onRun(event){
+        event.stopPropagation();
+        event.preventDefault();
         this.callStack.reset();
         this.callStack.run();
     }
 
-    inspectCallstack(){
+    onInspectCallstack(event){
+        event.stopPropagation();
+        event.preventDefault();
         let inspector = document.querySelector(`work-sheet[ws-connector-id='${this.id}']`);
         if(!inspector){
             inspector = document.createElement("work-sheet");
@@ -284,7 +322,9 @@ class WSConnection extends HTMLElement {
         }
     }
 
-    onRecordToggle(){
+    onRecordToggle(event){
+        event.stopPropagation();
+        event.preventDefault();
         this.toggleAttribute("recording");
         const record_button = this.shadowRoot.querySelector("#record");
         const record_icon = this.shadowRoot.querySelector("#record > svg");
@@ -297,12 +337,45 @@ class WSConnection extends HTMLElement {
         }
     }
 
+    onAffiliateMouseover(event){
+        // outline all connected sheets
+        let sheetIds = [];
+        const sources = this.getAttribute("sources");
+        if(sources){
+            sheetIds = sources.split(",");
+        }
+        const target = this.getAttribute("target");
+        if(target){
+            sheetIds.push(target);
+        }
+        sheetIds.forEach((id) => {
+            const sheet = document.getElementById(id);
+            sheet.style.outline = "solid var(--palette-orange)";
+        });
+        event.target.addEventListener("mouseleave", () => {
+            sheetIds.forEach((id) => {
+                const sheet = document.getElementById(id);
+                sheet.style.outline = "initial";
+            })
+        });
+    }
+
+    // main icon
+    affiliateIcon() {
+        const svg = createIconSVGFromString(icons.affiliate);
+        const icon = document.createElement("span");
+        icon.appendChild(svg);
+        icon.addEventListener("mouseover", this.onAffiliateMouseover);
+        return icon;
+    }
+
     // the buttons
     runButton() {
         const svg = createIconSVGFromString(icons.run);
+        svg.style.stroke = "var(--palette-orange)";
         const button = document.createElement("span");
         button.appendChild(svg);
-        button.addEventListener("click", this.run);
+        button.addEventListener("click", this.onRun);
         button.setAttribute("title", "run commands");
         button.setAttribute("data-clickable", true);
         return button;
@@ -310,9 +383,10 @@ class WSConnection extends HTMLElement {
 
     stackButton() {
         const svg = createIconSVGFromString(icons.stack);
+        svg.style.stroke = "var(--palette-orange)";
         const button = document.createElement("span");
         button.appendChild(svg);
-        button.addEventListener("click", this.inspectCallstack);
+        button.addEventListener("click", this.onInspectCallstack);
         button.setAttribute("title", "inspect the current commands");
         button.setAttribute("data-clickable", true);
         return button;
@@ -320,9 +394,10 @@ class WSConnection extends HTMLElement {
 
     stepButton() {
         const svg = createIconSVGFromString(icons.walk);
+        svg.style.stroke = "var(--palette-orange)";
         const button = document.createElement("span");
         button.appendChild(svg);
-        button.addEventListener("click", this.step);
+        button.addEventListener("click", this.onStep);
         button.setAttribute("title", "step to next command");
         button.setAttribute("data-clickable", true);
         return button;
@@ -337,6 +412,16 @@ class WSConnection extends HTMLElement {
         button.setAttribute("title", "start adding commands");
         button.setAttribute("data-clickable", true);
         button.setAttribute("id", "record");
+        return button;
+    }
+
+    hideButton() {
+        const svg = createIconSVGFromString(icons.circleX);
+        const button = document.createElement("span");
+        button.appendChild(svg);
+        button.addEventListener("click", this.hide);
+        button.setAttribute("title", "hide the connection");
+        button.setAttribute("data-clickable", true);
         return button;
     }
 
