@@ -90,6 +90,7 @@ class WSConnection extends HTMLElement {
         this.onInspectCallstack = this.onInspectCallstack.bind(this);
         this.onRecordToggle = this.onRecordToggle.bind(this);
         this.onAffiliateMouseover = this.onAffiliateMouseover.bind(this);
+        this.onAffiliateMouseleave = this.onAffiliateMouseleave.bind(this);
         // icons and buttons
         this.affiliateIcon = this.affiliateIcon.bind(this);
     }
@@ -124,8 +125,6 @@ class WSConnection extends HTMLElement {
         this.updateLinkedSheet(this.getAttribute("target"), "");
         // remove all the leaderlines
         this.leaderLines.forEach((line) => {
-            line.start.removeTarget(line.end.id);
-            line.end.removeSource(line.start.id);
             line.remove();
         });
         this.removeEventListener("mousedown", this.onMousedown);
@@ -137,19 +136,18 @@ class WSConnection extends HTMLElement {
 
     unhide(event) {
         // we use the click event to set the position of
-        // of connection
-        const rect = event.target.getBoundingClientRect();
-        this.style.setProperty("top", `${rect.y}px`);
-        this.style.setProperty("left", `${rect.x}px`);
-        this.style.setProperty("display", "initial");
+        // of connection but don't move it if it is already
+        // visible
+        if(this.style.getPropertyValue("display") =="none"){
+            const rect = event.target.getBoundingClientRect();
+            this.style.setProperty("top", `${rect.y}px`);
+            this.style.setProperty("left", `${rect.x}px`);
+            this.style.setProperty("display", "initial");
+        }
     }
 
     updateLeaderLine() {
         this.leaderLines.forEach((line, index) => {
-            // when we remove the lines tell the corresponding worksheets to
-            // remove the link icons
-            line.start.removeTarget(line.end.id);
-            line.end.removeSource(line.start.id);
             line.remove();
         });
         this.leaderLines = [];
@@ -167,8 +165,6 @@ class WSConnection extends HTMLElement {
             );
             if (sourceElement && destElement) {
                 this.leaderLines.push(new LeaderLine(sourceElement, destElement));
-                sourceElement.addTarget(destElement.id, destElement.name);
-                destElement.addSource(sourceElement.id, sourceElement.name);
             }
         });
     }
@@ -339,24 +335,27 @@ class WSConnection extends HTMLElement {
 
     onAffiliateMouseover(event){
         // outline all connected sheets
-        let sheetIds = [];
+        const sheetIds = [this.getAttribute("target")];
         const sources = this.getAttribute("sources");
         if(sources){
-            sheetIds = sources.split(",");
-        }
-        const target = this.getAttribute("target");
-        if(target){
-            sheetIds.push(target);
+            sheetIds.concat(sources.split(","));
         }
         sheetIds.forEach((id) => {
             const sheet = document.getElementById(id);
             sheet.style.outline = "solid var(--palette-orange)";
         });
-        event.target.addEventListener("mouseleave", () => {
-            sheetIds.forEach((id) => {
-                const sheet = document.getElementById(id);
-                sheet.style.outline = "initial";
-            })
+        event.target.addEventListener("mouseleave", this.onAffiliateMouseleave);
+    }
+
+    onAffiliateMouseleave(){
+        const sheetIds = [this.getAttribute("target")];
+        const sources = this.getAttribute("sources");
+        if(sources){
+            sheetIds.concat(sources.split(","));
+        }
+        sheetIds.forEach((id) => {
+            const sheet = document.getElementById(id);
+            sheet.style.outline = "initial";
         });
     }
 

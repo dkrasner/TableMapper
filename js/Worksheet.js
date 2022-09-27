@@ -271,11 +271,6 @@ class Worksheet extends HTMLElement {
         this.addToFooter = this.addToFooter.bind(this);
         this.addToHeader = this.addToHeader.bind(this);
         this.removeButton = this.removeButton.bind(this);
-        this.addSource = this.addSource.bind(this);
-        this.removeSource = this.removeSource.bind(this);
-        this.addTarget = this.addTarget.bind(this);
-        this.removeTarget = this.removeTarget.bind(this);
-        this.removeLink = this.removeLink.bind(this);
         this.onMouseMove = this.onMouseMove.bind(this);
         this.onMouseDownInHeaderFooter =
             this.onMouseDownInHeaderFooter.bind(this);
@@ -888,82 +883,6 @@ class Worksheet extends HTMLElement {
         overlay.replaceChildren(iconSVG);
     }
 
-    /** Handling source and target related icons **/
-
-    addSource(id) {
-        if (
-            !this.shadowRoot.querySelector(
-                `#footer-left > [data-source-id='${id}']`
-            )
-        ) {
-            // add an icon with data about the source to the footer
-            const sourceSpan = this._createSourceTargetIconSpan(
-                "source",
-                id,
-                this.id
-            );
-            this.addToFooter(sourceSpan, "left");
-            return id;
-        }
-    }
-
-    removeSource(id) {
-        // remove the source link
-        this.shadowRoot
-            .querySelectorAll(`#footer-left > [data-source-id='${id}']`)
-            .forEach((item) => {
-                item.remove();
-            });
-        // make sure no outline styles linger
-        this.style.outline = "initial";
-    }
-
-    addTarget(id) {
-        if (
-            !this.shadowRoot.querySelector(
-                `#footer-right > [data-target-id='${id}']`
-            )
-        ) {
-            // add an icon with data about the target to the footer
-            const targetSpan = this._createSourceTargetIconSpan(
-                "target",
-                this.id,
-                id
-            );
-            this.addToFooter(targetSpan, "right", true);
-            return id;
-        }
-    }
-
-    removeTarget(id) {
-        // remove the target link
-        this.shadowRoot
-            .querySelectorAll(`#footer-right > [data-target-id='${id}']`)
-            .forEach((item) => {
-                item.remove();
-            });
-        // make sure no outline styles linger
-        this.style.outline = "initial";
-    }
-
-    removeLink(event) {
-        event.stopPropagation();
-        event.preventDefault();
-        const sourceId = event.target.getAttribute("data-source-id");
-        const targetId = event.target.getAttribute("data-target-id");
-        const connection = this._getConnection(targetId, sourceId);
-        const sources = connection.getAttribute("sources").split(",");
-        if (sources.indexOf(sourceId) > -1) {
-            sources.splice(sources.indexOf(sourceId), 1);
-            connection.setAttribute("sources", sources);
-        }
-        if (event.target.getAttribute("data-type") == "source") {
-            this.removeSource(sourceId);
-        } else {
-            this.removeTarget(targetId);
-        }
-    }
-
     /**
       * I find the connection which corresponds to the target and source (if provided).
       * The assumption is that each sheet can be the source of multiple sheets.
@@ -986,55 +905,6 @@ class Worksheet extends HTMLElement {
         } else {
             return wc;
         }
-    }
-
-    /**
-     * Create a DOM element from an SVG string
-     * for both the source/target icon as well as the
-     * unlink icon. Adds event listeners for mousenter and
-     * mouseleave.
-     */
-    _createSourceTargetIconSpan(type, sourceId, targetId) {
-        // make a reference to the source/target sheet
-        // to update css on hover
-        let iconString;
-        let sheet;
-        if (type == "source") {
-            iconString = icons.sheetImport;
-            sheet = document.getElementById(sourceId);
-        } else {
-            iconString = icons.sheetExport;
-            sheet = document.getElementById(targetId);
-        }
-        const icon = createIconSVGFromString(iconString);
-        const iconSpan = document.createElement("span");
-        iconSpan.appendChild(icon);
-        iconSpan.setAttribute("data-type", type);
-        iconSpan.setAttribute("data-source-id", sourceId);
-        iconSpan.setAttribute("data-target-id", targetId);
-        // overlay the unlink icon
-        const unlinkIcon = createIconSVGFromString(icons.unlink);
-        unlinkIcon.setAttribute("data-type", type);
-        unlinkIcon.setAttribute("data-source-id", sourceId);
-        unlinkIcon.setAttribute("data-target-id", targetId);
-        unlinkIcon.style.display = "none";
-        iconSpan.addEventListener("click", this.removeLink);
-        iconSpan.appendChild(unlinkIcon);
-        iconSpan.addEventListener("mouseover", () => {
-            unlinkIcon.style.display = "inherit";
-            icon.style.display = "none";
-            sheet.style.outline = "solid var(--palette-blue)";
-            iconSpan.setAttribute(
-                "title",
-                `${type}: ${sheet.name} (${sheet.id})`
-            );
-        });
-        iconSpan.addEventListener("mouseleave", () => {
-            unlinkIcon.style.display = "none";
-            icon.style.display = "inherit";
-            sheet.style.outline = "initial";
-        });
-        return iconSpan;
     }
 
     fromCSV(aString) {
