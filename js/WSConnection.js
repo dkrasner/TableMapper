@@ -268,12 +268,20 @@ class WSConnection extends HTMLElement {
         const ci = new CommandInterface(this.interpreter, this.callStack, sources, target);
         // TODO: deal with proper placement of the interface
         ci.afterSave = () => {
-            // reload the callstacl instruction so that they appear in the open
+            // reload the callstack instruction so that they appear in the open
             // inspector
             const inspector = document.querySelector(`work-sheet[ws-connector-id='${this.id}']`);
             if(inspector){
                 inspector.sheet.dataFrame.clear();
-                inspector.sheet.dataFrame.loadFromArray(this.callStack.stack);
+                // add columns names and lock the name row
+                let data = [
+                    ["Sources", "Target", "Command"]
+                ];
+                inspector.sheet.setAttribute("lockedrows", 1);
+                if(this.callStack.stack.length > 0){
+                    data = data.concat(this.callStack.stack);
+                }
+                inspector.sheet.dataFrame.loadFromArray(data);
             }
         }
         document.body.append(ci);
@@ -312,9 +320,15 @@ class WSConnection extends HTMLElement {
             inspector.updateName("The Commands");
             inspector.setAttribute("ws-connector-id", this.id);
             inspector.sheet.dataFrame.clear();
+            // add columns names and lock the name row
+            let data = [
+                ["Sources", "Target", "Command"]
+            ];
+            inspector.sheet.setAttribute("lockedrows", 1);
             if(this.callStack.stack.length > 0){
-                inspector.sheet.dataFrame.loadFromArray(this.callStack.stack);
+                data = data.concat(this.callStack.stack);
             }
+            inspector.sheet.dataFrame.loadFromArray(data);
         }
     }
 
@@ -335,10 +349,10 @@ class WSConnection extends HTMLElement {
 
     onAffiliateMouseover(event){
         // outline all connected sheets
-        const sheetIds = [this.getAttribute("target")];
+        let sheetIds = [this.getAttribute("target")];
         const sources = this.getAttribute("sources");
         if(sources){
-            sheetIds.concat(sources.split(","));
+            sheetIds = sheetIds.concat(sources.split(","));
         }
         sheetIds.forEach((id) => {
             const sheet = document.getElementById(id);
@@ -348,10 +362,10 @@ class WSConnection extends HTMLElement {
     }
 
     onAffiliateMouseleave(){
-        const sheetIds = [this.getAttribute("target")];
+        let sheetIds = [this.getAttribute("target")];
         const sources = this.getAttribute("sources");
         if(sources){
-            sheetIds.concat(sources.split(","));
+            sheetIds = sheetIds.concat(sources.split(","));
         }
         sheetIds.forEach((id) => {
             const sheet = document.getElementById(id);
