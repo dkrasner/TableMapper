@@ -8,6 +8,8 @@ import BasicInterpreter from "./interpreters.js";
 import CommandInterface from './CommandInterface.js';
 import createIconSVGFromString from "./utils/helpers.js";
 import { EndOfStackError, CallStack } from "./callStack.js";
+import ContextMenuHandler from "./ContextMenuHandler.js";
+import { CONTEXT_MENU_EL_NAME } from "./ContextMenu.js";
 import icons from "./utils/icons.js";
 
 const templateString = `
@@ -91,6 +93,7 @@ class WSConnection extends HTMLElement {
         this.onRecordToggle = this.onRecordToggle.bind(this);
         this.onAffiliateMouseover = this.onAffiliateMouseover.bind(this);
         this.onAffiliateMouseleave = this.onAffiliateMouseleave.bind(this);
+        this.loadInspector = this.loadInspector.bind(this);
         // icons and buttons
         this.affiliateIcon = this.affiliateIcon.bind(this);
     }
@@ -272,16 +275,7 @@ class WSConnection extends HTMLElement {
             // inspector
             const inspector = document.querySelector(`work-sheet[ws-connector-id='${this.id}']`);
             if(inspector){
-                inspector.sheet.dataFrame.clear();
-                // add columns names and lock the name row
-                let data = [
-                    ["Sources", "Target", "Command"]
-                ];
-                inspector.sheet.setAttribute("lockedrows", 1);
-                if(this.callStack.stack.length > 0){
-                    data = data.concat(this.callStack.stack);
-                }
-                inspector.sheet.dataFrame.loadFromArray(data);
+                this.loadInspector(inspector);
             }
         }
         document.body.append(ci);
@@ -316,22 +310,15 @@ class WSConnection extends HTMLElement {
         let inspector = document.querySelector(`work-sheet[ws-connector-id='${this.id}']`);
         if(!inspector){
             inspector = document.createElement("work-sheet");
+            // add a custom ContextMenuHandler to the viewer
+            inspector.setupContextMenu = (event) => {
+                this.setupInspectorContextMenu(event, inspector);
+            };
             document.body.append(inspector);
             inspector.updateName("The Commands");
             inspector.setAttribute("ws-connector-id", this.id);
             inspector.sheet.dataFrame.clear();
-            // add columns names and lock the name row
-            let data = [
-                ["Sources", "Target", "Command"]
-            ];
-            inspector.sheet.setAttribute("lockedrows", 1);
-            // make the sheet read only
-            inspector.sheet.setAttribute("lockedrows", 1);
-            inspector.sheet.setAttribute("read-only-view", "");
-            if(this.callStack.stack.length > 0){
-                data = data.concat(this.callStack.stack);
-            }
-            inspector.sheet.dataFrame.loadFromArray(data);
+            this.loadInspector(inspector);
         }
     }
 
@@ -439,6 +426,55 @@ class WSConnection extends HTMLElement {
         button.setAttribute("title", "hide the connection");
         button.setAttribute("data-clickable", true);
         return button;
+    }
+
+    loadInspector(inspector){
+        inspector.sheet.dataFrame.clear();
+        // add columns names and lock the name row
+        let data = [
+            ["Sources", "Target", "Command"]
+        ];
+        inspector.sheet.setAttribute("lockedrows", 1);
+        if(this.callStack.stack.length > 0){
+            data = data.concat(this.callStack.stack);
+        }
+        inspector.sheet.dataFrame.loadFromArray(data);
+    }
+
+    setupInspectorContextMenu(event, inspector){
+        inspector.contextMenuHandler = new ContextMenuHandler(inspector);
+        inspector.contextMenuHandler.innerSheetContextMenu = (event) => {
+            event.preventDefault();
+            switch (event.originalTarget.tagName) {
+                case "ROW-TAB":
+                this.inspectorContextMenu(event, inspector);
+                break;
+            }
+        }
+        inspector.contextMenuHandler.worksheetContextMenu = () => {};
+        inspector.contextMenuHandler.setupListeners();
+    }
+
+    inspectorContextMenu(event, inspector){
+        //NOTE: only row tab context menu for now 
+        const tab = event.originalTarget;
+        const y = parseInt(tab.dataset.relativeY);
+        // make sure there is a command there to do something with
+        // and we are not clicking on the name row
+        if(y > 0 && inspector.sheet.dataFrame.getAt([0,y])){
+            // NOTE: the inspectorhas a fixed column name row, and the callstack
+            // commands count from 0, so the corresponding command is tabIndexName - 1
+            const commandIndex = y - 1;
+            const menuText = `Delete this command`;
+            const menu = document.createElement(CONTEXT_MENU_EL_NAME);
+            menu.addListItem(menuText, (clickEvent) => {
+                console.log(`delete command: ${commandIndex}`);
+                this.callStack.remove(commandIndex);
+                this.loadInspector(inspector);
+            });
+            menu.openAtMouseEvent(event);
+            event.stopPropagation();
+        }
     }
 
     attributeChangedCallback(name, oldVal, newVal) {

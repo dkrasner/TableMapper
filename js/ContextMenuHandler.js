@@ -16,7 +16,10 @@ class ContextMenuHandler {
 
     setupListeners() {
         let innerSheet = this.worksheet.shadowRoot.getElementById("ap-sheet");
-        innerSheet.addEventListener("contextmenu", this.innerSheetContextMenu);
+        innerSheet.addEventListener(
+            "contextmenu",
+            this.innerSheetContextMenu
+        );
         this.worksheet.addEventListener(
             "contextmenu",
             this.worksheetContextMenu

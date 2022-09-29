@@ -268,6 +268,7 @@ class Worksheet extends HTMLElement {
         this.isEditingName = false;
 
         // bind methods
+        this.setupContextMenu = this.setupContextMenu.bind(this);
         this.addToFooter = this.addToFooter.bind(this);
         this.addToHeader = this.addToHeader.bind(this);
         this.removeButton = this.removeButton.bind(this);
@@ -300,8 +301,7 @@ class Worksheet extends HTMLElement {
         this.setAttribute("id", window.crypto.randomUUID());
 
         // Setup a ContextMenu handler for this sheet
-        this.contextMenuHandler = new ContextMenuHandler(this);
-        this.contextMenuHandler.setupListeners();
+        this.setupContextMenu();
 
         this.addToHeader(this.trashButton(), "left");
         this.addToHeader(this.uploadButton(), "left");
@@ -352,6 +352,15 @@ class Worksheet extends HTMLElement {
         this.removeEventListener("dragleave", this.onDragLeave);
         this.removeEventListener("drop", this.onDrop);
         this.contextMenuHandler.removeListeners();
+    }
+
+    /**
+      * Setup the context meny handler. Can be overwritten
+      * by others who want a custom handler
+      **/
+    setupContextMenu(){
+        this.contextMenuHandler = new ContextMenuHandler(this);
+        this.contextMenuHandler.setupListeners();
     }
 
     attributeChangedCallback(name, oldVal, newVal) {
