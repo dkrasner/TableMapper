@@ -31,7 +31,7 @@ const templateString = `
     --sheet-bg-color: var(--palette-cyan);
 }
 
-:host([minimized="true"]) > div:not(#header-bar){
+:host([minimized]) > div:not(#header-bar){
     display: none;
 }
 
@@ -270,13 +270,10 @@ class Worksheet extends HTMLElement {
         this.isEditingName = false;
 
         // bind methods
+        this.setupContextMenu = this.setupContextMenu.bind(this);
         this.addToFooter = this.addToFooter.bind(this);
         this.addToHeader = this.addToHeader.bind(this);
-        this.addSource = this.addSource.bind(this);
-        this.removeSource = this.removeSource.bind(this);
-        this.addTarget = this.addTarget.bind(this);
-        this.removeTarget = this.removeTarget.bind(this);
-        this.removeLink = this.removeLink.bind(this);
+        this.removeButton = this.removeButton.bind(this);
         this.onMouseMove = this.onMouseMove.bind(this);
         this.onMouseDownInHeaderFooter =
             this.onMouseDownInHeaderFooter.bind(this);
@@ -294,10 +291,6 @@ class Worksheet extends HTMLElement {
         this._basicDialog = this._basicDialog.bind(this);
         this.closeDialog = this.closeDialog.bind(this);
         this.onDelete = this.onDelete.bind(this);
-        this.onStackInspect = this.onStackInspect.bind(this);
-        this.onRun = this.onRun.bind(this);
-        this.onStep = this.onStep.bind(this);
-        this.onRecordToggle = this.onRecordToggle.bind(this);
         this.onExternalLinkDragStart = this.onExternalLinkDragStart.bind(this);
         this.onDragStart = this.onDragStart.bind(this);
         this.onDragEnd = this.onDragEnd.bind(this);
@@ -318,13 +311,13 @@ class Worksheet extends HTMLElement {
         this.setAttribute("id", window.crypto.randomUUID());
 
         // Setup a ContextMenu handler for this sheet
-        this.contextMenuHandler = new ContextMenuHandler(this);
-        this.contextMenuHandler.setupListeners();
+        this.setupContextMenu();
 
         this.addToHeader(this.trashButton(), "left");
         this.addToHeader(this.uploadButton(), "left");
         this.addToHeader(this.downloadButton(), "left");
         this.addToHeader(this.eraseButton(), "right");
+        this.addToHeader(this.maximizeMinimizeButton(), "right");
         this.addToFooter(this.linkButton(), "right");
         const header = this.shadowRoot.querySelector("#header-bar");
         const footer = this.shadowRoot.querySelector("#footer-bar");
@@ -360,7 +353,7 @@ class Worksheet extends HTMLElement {
     disconnectedCallback() {
         // remove event listeners
         const header = this.shadowRoot.querySelector("#header-bar");
-        const footer = this.shadowRoot.querySelector("#footer-bar");
+        // const footer = this.shadowRoot.querySelector("#footer-bar");
         const name = header.querySelector("span");
         name.removeEventListener("dblclick", this.onNameDblClick);
         this.removeEventListener("dragstart", this.onDragStart);
@@ -371,6 +364,15 @@ class Worksheet extends HTMLElement {
         this.contextMenuHandler.removeListeners();
     }
 
+    /**
+      * Setup the context meny handler. Can be overwritten
+      * by others who want a custom handler
+      **/
+    setupContextMenu(){
+        this.contextMenuHandler = new ContextMenuHandler(this);
+        this.contextMenuHandler.setupListeners();
+    }
+
     attributeChangedCallback(name, oldVal, newVal) {
         if (name === "minimized") {
             Array.from(document.querySelectorAll("ws-connection")).forEach(
@@ -378,6 +380,16 @@ class Worksheet extends HTMLElement {
                     connectionElement.renderLines();
                 }
             );
+            const header = this.shadowRoot.querySelector("#header-bar");
+            const button = header.querySelector("#min-max");
+            let title = "minimize this worksheet";
+            let svg = createIconSVGFromString(icons.minimize);
+            if(this.hasAttribute("minimized")){
+                title = "maximize this worksheet";
+                svg = createIconSVGFromString(icons.maximize);
+            }
+            button.setAttribute("title", title);
+            button.querySelector("svg").replaceWith(svg);
         }
     }
 
@@ -409,7 +421,26 @@ class Worksheet extends HTMLElement {
         }
     }
 
+    removeButton(id){
+        // recall our buttons are not necessary DOM <button> elements
+        const button = this.shadowRoot.querySelector(`[id="${id}"]`);
+        if(button){
+            button.remove();
+        }
+    }
+
     /* default header/footer buttons */
+    maximizeMinimizeButton() {
+        const svg = createIconSVGFromString(icons.minimize);
+        const button = document.createElement("span");
+        button.appendChild(svg);
+        button.addEventListener("click", () => {this.toggleAttribute("minimized");});
+        button.setAttribute("title", "minimize the worksheet");
+        button.setAttribute("data-clickable", true);
+        button.setAttribute("id", "min-max");
+        return button;
+    }
+
     trashButton() {
         const svg = createIconSVGFromString(icons.trash);
         const button = document.createElement("span");
@@ -454,48 +485,6 @@ class Worksheet extends HTMLElement {
         return button;
     }
 
-    runButton() {
-        const svg = createIconSVGFromString(icons.run);
-        const button = document.createElement("span");
-        button.appendChild(svg);
-        button.addEventListener("click", this.onRun);
-        button.setAttribute("title", "run commands");
-        button.setAttribute("data-clickable", true);
-        return button;
-    }
-
-    stackButton() {
-        const svg = createIconSVGFromString(icons.stack);
-        const button = document.createElement("span");
-        button.appendChild(svg);
-        button.addEventListener("click", this.onStackInspect);
-        button.setAttribute("title", "inspect the current commands");
-        button.setAttribute("data-clickable", true);
-        return button;
-    }
-
-    stepButton() {
-        const svg = createIconSVGFromString(icons.walk);
-        const button = document.createElement("span");
-        button.appendChild(svg);
-        button.addEventListener("click", this.onStep);
-        button.setAttribute("title", "step to next command");
-        button.setAttribute("data-clickable", true);
-        return button;
-    }
-
-    recordButton() {
-        const svg = createIconSVGFromString(icons.record);
-        const button = document.createElement("span");
-        svg.style.stroke = "green"; // TODO set to palette color
-        button.appendChild(svg);
-        button.addEventListener("click", this.onRecordToggle);
-        button.setAttribute("title", "start recording");
-        button.setAttribute("data-clickable", true);
-        button.setAttribute("id", "record");
-        return button;
-    }
-
     linkButton() {
         const svg = createIconSVGFromString(icons.link);
         const button = document.createElement("span");
@@ -511,21 +500,40 @@ class Worksheet extends HTMLElement {
         return button;
     }
 
+    connectionButton() {
+        const svg = createIconSVGFromString(icons.affiliate);
+        svg.style.setProperty("stroke", "var(--palette-orange)");
+        const button = document.createElement("span");
+        button.appendChild(svg);
+        button.addEventListener("click", (event) => {
+            const connection = this._getConnection(this.id);
+            connection.unhide(event);
+        });
+        button.setAttribute("title", "open connector");
+        button.setAttribute("data-clickable", true);
+        button.setAttribute("id", "connection-button");
+        return button;
+    }
+
+    // the callbacks
     onMouseDownInHeaderFooter(event) {
         // drag event propagation can be touchy so make sure we are not clicking or dragging
         // any children of header/footer
-        if (
-            event.target.id == "footer-bar" ||
-            event.target.id == "header-bar"
-        ) {
-            // dispatch an event to put the sheet in focus
-            const focusEvent = new CustomEvent("newSheetFocus", {
-                bubbles: true,
-                detail: { target: this },
-            });
-            this.dispatchEvent(focusEvent);
-            document.addEventListener("mousemove", this.onMouseMove);
-            document.addEventListener("mouseup", this.onMouseUpAfterDrag);
+        // only left click for the move here
+        if(event.button == 0){
+            if (
+                event.target.id == "footer-bar" ||
+                    event.target.id == "header-bar"
+            ) {
+                // dispatch an event to put the sheet in focus
+                const focusEvent = new CustomEvent("newSheetFocus", {
+                    bubbles: true,
+                    detail: { target: this },
+                });
+                this.dispatchEvent(focusEvent);
+                document.addEventListener("mousemove", this.onMouseMove);
+                document.addEventListener("mouseup", this.onMouseUpAfterDrag);
+            }
         }
     }
 
@@ -544,7 +552,7 @@ class Worksheet extends HTMLElement {
 
         // Trigger a custom move event so that
         // implementors of the Worksheet can react
-        let moveEvent = new CustomEvent("worksheet-moved", {
+        const moveEvent = new CustomEvent("worksheet-moved", {
             bubbles: true,
             detail: {
                 id: this.id,
@@ -633,19 +641,6 @@ class Worksheet extends HTMLElement {
         this.sheet.dataFrame.clear();
     }
 
-    onRecordToggle(){
-        this.toggleAttribute("recording");
-        const record_button = this.shadowRoot.querySelector("#record");
-        const record_icon = this.shadowRoot.querySelector("#record > svg");
-        if(this.hasAttribute("recording")){
-            record_icon.style.stroke = "red"; // TODO set to palette color
-            record_button.setAttribute("title", "stop recording");
-        } else {
-            record_icon.style.stroke = "green"; // TODO set to palette color
-            record_button.setAttribute("title", "start recording");
-        }
-    }
-
     onUpload(event) {
         // supported file formats
         const formats = ['csv', 'xlsx', 'xls'];
@@ -712,23 +707,6 @@ class Worksheet extends HTMLElement {
         this.closeDialog();
         const [wb, fileName] = this.toExcel();
         XLSX.writeFile(wb, `${fileName}.xlsx`);
-    }
-
-    // TODO: these callstack calls, and corresponding button icons, should be
-    // removed and eventually live in a connection or commandInterface element UI
-    onRun() {
-        const ws = this._getConnection(this.id);
-        ws.run();
-    }
-
-    onStep() {
-        const ws = this._getConnection(this.id);
-        ws.step();
-    }
-
-    onStackInspect(){
-        const ws = this._getConnection(this.id);
-        ws.inspectCallstack();
     }
 
     //TODO: sort out what to do with this
@@ -846,8 +824,7 @@ class Worksheet extends HTMLElement {
             );
             // we need to define the recording bool here otherwise event can
             // loose reference to target inside a condition - wtf?!
-            const recording = event.target.hasAttribute("recording");
-            if(connection && recording){
+            if(connection && connection.hasAttribute("recording")){
                 if(target.nodeName == "SHEET-CELL"){
                     target.classList.add("dragover");
                     target.addEventListener("dragleave", this._removeDragDropStyling);
@@ -889,10 +866,7 @@ class Worksheet extends HTMLElement {
                 connection.setAttribute("target", this.id);
                 connection.setAttribute("sources", [sourceId]);
                 // add callstack and command related buttons
-                this.addToHeader(this.stackButton(), "right");
-                this.addToHeader(this.stepButton(), "right");
-                this.addToHeader(this.runButton(), "right");
-                this.addToHeader(this.recordButton(), "right");
+                this.addToFooter(this.connectionButton(), "left", true);
             }
         } else if(event.dataTransfer.getData("selection-drag")){
             // we need to make sure that three conditions hold for a valid
@@ -910,8 +884,7 @@ class Worksheet extends HTMLElement {
             );
             // we need to define the recording bool here otherwise event can
             // loose reference to target inside a condition - wtf?!
-            const recording = event.target.hasAttribute("recording");
-            if(connection && recording){
+            if(connection && connection.hasAttribute("recording")){
                 if(cell_target.nodeName == "SHEET-CELL"){
                     const drop_data = JSON.parse(event.dataTransfer.getData("text/json"));
                     const source_origin = [
@@ -966,82 +939,6 @@ class Worksheet extends HTMLElement {
         overlay.replaceChildren(iconSVG);
     }
 
-    /** Handling source and target related icons **/
-
-    addSource(id) {
-        if (
-            !this.shadowRoot.querySelector(
-                `#footer-left > [data-source-id='${id}']`
-            )
-        ) {
-            // add an icon with data about the source to the footer
-            const sourceSpan = this._createSourceTargetIconSpan(
-                "source",
-                id,
-                this.id
-            );
-            this.addToFooter(sourceSpan, "left");
-            return id;
-        }
-    }
-
-    removeSource(id) {
-        // remove the source link
-        this.shadowRoot
-            .querySelectorAll(`#footer-left > [data-source-id='${id}']`)
-            .forEach((item) => {
-                item.remove();
-            });
-        // make sure no outline styles linger
-        this.style.outline = "initial";
-    }
-
-    addTarget(id) {
-        if (
-            !this.shadowRoot.querySelector(
-                `#footer-right > [data-target-id='${id}']`
-            )
-        ) {
-            // add an icon with data about the target to the footer
-            const targetSpan = this._createSourceTargetIconSpan(
-                "target",
-                this.id,
-                id
-            );
-            this.addToFooter(targetSpan, "right", true);
-            return id;
-        }
-    }
-
-    removeTarget(id) {
-        // remove the target link
-        this.shadowRoot
-            .querySelectorAll(`#footer-right > [data-target-id='${id}']`)
-            .forEach((item) => {
-                item.remove();
-            });
-        // make sure no outline styles linger
-        this.style.outline = "initial";
-    }
-
-    removeLink(event) {
-        event.stopPropagation();
-        event.preventDefault();
-        const sourceId = event.target.getAttribute("data-source-id");
-        const targetId = event.target.getAttribute("data-target-id");
-        const connection = this._getConnection(targetId, sourceId);
-        const sources = connection.getAttribute("sources").split(",");
-        if (sources.indexOf(sourceId) > -1) {
-            sources.splice(sources.indexOf(sourceId), 1);
-            connection.setAttribute("sources", sources);
-        }
-        if (event.target.getAttribute("data-type") == "source") {
-            this.removeSource(sourceId);
-        } else {
-            this.removeTarget(targetId);
-        }
-    }
-
     /**
       * I find the connection which corresponds to the target and source (if provided).
       * The assumption is that each sheet can be the source of multiple sheets.
@@ -1066,6 +963,7 @@ class Worksheet extends HTMLElement {
         }
     }
 
+<<<<<<< HEAD
     /**
      * Create a DOM element from an SVG string
      * for both the source/target icon as well as the
@@ -1268,7 +1166,7 @@ class Worksheet extends HTMLElement {
     }
 
     get isMinimized() {
-        return this.getAttribute("minimized") === "true";
+        return this.hasAttribute("minimized");
     }
 
     static get observedAttributes() {

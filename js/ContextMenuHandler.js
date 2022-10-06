@@ -16,7 +16,10 @@ class ContextMenuHandler {
 
     setupListeners() {
         let innerSheet = this.worksheet.shadowRoot.getElementById("ap-sheet");
-        innerSheet.addEventListener("contextmenu", this.innerSheetContextMenu);
+        innerSheet.addEventListener(
+            "contextmenu",
+            this.innerSheetContextMenu
+        );
         this.worksheet.addEventListener(
             "contextmenu",
             this.worksheetContextMenu
@@ -89,14 +92,11 @@ class ContextMenuHandler {
 
     addMinimizeItemTo(aMenu) {
         let name = "Minimize Worksheet";
-        let action = (e) => {
-            this.worksheet.setAttribute("minimized", "true");
+        const action = (e) => {
+            this.worksheet.toggleAttribute("minimized");
         };
         if (this.worksheet.isMinimized) {
             name = "Maximize Worksheet";
-            action = (e) => {
-                this.worksheet.removeAttribute("minimized");
-            };
         }
         aMenu.addListItem(name, action);
     }

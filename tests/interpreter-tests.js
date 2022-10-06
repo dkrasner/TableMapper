@@ -39,11 +39,6 @@ describe("Interpreter Tests", () => {
         document.body.append(sourceWS);
         document.body.append(anotherSourceWS);
         document.body.append(targetWS);
-        // add callstack and command related buttons
-        targetWS.addToHeader(targetWS.stackButton(), "right");
-        targetWS.addToHeader(targetWS.stepButton(), "right");
-        targetWS.addToHeader(targetWS.runButton(), "right");
-        targetWS.addToHeader(targetWS.recordButton(), "right");
         // NOTE: bc of some Node nonsense we need to generate
         // the ids manually, otherwise they are not guaranteed to be
         // standard UUID format
