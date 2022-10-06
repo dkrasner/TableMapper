@@ -963,8 +963,7 @@ class Worksheet extends HTMLElement {
         }
     }
 
-<<<<<<< HEAD
-    /**
+    /*
      * Create a DOM element from an SVG string
      * for both the source/target icon as well as the
      * unlink icon. Adds event listeners for mousenter and
