@@ -10,6 +10,7 @@
 import { labelIndex } from "./interpreters.js";
 import icons from "./utils/icons.js";
 import createIconSVGFromString from "./utils/helpers.js";
+import * as XLSX from 'xlsx';
 import CSVParser from "papaparse";
 import ContextMenuHandler from "./ContextMenuHandler.js";
 
@@ -221,6 +222,7 @@ my-grid {
 .dragover {
     border: solid var(--palette-beige);
 }
+
 </style>
 <div id="header-bar">
     <span id="header-left">
@@ -282,6 +284,12 @@ class Worksheet extends HTMLElement {
         this.onErase = this.onErase.bind(this);
         this.onUpload = this.onUpload.bind(this);
         this.onDownload = this.onDownload.bind(this);
+        this.downloadCSV = this.downloadCSV.bind(this);
+        this.downloadExcel = this.downloadExcel.bind(this);
+        this.openDownloadDialog = this.openDownloadDialog.bind(this);
+        this.openExcelUploadDialog = this.openExcelUploadDialog.bind(this);
+        this._basicDialog = this._basicDialog.bind(this);
+        this.closeDialog = this.closeDialog.bind(this);
         this.onDelete = this.onDelete.bind(this);
         this.onExternalLinkDragStart = this.onExternalLinkDragStart.bind(this);
         this.onDragStart = this.onDragStart.bind(this);
@@ -294,6 +302,8 @@ class Worksheet extends HTMLElement {
         // Bound serialization methods
         this.toCSV = this.toCSV.bind(this);
         this.fromCSV = this.fromCSV.bind(this);
+        this.fromExcel = this.fromExcel.bind(this);
+        this.toExcel = this.toExcel.bind(this);
     }
 
     connectedCallback() {
@@ -632,24 +642,55 @@ class Worksheet extends HTMLElement {
     }
 
     onUpload(event) {
+        // supported file formats
+        const formats = ['csv', 'xlsx', 'xls'];
+        const rexp = new RegExp(`(?:${formats.join('|')})$`);
         const file = event.target.files[0];
-        const reader = new FileReader();
-        reader.addEventListener("load", (loadEv) => {
-            this.fromCSV(loadEv.target.result);
-        });
-        reader.addEventListener("error", (e) => {
-            console.error(e);
-            alert("An error occurred reading this file");
-            return;
-        });
-
-        // Will trigger the reader.load event
-        reader.readAsText(file);
-        // set the name of the sheet to the file name; TODO: do we want this?
-        this.updateName(file.name);
+        let fileName = file.name;
+        if(rexp.test(fileName)){
+            const ftype = rexp.exec(fileName)[0];
+            const reader = new FileReader();
+            const rABS = !!reader.readAsBinaryString;
+            reader.addEventListener("load", (loadEv) => {
+                if(ftype == 'csv'){
+                    this.fromCSV(loadEv.target.result, fileName);
+                } else {
+                    this.fromExcel(
+                        loadEv.target.result,
+                        rABS,
+                        fileName,
+                        ftype
+                    );
+                }
+            });
+            reader.addEventListener("error", (e) => {
+                console.error(e);
+                alert("An error occurred reading this file");
+                return;
+            });
+            if(ftype == 'csv'){
+                // Will trigger the reader.load event
+                reader.readAsText(file);
+            } else {
+                // excel files
+                if(rABS){
+                    reader.readAsBinaryString(file)
+                } else {
+                    reader.readAsArrayBuffer(file);
+                }
+            }
+        } else {
+            alert(`I only support ${formats.join(', ')} type files!`);
+            // TODO perhaps we should throw an error here
+        }
     }
 
     onDownload() {
+        this.openDownloadDialog();
+    }
+
+    downloadCSV(){
+        this.closeDialog();
         const csv = this.toCSV();
         const anchor = document.createElement("a");
         anchor.style.display = "none";
@@ -660,6 +701,12 @@ class Worksheet extends HTMLElement {
         document.body.append(anchor);
         anchor.click();
         window.URL.revokeObjectURL(url);
+    }
+
+    downloadExcel(){
+        this.closeDialog();
+        const [wb, fileName] = this.toExcel();
+        XLSX.writeFile(wb, `${fileName}.xlsx`);
     }
 
     //TODO: sort out what to do with this
@@ -916,14 +963,74 @@ class Worksheet extends HTMLElement {
         }
     }
 
-    fromCSV(aString) {
+<<<<<<< HEAD
+    /**
+     * Create a DOM element from an SVG string
+     * for both the source/target icon as well as the
+     * unlink icon. Adds event listeners for mousenter and
+     * mouseleave.
+     */
+    _createSourceTargetIconSpan(type, sourceId, targetId) {
+        // make a reference to the source/target sheet
+        // to update css on hover
+        let iconString;
+        let sheet;
+        if (type == "source") {
+            iconString = icons.sheetImport;
+            sheet = document.getElementById(sourceId);
+        } else {
+            iconString = icons.sheetExport;
+            sheet = document.getElementById(targetId);
+        }
+        const icon = createIconSVGFromString(iconString);
+        const iconSpan = document.createElement("span");
+        iconSpan.appendChild(icon);
+        iconSpan.setAttribute("data-type", type);
+        iconSpan.setAttribute("data-source-id", sourceId);
+        iconSpan.setAttribute("data-target-id", targetId);
+        // overlay the unlink icon
+        const unlinkIcon = createIconSVGFromString(icons.unlink);
+        unlinkIcon.setAttribute("data-type", type);
+        unlinkIcon.setAttribute("data-source-id", sourceId);
+        unlinkIcon.setAttribute("data-target-id", targetId);
+        unlinkIcon.style.display = "none";
+        iconSpan.addEventListener("click", this.removeLink);
+        iconSpan.appendChild(unlinkIcon);
+        iconSpan.addEventListener("mouseover", () => {
+            unlinkIcon.style.display = "inherit";
+            icon.style.display = "none";
+            sheet.style.outline = "solid var(--palette-blue)";
+            iconSpan.setAttribute(
+                "title",
+                `${type}: ${sheet.name} (${sheet.id})`
+            );
+        });
+        iconSpan.addEventListener("mouseleave", () => {
+            unlinkIcon.style.display = "none";
+            icon.style.display = "inherit";
+            sheet.style.outline = "initial";
+        });
+        return iconSpan;
+    }
+
+    fromCSV(aString, fileName) {
         const data = CSVParser.parse(aString).data;
         if (data) {
             this.sheet.dataFrame.clear();
-            this.sheet.dataFrame.corner.x = data[0].length - 1;
-            this.sheet.dataFrame.corner.y = data.length - 1;
+            this.sheet.dataFrame.corner.x = Math.max(
+                Math.max(
+                    ...data.map((row) => {return row.length})
+                ) - 1,
+                this.sheet.dataFrame.corner.x
+            );
+            this.sheet.dataFrame.corner.y = Math.max(
+                data.length - 1,
+                this.sheet.dataFrame.corner.y
+            );
             this.sheet.dataFrame.loadFromArray(data);
             this.sheet.render();
+            // set the name of the sheet to the file name; TODO: do we want this?
+            this.updateName(fileName);
         }
     }
 
@@ -932,6 +1039,130 @@ class Worksheet extends HTMLElement {
             this.sheet.dataFrame
         );
         return CSVParser.unparse(data);
+    }
+
+    fromExcel(aString, rABS, fileName, ftype){
+        // TODO: if the field is an excel date field xlsx converts it
+        // automatically, to either a numerical value or a date string
+        // I can't see a way around this and it might be a by-product of how
+        // excel data is actually stored tbd...
+        const wb = XLSX.read(
+            aString,
+            {
+                type: rABS ? "binary" : "array",
+                cellText:false,
+                cellDates:true,
+            }
+        );
+        // ask which sheet to load since we only do one
+        this.openExcelUploadDialog(wb, (event) => {
+            const ws = wb.Sheets[event.target.value];
+            if(ws){
+                const wsArray = XLSX.utils.sheet_to_json(
+                    ws,
+                    {header: 1} // this will give us an nd-array
+                );
+                this.onErase();
+                this.sheet.dataFrame.corner.x = Math.max(
+                    Math.max(
+                        ...wsArray.map((row) => {return row.length})
+                    ) - 1,
+                    this.sheet.dataFrame.corner.x
+                );
+                this.sheet.dataFrame.corner.y = Math.max(
+                    wsArray.length - 1,
+                    this.sheet.dataFrame.corner.y
+                );
+                this.sheet.dataFrame.loadFromArray(wsArray);
+                // update the file name to include the sheet/tab
+                fileName = fileName.replace(`.${ftype}`, `[${event.target.value}]`);
+                fileName = fileName.replace(/\[.+\]$/, `[${event.target.value}]`);
+                // set the name of the sheet to the file name; TODO: do we want this?
+                this.updateName(fileName);
+            }
+        });
+    }
+
+    openExcelUploadDialog(workbook, callback){
+        const dialog = this._basicDialog(`${this.id}_excel_dialog`);
+        const form = document.createElement("form");
+        const select = document.createElement("select");
+        const option = document.createElement("option");
+        option.textContent = "Choose a sheet...";
+        option.setAttribute("disabled", "");
+        option.setAttribute("selected", "");
+        select.append(option);
+        workbook.SheetNames.forEach((name) => {
+            const option = document.createElement("option");
+            option.textContent = name;
+            select.append(option);
+        })
+        form.append(select);
+        dialog.firstChild.append(form);
+        select.addEventListener("change", callback);
+        dialog.showModal();
+    }
+
+    openDownloadDialog(){
+        const dialog = this._basicDialog(`${this.id}_download_dialog`);
+        const csvButton = document.createElement("button");
+        csvButton.textContent = "CSV";
+        const excelButton = document.createElement("button");
+        excelButton.textContent = "XLSX";
+        dialog.firstChild.append(csvButton);
+        dialog.firstChild.append(excelButton);
+        csvButton.addEventListener("click", this.downloadCSV);
+        excelButton.addEventListener("click", this.downloadExcel);
+        dialog.showModal();
+    }
+
+    _basicDialog(id){
+        const dialog = document.createElement("dialog");
+        const div = document.createElement("div");
+        dialog.append(div);
+        dialog.setAttribute("id", id);
+        document.body.append(dialog);
+        // create a close/remove icon
+        const svg = createIconSVGFromString(icons.remove);
+        const removeButton = document.createElement("span");
+        removeButton.appendChild(svg);
+        removeButton.setAttribute("title", "cancel");
+        removeButton.setAttribute("data-clickable", true);
+        removeButton.setAttribute("id", "remove");
+        dialog.append(removeButton);
+        removeButton.addEventListener(
+            "click",
+            () => this.closeDialog(id)
+        );
+        return dialog;
+    }
+
+    closeDialog(id){
+        const dialog = document.getElementById(id);
+        if(dialog){
+            dialog.remove();
+        }
+    }
+
+
+    toExcel(){
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.aoa_to_sheet(
+            this.sheet.dataFrame.getDataArrayForFrame(
+                this.sheet.dataFrame
+            )
+        )
+        // TODO get proper name here for the sheet
+        let sheetName = "Sheet1";
+        const sheetRE = /\[(.*)\]$/;
+        const m = this.name.match(sheetRE);
+        let fileName = this.name;
+        if(m){
+            sheetName = m[1];
+            fileName = fileName.replace(sheetRE, "");
+        }
+        XLSX.utils.book_append_sheet(wb, ws, sheetName);
+        return [wb, fileName];
     }
 
     get isMinimized() {
