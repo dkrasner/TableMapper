@@ -125,9 +125,13 @@ const commandRegistry = {
     "replace": {
         command: replace,
         description: 'Replace content with new\n' +
-            'Use a dictionary where the keys and values specify\n' +
+            'Use the "=>" arrow symbol to specify\n' +
             'what and with-what to replace, respectively.\n' +
-            '(Example: {"1": "ONE", "2": "TWO"} will replace 1 with ONE and 2 with TWO)\n'
+            'Each new line will represent a new replacement pair.\n' +
+            '(Example:\n' +
+            '1 => ONE\n' +
+            '2 => TWO\n' +
+            'will replace "1" with "ONE" and "2" with "TWO".)'
         ,
         args: true
     },

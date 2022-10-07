@@ -325,12 +325,17 @@ class CommandInterface extends HTMLElement {
         // TODO: this is a bit absurd! we are joining the source and target data
         // into a string only to parse it all out later. I am leaving this in for now
         // so that our 'view' on the callstack __is__ the callstack
+        const argsDict = {};
+        args.split("\n").forEach((entry) => {
+            const [k, v] = entry.split(/\s*=>\s*/);
+            argsDict[k] = v;
+        })
         const sources = this.sources.map((s) => {
             return `${s.id}!(${s.origin[0]},${s.origin[1]}):(${s.corner[0]},${s.corner[1]})`;
         }).join(",");
         const target = `${this.target.id}!(${this.target.origin[0]},${this.target.origin[1]}):(${this.target.corner[0]},${this.target.corner[1]})`;
         // TODO: do we really need command(args) or can we seperate them out command, args for ex 
-        command = `${command}(${args})`;
+        command = `${command}(${JSON.stringify(argsDict)})`;
         return [sources, target, command];
     }
 
