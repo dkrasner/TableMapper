@@ -12,6 +12,7 @@ class ContextMenuHandler {
         this.addMinimizeItemTo = this.addMinimizeItemTo.bind(this);
         this.setupListeners = this.setupListeners.bind(this);
         this.removeListeners = this.removeListeners.bind(this);
+        this.clearContextMenus = this.clearContextMenus.bind(this);
     }
 
     setupListeners() {
@@ -20,10 +21,12 @@ class ContextMenuHandler {
             "contextmenu",
             this.innerSheetContextMenu
         );
+        /*
         this.worksheet.addEventListener(
             "contextmenu",
             this.worksheetContextMenu
         );
+        */
     }
 
     removeListeners() {
@@ -59,7 +62,7 @@ class ContextMenuHandler {
         } else {
             currentMenu.addSpacer();
         }
-        this.addMinimizeItemTo(currentMenu);
+        // this.addMinimizeItemTo(currentMenu);
         currentMenu.openAtMouseEvent(event);
         event.stopPropagation();
     }
@@ -78,16 +81,29 @@ class ContextMenuHandler {
         if (tabIndex > 1) {
             menuText = `Lock the first ${tabIndex} ${axis}s`;
         }
-        let menu = document.createElement(CONTEXT_MENU_EL_NAME);
-        menu.addListItem(menuText, (clickEvent) => {
-            innerSheet.setAttribute(`locked${axis}s`, tabIndex);
-        });
+        // clear all the menus before adding a new one
+        this.clearContextMenus();
+        const menu = document.createElement(CONTEXT_MENU_EL_NAME);
         if (currentLockedRows) {
-            menu.addListItem(`Unlock all ${axis}s`, (clickEvent) => {
-                innerSheet.setAttribute(`locked${axis}s`, 0);
+            if(tabIndex <= currentLockedRows){
+                menu.addListItem(`Unlock all ${axis}s`, (clickEvent) => {
+                    innerSheet.setAttribute(`locked${axis}s`, 0);
+                });
+            } else {
+                menu.addListItem(menuText, (clickEvent) => {
+                    innerSheet.setAttribute(`locked${axis}s`, tabIndex);
+                });
+                menu.addListItem(`Unlock all ${axis}s`, (clickEvent) => {
+                    innerSheet.setAttribute(`locked${axis}s`, 0);
+                });
+            }
+        } else {
+            menu.addListItem(menuText, (clickEvent) => {
+                innerSheet.setAttribute(`locked${axis}s`, tabIndex);
             });
         }
         menu.openAtMouseEvent(event);
+        event.stopPropagation();
     }
 
     addMinimizeItemTo(aMenu) {
@@ -99,6 +115,11 @@ class ContextMenuHandler {
             name = "Maximize Worksheet";
         }
         aMenu.addListItem(name, action);
+    }
+
+    clearContextMenus(){
+        const menus = document.querySelectorAll(CONTEXT_MENU_EL_NAME);
+        menus.forEach((m) => {m.remove()});
     }
 }
 
