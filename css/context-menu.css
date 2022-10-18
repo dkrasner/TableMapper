@@ -50,8 +50,8 @@ context-menu-item {
     padding-right: 4px;
     padding-top: 4px;
     padding-bottom: 4px;
-    color: var(--ctx-item-font-color);
-    background-color: var(--palette-white);
+    color: var(--ctx-item-font-color-highlighted);
+    background-color: var(--palette-lightblue);
 }
 
 context-menu-item:last-child {
