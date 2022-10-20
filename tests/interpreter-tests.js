@@ -82,7 +82,7 @@ describe("Interpreter Tests", () => {
         });
         it("Running the replace command populates target Worksheet", () => {
             const instructions = [
-                [`${sourceWS.id}!(0,0):(2,2)`, `${targetWS.id}!(0,0):(0,0)`, "replace({'a': 'AAA'})"],
+                [`${sourceWS.id}!(0,0):(2,2)`, `${targetWS.id}!(0,0):(0,0)`, "replace('a': 'AAA')"],
             ]
             callstack.load(instructions);
             callstack.run();
@@ -101,7 +101,7 @@ describe("Interpreter Tests", () => {
         it("Running copy and replace commands populates target Worksheet", () => {
             const instructions = [
                 [`${sourceWS.id}!(0,0):(2,2)`, `${targetWS.id}!(0,0):(0,0)`, "copy()"],
-                [`${sourceWS.id}!(0,0):(2,2)`, `${targetWS.id}!(3,0):(3,0)`, "replace({'a': 'AAA'})"],
+                [`${sourceWS.id}!(0,0):(2,2)`, `${targetWS.id}!(3,0):(3,0)`, "replace('a': 'AAA')"],
             ]
             callstack.load(instructions);
             callstack.run();
@@ -126,7 +126,7 @@ describe("Interpreter Tests", () => {
         it("Stepping through copy and replace commands populates target Worksheet", () => {
             const instructions = [
                 [`${sourceWS.id}!(0,0):(2,2)`, `${targetWS.id}!(0,0):(0,0)`, "copy()"],
-                [`${sourceWS.id}!(0,0):(2,2)`, `${targetWS.id}!(3,0):(3,0)`, "replace({'a': 'AAA'})"],
+                [`${sourceWS.id}!(0,0):(2,2)`, `${targetWS.id}!(3,0):(3,0)`, "replace('a': 'AAA')"],
             ]
             callstack.load(instructions);
             callstack.step();

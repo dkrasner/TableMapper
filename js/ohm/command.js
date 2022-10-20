@@ -12,11 +12,11 @@ Command {
 
     Copy = "copy" "()"
 
-    Replace = "replace" + "(" + Dict + ")"
+    Replace = "replace" + "(" + ReplaceArg + ")"
 
     Join = "join" + "(" + stringLiteral + ")"
 
-    Dict = "{" + NonemptyListOf<KeyVal, ","> + "}"
+    ReplaceArg = nonemptyListOf<KeyVal, lineTerminator>
 
     KeyVal = stringLiteral + ":" + (stringLiteral | digit+)
 
@@ -48,11 +48,23 @@ const commandSemantics = g.createSemantics().addOperation('interpret', {
         return [joinLiteral.sourceString, s.interpret()[0]];
     },
 
-    Dict(leftBracket, kvList, rightBracket){
-        let d = leftBracket.sourceString + kvList.sourceString + rightBracket.sourceString;
-        // NOTE: JSON.parse doesn't like single quotes; we could prob parse/build the dict ourselves
-        d = d.replaceAll("'", '"');
-        return JSON.parse(d);
+    ReplaceArg(kvList){
+        return kvList.asIteration().children.map(item => item.interpret());
+    },
+
+    KeyVal(firstStringLiteral, colonLiteral, stringLiteralOrDigit){
+        let [first, second] = [firstStringLiteral.interpret(), stringLiteralOrDigit.interpret()];
+        if (first instanceof Array){
+            first = first[0];
+        }
+        if (second instanceof Array){
+            second = second[0];
+        }
+        return [first, second];
+    },
+
+    digit(d){
+        return d.sourceString;
     },
 
     stringLiteral(quoteLeftLiteral, s, quoteRightLiteral){
