@@ -1018,17 +1018,26 @@ class Worksheet extends HTMLElement {
         let rowsProcessed = 0;
         // we are not binding the parse callbacks here
         const self = this;
+        let icon = icons.loader;
         const parseConfig = {
             worker: true, // run the upload on a Worker not to block things up
             chunk: function(chunk){
+                self._overlay(icon);
                 self.sheet.dataFrame.loadFromArray(chunk.data, [0, rowsProcessed], false);
                 rowsProcessed += chunk.data.length;
+                if(icon == icons.loader){
+                    icon = icons.loaderQuarter;
+                } else {
+                    icon = icons.loader;
+                }
                 console.log("processed:", rowsProcessed);
             },
             complete: function(){
                 self.sheet.render();
                 console.log("total rows:", rowsProcessed);
                 self.updateName(file.name);
+                const overlay = self.shadowRoot.querySelector(".overlay");
+                overlay.classList.add("hide");
             }
         }
         try {
