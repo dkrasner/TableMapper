@@ -1072,27 +1072,20 @@ class Worksheet extends HTMLElement {
         this.openExcelUploadDialog(wb, (event) => {
             const ws = wb.Sheets[event.target.value];
             if(ws){
+                this._overlay(icons.loader);
                 const wsArray = XLSX.utils.sheet_to_json(
                     ws,
                     {header: 1} // this will give us an nd-array
                 );
                 this.onErase();
-                this.sheet.dataFrame.corner.x = Math.max(
-                    Math.max(
-                        ...wsArray.map((row) => {return row.length})
-                    ) - 1,
-                    this.sheet.dataFrame.corner.x
-                );
-                this.sheet.dataFrame.corner.y = Math.max(
-                    wsArray.length - 1,
-                    this.sheet.dataFrame.corner.y
-                );
                 this.sheet.dataFrame.loadFromArray(wsArray);
                 // update the file name to include the sheet/tab
                 fileName = fileName.replace(`.${ftype}`, `[${event.target.value}]`);
                 fileName = fileName.replace(/\[.+\]$/, `[${event.target.value}]`);
                 // set the name of the sheet to the file name; TODO: do we want this?
                 this.updateName(fileName);
+                const overlay = this.shadowRoot.querySelector(".overlay");
+                overlay.classList.add("hide");
             }
         });
     }
