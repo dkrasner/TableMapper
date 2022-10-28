@@ -12,6 +12,7 @@ import icons from "./utils/icons.js";
 import createIconSVGFromString from "./utils/helpers.js";
 import * as XLSX from 'xlsx';
 import CSVParser from "papaparse";
+import Papa from 'papaparse';
 import ContextMenuHandler from "./ContextMenuHandler.js";
 
 // Simple grid-based sheet component
@@ -646,33 +647,27 @@ class Worksheet extends HTMLElement {
         const formats = ['csv', 'xlsx', 'xls'];
         const rexp = new RegExp(`(?:${formats.join('|')})$`);
         const file = event.target.files[0];
-        let fileName = file.name;
+        const fileName = file.name;
         if(rexp.test(fileName)){
             const ftype = rexp.exec(fileName)[0];
-            const reader = new FileReader();
-            const rABS = !!reader.readAsBinaryString;
-            reader.addEventListener("load", (loadEv) => {
-                if(ftype == 'csv'){
-                    this.fromCSV(loadEv.target.result, fileName);
-                } else {
+            if(ftype == 'csv'){
+                this.fromCSV(file);
+            } else {
+                const reader = new FileReader();
+                const rABS = !!reader.readAsBinaryString;
+                reader.addEventListener("load", (loadEv) => {
                     this.fromExcel(
                         loadEv.target.result,
                         rABS,
                         fileName,
                         ftype
                     );
-                }
-            });
-            reader.addEventListener("error", (e) => {
-                console.error(e);
-                alert("An error occurred reading this file");
-                return;
-            });
-            if(ftype == 'csv'){
-                // Will trigger the reader.load event
-                reader.readAsText(file);
-            } else {
-                // excel files
+                });
+                reader.addEventListener("error", (e) => {
+                    console.error(e);
+                    alert("An error occurred reading the xlsx file; try converting to csv first!");
+                    return;
+                });
                 if(rABS){
                     reader.readAsBinaryString(file)
                 } else {
@@ -1012,24 +1007,44 @@ class Worksheet extends HTMLElement {
         return iconSpan;
     }
 
-    fromCSV(aString, fileName) {
-        const data = CSVParser.parse(aString).data;
-        if (data) {
-            this.sheet.dataFrame.clear();
-            this.sheet.dataFrame.corner.x = Math.max(
-                Math.max(
-                    ...data.map((row) => {return row.length})
-                ) - 1,
-                this.sheet.dataFrame.corner.x
-            );
-            this.sheet.dataFrame.corner.y = Math.max(
-                data.length - 1,
-                this.sheet.dataFrame.corner.y
-            );
-            this.sheet.dataFrame.loadFromArray(data);
-            this.sheet.render();
-            // set the name of the sheet to the file name; TODO: do we want this?
-            this.updateName(fileName);
+    /**
+      * I hadle csv files. This is done by iterating over
+      * chunks (default size 10MB) and updating the sheet.DataFrame
+      * accordigly. This is a bit slower, on small files, than loading in one go
+      * but it allows for dealing with all files uniformly (the different for small
+      * files is unnoticeable).
+      **/
+    fromCSV(file) {
+        let rowsProcessed = 0;
+        // we are not binding the parse callbacks here
+        const self = this;
+        let icon = icons.loader;
+        const parseConfig = {
+            worker: true, // run the upload on a Worker not to block things up
+            chunk: function(chunk){
+                self._overlay(icon);
+                self.sheet.dataFrame.loadFromArray(chunk.data, [0, rowsProcessed], false);
+                rowsProcessed += chunk.data.length;
+                if(icon == icons.loader){
+                    icon = icons.loaderQuarter;
+                } else {
+                    icon = icons.loader;
+                }
+                console.log("processed:", rowsProcessed);
+            },
+            complete: function(){
+                self.sheet.render();
+                console.log("total rows:", rowsProcessed);
+                self.updateName(file.name);
+                const overlay = self.shadowRoot.querySelector(".overlay");
+                overlay.classList.add("hide");
+            }
+        }
+        try {
+            Papa.parse(file, parseConfig);
+        } catch (e){
+            console.log(e);
+            alert("I couldn't process the csv; please try again");
         }
     }
 
@@ -1057,27 +1072,20 @@ class Worksheet extends HTMLElement {
         this.openExcelUploadDialog(wb, (event) => {
             const ws = wb.Sheets[event.target.value];
             if(ws){
+                this._overlay(icons.loader);
                 const wsArray = XLSX.utils.sheet_to_json(
                     ws,
                     {header: 1} // this will give us an nd-array
                 );
                 this.onErase();
-                this.sheet.dataFrame.corner.x = Math.max(
-                    Math.max(
-                        ...wsArray.map((row) => {return row.length})
-                    ) - 1,
-                    this.sheet.dataFrame.corner.x
-                );
-                this.sheet.dataFrame.corner.y = Math.max(
-                    wsArray.length - 1,
-                    this.sheet.dataFrame.corner.y
-                );
                 this.sheet.dataFrame.loadFromArray(wsArray);
                 // update the file name to include the sheet/tab
                 fileName = fileName.replace(`.${ftype}`, `[${event.target.value}]`);
                 fileName = fileName.replace(/\[.+\]$/, `[${event.target.value}]`);
                 // set the name of the sheet to the file name; TODO: do we want this?
                 this.updateName(fileName);
+                const overlay = this.shadowRoot.querySelector(".overlay");
+                overlay.classList.add("hide");
             }
         });
     }
