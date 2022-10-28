@@ -14,6 +14,7 @@ import * as XLSX from 'xlsx';
 import CSVParser from "papaparse";
 import Papa from 'papaparse';
 import ContextMenuHandler from "./ContextMenuHandler.js";
+import PlotInterface from './PlotInterface.js';
 
 // Simple grid-based sheet component
 const templateString = `
@@ -275,6 +276,7 @@ class Worksheet extends HTMLElement {
         this.addToFooter = this.addToFooter.bind(this);
         this.addToHeader = this.addToHeader.bind(this);
         this.removeButton = this.removeButton.bind(this);
+        this.onOpenPlotInterface = this.onOpenPlotInterface.bind(this);
         this.onMouseMove = this.onMouseMove.bind(this);
         this.onMouseDownInHeaderFooter =
             this.onMouseDownInHeaderFooter.bind(this);
@@ -320,6 +322,7 @@ class Worksheet extends HTMLElement {
         this.addToHeader(this.eraseButton(), "right");
         this.addToHeader(this.maximizeMinimizeButton(), "right");
         this.addToFooter(this.linkButton(), "right");
+        this.addToFooter(this.plotButton(), "left");
         const header = this.shadowRoot.querySelector("#header-bar");
         const footer = this.shadowRoot.querySelector("#footer-bar");
         const name = header.querySelector("#title");
@@ -431,6 +434,16 @@ class Worksheet extends HTMLElement {
     }
 
     /* default header/footer buttons */
+    plotButton(){
+        const svg = createIconSVGFromString(icons.desktopAnalytics);
+        const button = document.createElement("span");
+        button.appendChild(svg);
+        button.addEventListener("click", this.onOpenPlotInterface);
+        button.setAttribute("title", "open the reporting interface");
+        button.setAttribute("data-clickable", true);
+        return button;
+    }
+
     maximizeMinimizeButton() {
         const svg = createIconSVGFromString(icons.minimize);
         const button = document.createElement("span");
@@ -517,6 +530,11 @@ class Worksheet extends HTMLElement {
     }
 
     // the callbacks
+    onOpenPlotInterface(){
+        const pi  = new PlotInterface();
+        document.body.append(pi);
+    }
+
     onMouseDownInHeaderFooter(event) {
         // drag event propagation can be touchy so make sure we are not clicking or dragging
         // any children of header/footer
