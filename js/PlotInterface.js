@@ -18,40 +18,38 @@ const templateString = `
         border-radius: 5px;
         left: 50%;
         top: 30%;
+        resize: both;
+        overflow: hidden;
+        width: 300px;
+        height: 300px;
     }
 
     div.wrapper {
         margin: 8px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        height: 100% !important;
     }
 
     #header {
         cursor: grab;
-        width: 100%;
         text-align: center;
         font-weight: bold;
         display: flex;
-        justify-content: space-between;
+        justify-content: space-around;
         align-items: center;
-    }
-
-    textarea {
-        outline: none;
-        margin-bottom: 4px;
-        margin-top: 4px;
-    }
-
-    textarea:focus {
-        outline: solid var(--palette-cyan) 1px;
+        margin-top: 7px;
     }
 
     #footer {
+        margin: 8px;
         cursor: grab;
-        width: 100%;
         text-align: center;
         font-size: 20px;
         font-weight: bold;
         display: flex;
-        justify-content: flex-end;
+        justify-content: space-around;
         align-items: center;
     }
 
@@ -71,12 +69,10 @@ const templateString = `
     }
 
     #close {
-        display: flex;
-        cursor: default;
-    }
-
-    #see-it {
-        background-color: var(--palette-beige);
+        cursor: pointer;
+        position: absolute;
+        right: 0px;
+        top: 0px;
     }
 
     #do-it {
@@ -92,12 +88,16 @@ const templateString = `
         background-color: var(--palette-beige) !important;
         cursor: default !important;
     }
+
+    #plot {
+        height: 80%!important;
+        resizable: true;
+        background-color: var(--palette-white);
+    }
 </style>
 <div class="wrapper">
-    <div id="header">
-        <span> Select the type of chart </span>
-    </div>
-    <div id="plots"></div>
+    <div id="header"></div>
+    <div id="plot"></div>
     <div id="footer">
         <button id="do-it">Plot it</button>
         <button id="save-it">Save It</button>
@@ -132,20 +132,22 @@ class PlotInterface extends HTMLElement {
         if (this.isConnected) {
             const header = this.shadowRoot.querySelector("#header");
             const footer = this.shadowRoot.querySelector("#footer");
+            const wrapper = this.shadowRoot.querySelector(".wrapper");
             // event listeners
             header.addEventListener("mousedown", this.onMouseDownInHeaderFooter);
             footer.addEventListener("mousedown", this.onMouseDownInHeaderFooter);
             // add a close button
             const svg = createIconSVGFromString(icons.circleX);
+            svg.style.setProperty("width", "15px");
+            svg.style.setProperty("height", "15px");
             const button = document.createElement("span");
             button.id = "close";
             button.appendChild(svg);
             button.addEventListener("click", this.onClose);
-            header.appendChild(button);
+            wrapper.appendChild(button);
             // add the charts
-            const plots = this.shadowRoot.querySelector("#plots");
             ["line", "bar", "pie"].forEach((name) => {
-                plots.append(this.addChartButton(name));
+                header.append(this.addChartButton(name));
             })
         }
     }
