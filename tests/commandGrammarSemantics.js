@@ -39,6 +39,31 @@ describe('Reference Grammar and Semantics', function () {
             matchTest(s);
             // semanticMatchTest(s, "Join");
         });
+        it('Sum', function () {
+            const s = "sum()";
+            matchTest(s);
+            semanticMatchTest(s, "Sum");
+        });
+        it('Average', function () {
+            const s = "average()";
+            matchTest(s);
+            semanticMatchTest(s, "Average");
+        });
+        it('Median', function () {
+            const s = "median()";
+            matchTest(s);
+            semanticMatchTest(s, "Median");
+        });
+        it('Max', function () {
+            const s = "max()";
+            matchTest(s);
+            semanticMatchTest(s, "Max");
+        });
+        it('Min', function () {
+            const s = "min()";
+            matchTest(s);
+            semanticMatchTest(s, "Min");
+        });
         it('Join must have an argument', function () {
             const s = "join()";
             semanticMatchFailTest(s, "Join");
@@ -62,6 +87,36 @@ describe('Reference Grammar and Semantics', function () {
             const m = g.match(s);
             const result = semantics(m).interpret();
             expect(result).to.eql(["copy", ""]);
+        });
+        it('Sum', function () {
+            const s= "sum()";
+            const m = g.match(s);
+            const result = semantics(m).interpret();
+            expect(result).to.eql(["sum", ""]);
+        });
+        it('Median', function () {
+            const s= "median()";
+            const m = g.match(s);
+            const result = semantics(m).interpret();
+            expect(result).to.eql(["median", ""]);
+        });
+        it('Max', function () {
+            const s= "max()";
+            const m = g.match(s);
+            const result = semantics(m).interpret();
+            expect(result).to.eql(["max", ""]);
+        });
+        it('Min', function () {
+            const s= "min()";
+            const m = g.match(s);
+            const result = semantics(m).interpret();
+            expect(result).to.eql(["min", ""]);
+        });
+        it('Average', function () {
+            const s= "average()";
+            const m = g.match(s);
+            const result = semantics(m).interpret();
+            expect(result).to.eql(["average", ""]);
         });
         it('Replace', function () {
             const s= "replace('a': 'AAAA'\n'b': 'BBBB')";
