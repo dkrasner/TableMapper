@@ -26,7 +26,7 @@ describe('Reference Grammar and Semantics', function () {
             semanticMatchFailTest("copy", "Copy");
         });
         it('Replace', function () {
-            const s = "replace({'a': 1, 'b': 2})";
+            const s = "replace('a': 1\n 'b': 2)";
             matchTest(s);
             semanticMatchTest(s, "Replace");
         });
@@ -43,23 +43,13 @@ describe('Reference Grammar and Semantics', function () {
             const s = "join()";
             semanticMatchFailTest(s, "Join");
         });
-        it('Dict (single quotes)', function () {
-            const s = "{'a': '1', 'b': '2'}";
-            semanticMatchTest(s, "Dict");
+        it('Replace Arg', function () {
+            const s = "'a':1\n'b':2\n";
+            semanticMatchTest(s, "ReplaceArg");
         });
-        it('Dict (double quotes)', function () {
-            const s = '{"a": "a", "b": "b"}';
-            semanticMatchTest(s, "Dict");
-        });
-        it('Dict (empty key or value)', function () {
-            let s = "{'': '1', 'b': 2}";
-            semanticMatchTest(s, "Dict");
-            s = "{'a': '', 'b': 2}";
-            semanticMatchTest(s, "Dict");
-        });
-        it('Dict (some values digits)', function () {
-            const s = "{'a': '1', 'b': 2}";
-            semanticMatchTest(s, "Dict");
+        it('Replace Arg (spaces)', function () {
+            const s = "'a':1\n' b':2\n";
+            semanticMatchTest(s, "ReplaceArg");
         });
         it('String literal return proper literal', function () {
             const s = "'this is a literal'";
@@ -74,10 +64,16 @@ describe('Reference Grammar and Semantics', function () {
             expect(result).to.eql(["copy", ""]);
         });
         it('Replace', function () {
-            const s= "replace({'a': 1, 'b': 2})";
+            const s= "replace('a': 'AAAA'\n'b': 'BBBB')";
             const m = g.match(s);
             const result = semantics(m).interpret();
-            expect(result).to.eql(["replace", {'a': 1, 'b': 2}]);
+            expect(result).to.eql(["replace", [["a", "AAAA"], ["b", "BBBB"]]]);
+        });
+        it('Replace (digits)', function () {
+            const s= "replace('a': 1\n'b': 2)";
+            const m = g.match(s);
+            const result = semantics(m).interpret();
+            expect(result).to.eql(["replace", [["a", "1"], ["b", "2"]]]);
         });
         it('Join', function () {
             const s= "join(',')";
