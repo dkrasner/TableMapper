@@ -32,6 +32,7 @@ class BasicInterpreter extends Object {
     matchAndInterpretCommand(s){
         const m = commandGrammar.match(s);
         if(m.failed()){
+            console.log(s)
             alert(`I cannot parse ${s}`);
             // throw new Error(`NotUnderstood ${s}`);
             return;
@@ -116,6 +117,49 @@ const replace = (sources, target, d) => {
     targetWS.sheet.dataFrame.copyFrom(sourceDF, targetOrigin);
 }
 
+const sum = (sources, target) => {
+    const source = sources[0].slice(1);
+    const [sourceWS, sourceOrigin, sourceCorner] = getOriginCornerElement(source);
+    const [targetWS, targetOrigin, _] = getOriginCornerElement(target);
+    const sourceDF = sourceWS.sheet.dataFrame.getDataSubFrame(sourceOrigin, sourceCorner);
+    const sum = _sum(sourceDF);
+    targetWS.sheet.dataFrame.putAt(targetOrigin, sum);
+}
+
+const average = (sources, target) => {
+    const source = sources[0].slice(1);
+    const [sourceWS, sourceOrigin, sourceCorner] = getOriginCornerElement(source);
+    const [targetWS, targetOrigin, _] = getOriginCornerElement(target);
+    const sourceDF = sourceWS.sheet.dataFrame.getDataSubFrame(sourceOrigin, sourceCorner);
+    const sum = _sum(sourceDF);
+    const ave = sum / ((sourceDF.size.x + 1) * (sourceDF.size.y + 1));
+    targetWS.sheet.dataFrame.putAt(targetOrigin, ave);
+}
+
+const max = (sources, target) => {
+    const source = sources[0].slice(1);
+    const [sourceWS, sourceOrigin, sourceCorner] = getOriginCornerElement(source);
+    const [targetWS, targetOrigin, _] = getOriginCornerElement(target);
+    const sourceDF = sourceWS.sheet.dataFrame.getDataSubFrame(sourceOrigin, sourceCorner);
+    targetWS.sheet.dataFrame.putAt(targetOrigin, _max_min(sourceDF, ">"));
+}
+
+const min = (sources, target) => {
+    const source = sources[0].slice(1);
+    const [sourceWS, sourceOrigin, sourceCorner] = getOriginCornerElement(source);
+    const [targetWS, targetOrigin, _] = getOriginCornerElement(target);
+    const sourceDF = sourceWS.sheet.dataFrame.getDataSubFrame(sourceOrigin, sourceCorner);
+    targetWS.sheet.dataFrame.putAt(targetOrigin, _max_min(sourceDF, "<"));
+}
+
+const median = (sources, target) => {
+    const source = sources[0].slice(1);
+    const [sourceWS, sourceOrigin, sourceCorner] = getOriginCornerElement(source);
+    const [targetWS, targetOrigin, _] = getOriginCornerElement(target);
+    const sourceDF = sourceWS.sheet.dataFrame.getDataSubFrame(sourceOrigin, sourceCorner);
+    targetWS.sheet.dataFrame.putAt(targetOrigin, _median(sourceDF));
+}
+
 const commandRegistry = {
     "copy": {
         command: copy,
@@ -138,11 +182,97 @@ const commandRegistry = {
         command: join,
         description: "Join multiple sources using provided string",
         args: true
-    }
+    },
+    "sum": {
+        command: sum,
+        description: "Sum the selected values",
+        args: false
+    },
+    "average": {
+        command: average,
+        description: "Get the average of the selected values",
+        args: false
+    },
+    /*
+    "median": {
+        command: median,
+        description: "Get the median of the selected values",
+        args: false
+    },
+    */
+    "max": {
+        command: max,
+        description: "Get the maximum of the selected values",
+        args: false
+    },
+    "min": {
+        command: min,
+        description: "Get the minimum of the selected values",
+        args: false
+    },
 }
 
 
 // Utils
+// Basic arithmetic utils
+const _sum = (df) => {
+    let ret = 0;
+    df.apply((entry) => {
+        if (isNaN(entry)) {
+            ret = NaN;
+        }
+        ret += parseFloat(entry);
+    })
+    return ret;
+}
+
+const _max_min = (df, which=">") => {
+    let ret = df.getAt(df.origin);
+    if (isNaN(ret)) {
+        return NaN;
+    }
+    df.forEachCoordinate((c) => {
+        let val = df.getAt(c);
+        if (isNaN(val)) {
+            return NaN;
+        }
+        val = parseFloat(val);
+        if (eval(`${val} ${which} ${ret}`)) {
+            ret = val;
+        }
+    })
+    return ret;
+}
+
+/**
+  * I returned the median of the flatted sheet.
+  **/
+const _median = (df) => {
+    // if the numbers of rows is odd, ie df.size.y % 2 == 0
+    // then take the middle row
+    let m;
+    if (df.size.y % 2 == 0) {
+        const y = df.size.y / 2;
+        console.log(y)
+        if(df.size.x % 2 == 0) {
+            const x = df.size.x / 2;
+            m = df.getAt([x, y]);
+        } else {
+            const x1 = (df.size.x + 1) / 2;
+            const x2 = x1 - 1;
+            m = (df.getAt([x1, y]) + df.getAt([x2, y])) / 2;
+        }
+    } else {
+        const y1 = (df.size.y + 1) / 2;
+        const y2 = y1 - 1;
+        m = (df.getAt([0, y1]) + df.getAt([df.size.x, y2])) / 2;
+    }
+    if (isNaN(m)) {
+        return NaN;
+    }
+    return parseFloat(m);
+}
+
 /**
   * I take a string like s="AA" and return its 'true'
   * column index. Otherwise I try to parse the string to an int.

@@ -8,13 +8,23 @@ import ohm from 'ohm-js';
 
 const commandGrammarSource = String.raw`
 Command {
-    Command = Copy | Replace | Join
+    Command = Copy | Replace | Join | Average | Median | Sum | Max | Min
 
     Copy = "copy" "()"
 
     Replace = "replace" + "(" + ReplaceArg + ")"
 
     Join = "join" + "(" + stringLiteral + ")"
+
+    Sum = "sum" "()"
+
+    Max = "max" "()"
+
+    Min = "min" "()"
+
+    Median = "median" "()"
+
+    Average = "average" "()"
 
     ReplaceArg = nonemptyListOf<KeyVal, lineTerminator>
 
@@ -46,6 +56,30 @@ const commandSemantics = g.createSemantics().addOperation('interpret', {
 
     Join(joinLiteral, leftBracket, s, rightBracket){
         return [joinLiteral.sourceString, s.interpret()[0]];
+    },
+
+    Sum(sumLiteral, brackets){
+        return [sumLiteral.sourceString, ""];
+    },
+
+    Max(maxLiteral, brackets){
+        return [maxLiteral.sourceString, ""];
+    },
+
+    Min(minLiteral, brackets){
+        return [minLiteral.sourceString, ""];
+    },
+
+    Sum(sumLiteral, brackets){
+        return [sumLiteral.sourceString, ""];
+    },
+
+    Median(medianLiteral, brackets){
+        return [medianLiteral.sourceString, ""];
+    },
+
+    Average(averageLiteral, brackets){
+        return [averageLiteral.sourceString, ""];
     },
 
     ReplaceArg(kvList){
