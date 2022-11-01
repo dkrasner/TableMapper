@@ -193,11 +193,13 @@ const commandRegistry = {
         description: "Get the average of the selected values",
         args: false
     },
+    /*
     "median": {
         command: median,
         description: "Get the median of the selected values",
         args: false
     },
+    */
     "max": {
         command: max,
         description: "Get the maximum of the selected values",
