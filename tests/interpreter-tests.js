@@ -327,7 +327,7 @@ describe("Interpreter Tests", () => {
             targetWS.onErase();
             expect(targetWS.sheet.dataFrame.store).to.eql({});
         });
-        it.skip("Median 2", () => {
+        it("Median 2", () => {
             const numericDataArray2 = [
                 [1, 2, 3],
                 [4, 5, 6],
@@ -335,11 +335,60 @@ describe("Interpreter Tests", () => {
             ];
             sourceWS.sheet.dataFrame.loadFromArray(numericDataArray2);
             const instructions = [
-                [`${sourceWS.id}!(0,0):(2,3)`, `${targetWS.id}!(0,0):(0,0)`, "median()"]
+                [`${sourceWS.id}!(0,0):(2,2)`, `${targetWS.id}!(0,0):(0,0)`, "median()"]
             ]
             callstack.load(instructions);
             callstack.run();
             expect(targetWS.sheet.dataFrame.store).to.eql({"0,0": 5});
+            targetWS.onErase();
+            expect(targetWS.sheet.dataFrame.store).to.eql({});
+        });
+        it("Median 3", () => {
+            const numericDataArray2 = [
+                [1, 2, 3, 4],
+                [5, 6, 7, 8],
+                [9, 10, 11, 12]
+            ];
+            sourceWS.sheet.dataFrame.loadFromArray(numericDataArray2);
+            const instructions = [
+                [`${sourceWS.id}!(0,0):(3,2)`, `${targetWS.id}!(0,0):(0,0)`, "median()"]
+            ]
+            callstack.load(instructions);
+            callstack.run();
+            expect(targetWS.sheet.dataFrame.store).to.eql({"0,0":  13 / 2});
+            targetWS.onErase();
+            expect(targetWS.sheet.dataFrame.store).to.eql({});
+        });
+        it("Median 4", () => {
+            const numericDataArray2 = [
+                [1, 2, 3],
+                [4, 5, 6],
+                [7, 8, 9]
+            ];
+            sourceWS.sheet.dataFrame.loadFromArray(numericDataArray2);
+            // NOTE: we are starting at (1, 1) here
+            const instructions = [
+                [`${sourceWS.id}!(1,1):(2,2)`, `${targetWS.id}!(0,0):(0,0)`, "median()"]
+            ]
+            callstack.load(instructions);
+            callstack.run();
+            expect(targetWS.sheet.dataFrame.store).to.eql({"0,0": 7});
+            targetWS.onErase();
+            expect(targetWS.sheet.dataFrame.store).to.eql({});
+        });
+        it("Median can be NaN", () => {
+            const numericDataArray2 = [
+                [1, 2, 3],
+                [4, 5, 6],
+                [7, "aaaa", 9]
+            ];
+            sourceWS.sheet.dataFrame.loadFromArray(numericDataArray2);
+            const instructions = [
+                [`${sourceWS.id}!(0,0):(2,2)`, `${targetWS.id}!(0,0):(0,0)`, "median()"]
+            ]
+            callstack.load(instructions);
+            callstack.run();
+            expect(targetWS.sheet.dataFrame.store).to.eql({"0,0": NaN});
             targetWS.onErase();
             expect(targetWS.sheet.dataFrame.store).to.eql({});
         });
