@@ -132,7 +132,7 @@ const average = (sources, target) => {
     const [targetWS, targetOrigin, _] = getOriginCornerElement(target);
     const sourceDF = sourceWS.sheet.dataFrame.getDataSubFrame(sourceOrigin, sourceCorner);
     const sum = _sum(sourceDF);
-    const ave = sum / ((sourceDF.size.x + 1) * (sourceDF.size.y + 1));
+    const ave = sum / ((sourceDF.size.x) * (sourceDF.size.y));
     targetWS.sheet.dataFrame.putAt(targetOrigin, ave);
 }
 
@@ -193,13 +193,11 @@ const commandRegistry = {
         description: "Get the average of the selected values",
         args: false
     },
-    /*
     "median": {
         command: median,
         description: "Get the median of the selected values",
         args: false
     },
-    */
     "max": {
         command: max,
         description: "Get the maximum of the selected values",
@@ -251,24 +249,29 @@ const _median = (df) => {
     // if the numbers of rows is odd, ie df.size.y % 2 == 0
     // then take the middle row
     let m;
-    if (df.size.y % 2 == 0) {
-        const y = df.size.y / 2;
-        console.log(y)
-        if(df.size.x % 2 == 0) {
-            const x = df.size.x / 2;
+    let anyNaN = 0;
+    df.forEachPoint((p) => {
+        if(isNaN(df.getAt(p))){
+            anyNaN = NaN;
+        }
+    })
+    if (isNaN(anyNaN)) {
+        return NaN;
+    }
+    if (df.size.y % 2 == 1) {
+        const y = df.origin.y + ((df.size.y - 1) / 2);
+        if(df.size.x % 2 == 1) {
+            const x = df.origin.x + ((df.size.x - 1) / 2);
             m = df.getAt([x, y]);
         } else {
-            const x1 = (df.size.x + 1) / 2;
+            const x1 = df.origin.x + ((df.size.x) / 2);
             const x2 = x1 - 1;
             m = (df.getAt([x1, y]) + df.getAt([x2, y])) / 2;
         }
     } else {
-        const y1 = (df.size.y + 1) / 2;
+        const y1 = df.origin.y + ((df.size.y) / 2);
         const y2 = y1 - 1;
-        m = (df.getAt([0, y1]) + df.getAt([df.size.x, y2])) / 2;
-    }
-    if (isNaN(m)) {
-        return NaN;
+        m = (df.getAt([df.origin.x, y1]) + df.getAt([df.corner.x, y2])) / 2;
     }
     return parseFloat(m);
 }
