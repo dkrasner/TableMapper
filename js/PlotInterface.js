@@ -6,6 +6,10 @@
 import icons from "./utils/icons.js";
 import createIconSVGFromString from "./utils/helpers.js";
 
+import { Chart, registerables } from 'chart.js';
+Chart.register(...registerables);
+
+
 const templateString = `
 <style>
     :host {
@@ -44,6 +48,7 @@ const templateString = `
 
     #footer {
         margin: 8px;
+        margin-bottom: 0px;
         cursor: grab;
         text-align: center;
         font-size: 20px;
@@ -55,6 +60,10 @@ const templateString = `
 
     #save {
         margin-left: 2px;
+    }
+
+    span[data-clickable="true"]{
+        cursor: pointer;
     }
 
     svg {
@@ -97,7 +106,9 @@ const templateString = `
 </style>
 <div class="wrapper">
     <div id="header"></div>
-    <div id="plot"></div>
+    <div id="plot-wrapper">
+        <canvas id="plot"></canvas>
+    </div>
     <div id="footer">
         <button id="do-it">Plot it</button>
         <button id="save-it">Save It</button>
@@ -132,6 +143,7 @@ class PlotInterface extends HTMLElement {
         if (this.isConnected) {
             const header = this.shadowRoot.querySelector("#header");
             const footer = this.shadowRoot.querySelector("#footer");
+            const plotter = this.shadowRoot.querySelector("#plot");
             const wrapper = this.shadowRoot.querySelector(".wrapper");
             // event listeners
             header.addEventListener("mousedown", this.onMouseDownInHeaderFooter);
@@ -149,6 +161,41 @@ class PlotInterface extends HTMLElement {
             ["line", "bar", "pie"].forEach((name) => {
                 header.append(this.addChartButton(name));
             })
+            // add a basic plot
+            /*
+            Plotly.newPlot(plotter, {
+                "data": [{ "y": [1, 2, 3] }],
+                "layout": { "width": 600, "heigoht": 400}
+            });
+            */
+            const labels = [
+                'January',
+                'February',
+                'March',
+                'April',
+                'May',
+                'June',
+            ];
+
+            const data = {
+                labels: labels,
+                datasets: [{
+                    label: 'My First dataset',
+                    backgroundColor: 'rgb(255, 99, 132)',
+                    borderColor: 'rgb(255, 99, 132)',
+                    data: [0, 10, 5, 2, 20, 30, 45],
+                }]
+            };
+
+            const config = {
+                type: 'line',
+                data: data,
+                options: {}
+            };
+            let chart = new Chart(plotter, config);
+            chart.render();
+            
+
         }
     }
 
@@ -164,7 +211,7 @@ class PlotInterface extends HTMLElement {
         const button = document.createElement("span");
         button.appendChild(svg);
         button.addEventListener("click", this.onOpenPlotInterface);
-        button.setAttribute("title", "open the reporting interface");
+        button.setAttribute("title", `${name} plot`);
         button.setAttribute("data-clickable", true);
         return button;
     }

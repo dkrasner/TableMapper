@@ -115,6 +115,7 @@ const templateString = `
 
 span[data-clickable="true"]{
     cursor: pointer;
+    height: 20px;
 }
 
 svg {
@@ -125,6 +126,10 @@ svg {
 
 input[type="file"]{
     display: none
+}
+
+.selected {
+    border: 1px solid var(--palette-orange);
 }
 
 my-grid {
