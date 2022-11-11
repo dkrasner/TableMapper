@@ -536,7 +536,7 @@ class Worksheet extends HTMLElement {
 
     // the callbacks
     onOpenPlotInterface(){
-        const pi  = new PlotInterface();
+        const pi  = new PlotInterface(this);
         document.body.append(pi);
     }
 

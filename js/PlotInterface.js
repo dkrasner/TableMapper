@@ -24,8 +24,8 @@ const templateString = `
         top: 30%;
         resize: both;
         overflow: hidden;
-        width: 300px;
-        height: 300px;
+        width: 500px;
+        height: 400px;
     }
 
     div.wrapper {
@@ -44,6 +44,7 @@ const templateString = `
         justify-content: space-around;
         align-items: center;
         margin-top: 7px;
+        margin-bottom: 7px;
     }
 
     #footer {
@@ -64,6 +65,8 @@ const templateString = `
 
     span[data-clickable="true"]{
         cursor: pointer;
+        width: 20px;
+        height: 20px;
     }
 
     svg {
@@ -98,10 +101,21 @@ const templateString = `
         cursor: default !important;
     }
 
-    #plot {
-        height: 80%!important;
+    #plot-wrapper {
+        height: 100%!important;
+        width: 100!important;
         resizable: true;
         background-color: var(--palette-white);
+    }
+
+    #plot {
+        height: 100%!important;
+        resizable: true;
+        background-color: var(--palette-white);
+    }
+
+    .selected {
+        outline: 1px solid var(--palette-orange);
     }
 </style>
 <div class="wrapper">
@@ -117,13 +131,10 @@ const templateString = `
 `;
 
 class PlotInterface extends HTMLElement {
-    constructor(interpreter, callStack, sources, target) {
+    constructor(worksheet) {
         super();
-        this.interpreter = interpreter;
-        this.callStack = callStack;
-        this.sources = sources;
-        this.target = target;
-        this.cache = null;
+        this.worksheet = worksheet;
+        this.currentChart = null;
 
         // Setup template and shadow root
         const template = document.createElement("template");
@@ -133,6 +144,8 @@ class PlotInterface extends HTMLElement {
 
         // Bound component methods
         this.addChartButton = this.addChartButton.bind(this);
+        this.plot = this.plot.bind(this);
+        this.onChartButtonClick = this.onChartButtonClick.bind(this);
         this.onMouseDownInHeaderFooter = this.onMouseDownInHeaderFooter.bind(this);
         this.onMouseMove = this.onMouseMove.bind(this);
         this.onMouseUpAfterDrag = this.onMouseUpAfterDrag.bind(this);
@@ -143,7 +156,6 @@ class PlotInterface extends HTMLElement {
         if (this.isConnected) {
             const header = this.shadowRoot.querySelector("#header");
             const footer = this.shadowRoot.querySelector("#footer");
-            const plotter = this.shadowRoot.querySelector("#plot");
             const wrapper = this.shadowRoot.querySelector(".wrapper");
             // event listeners
             header.addEventListener("mousedown", this.onMouseDownInHeaderFooter);
@@ -159,43 +171,14 @@ class PlotInterface extends HTMLElement {
             wrapper.appendChild(button);
             // add the charts
             ["line", "bar", "pie"].forEach((name) => {
-                header.append(this.addChartButton(name));
+                const button = this.addChartButton(name);
+                header.append(button);
+                if (name == 'bar') {
+                    // add a basic plot so there is something to see
+                    button.classList.add("selected");
+                    this.plot('bar');
+                }
             })
-            // add a basic plot
-            /*
-            Plotly.newPlot(plotter, {
-                "data": [{ "y": [1, 2, 3] }],
-                "layout": { "width": 600, "heigoht": 400}
-            });
-            */
-            const labels = [
-                'January',
-                'February',
-                'March',
-                'April',
-                'May',
-                'June',
-            ];
-
-            const data = {
-                labels: labels,
-                datasets: [{
-                    label: 'My First dataset',
-                    backgroundColor: 'rgb(255, 99, 132)',
-                    borderColor: 'rgb(255, 99, 132)',
-                    data: [0, 10, 5, 2, 20, 30, 45],
-                }]
-            };
-
-            const config = {
-                type: 'line',
-                data: data,
-                options: {}
-            };
-            let chart = new Chart(plotter, config);
-            chart.render();
-            
-
         }
     }
 
@@ -210,10 +193,84 @@ class PlotInterface extends HTMLElement {
         const svg = createIconSVGFromString(icons[`${name}Chart`]);
         const button = document.createElement("span");
         button.appendChild(svg);
-        button.addEventListener("click", this.onOpenPlotInterface);
+        button.addEventListener("click", this.onChartButtonClick);
         button.setAttribute("title", `${name} plot`);
         button.setAttribute("data-clickable", true);
+        button.setAttribute("data-plot-type", name);
         return button;
+    }
+
+    plot(type){
+        if (this.currentChart) {
+            this.currentChart.update();
+        } else{
+            const plotter = this.shadowRoot.querySelector("#plot");
+            let config;
+            if (type == 'bar'){
+                const labels = [
+                    'January',
+                    'February',
+                    'March',
+                    'April',
+                    'May',
+                    'June',
+                ];
+                const data = {
+                    labels: labels,
+                    datasets: [{
+                        label: this.worksheet.name,
+                        data: [65, 59, 80, 81, 56, 55, 40],
+                        backgroundColor: [
+                            'rgba(255, 99, 132, 0.2)',
+                            'rgba(255, 159, 64, 0.2)',
+                            'rgba(255, 205, 86, 0.2)',
+                            'rgba(75, 192, 192, 0.2)',
+                            'rgba(54, 162, 235, 0.2)',
+                            'rgba(153, 102, 255, 0.2)',
+                            'rgba(201, 203, 207, 0.2)'
+                        ],
+                        borderColor: [
+                            'rgb(255, 99, 132)',
+                            'rgb(255, 159, 64)',
+                            'rgb(255, 205, 86)',
+                            'rgb(75, 192, 192)',
+                            'rgb(54, 162, 235)',
+                            'rgb(153, 102, 255)',
+                            'rgb(201, 203, 207)'
+                        ],
+                        borderWidth: 1
+                    }]
+                };
+                config = {
+                    type: 'bar',
+                    data: data,
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    options: {
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    },
+                };
+            }
+            this.currentChart = new Chart(plotter, config);
+            this.currentChart.render();
+        }
+    }
+
+    onChartButtonClick(event){
+        // first clear all selected
+        this.shadowRoot.querySelectorAll("[data-plot-type]")
+
+        const type = event.target.getAttribute("data-plot-type");
+        if (type == "bar") {
+            event.target.classList.add("selected");
+            this.plot(type);
+        } else {
+            alert(`${type} plot is not available at the moment`);
+        }
     }
 
     onClose(){
