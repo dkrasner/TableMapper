@@ -7,7 +7,9 @@ import icons from "./utils/icons.js";
 import createIconSVGFromString from "./utils/helpers.js";
 
 import { Chart, registerables } from 'chart.js';
+import { Colors } from 'chart.js';
 Chart.register(...registerables);
+Chart.register(Colors);
 
 
 const templateString = `
@@ -24,8 +26,8 @@ const templateString = `
         top: 30%;
         resize: both;
         overflow: hidden;
-        width: 500px;
-        height: 400px;
+        min-width: 500px;
+        min-height: 400px;
     }
 
     div.wrapper {
@@ -208,23 +210,20 @@ class PlotInterface extends HTMLElement {
     plot(type){
         // get the selected data
         // TODO atm we only consider columns
-        const data = this.getDataSelection();
-        console.log(data)
         if (this.currentChart) {
             this.currentChart.destroy();
         }
         const plotter = this.shadowRoot.querySelector("#plot");
+        const datasets = this.getDataSelection();
         const labels = [];
-        for (let i=0; i < data.length; i++){
-            labels.push(i);
+        if (datasets && datasets[0]) {
+            for (let i=0; i < datasets[0].data.length; i++){ // TODO prob need to rethink this
+                labels.push(i);
+            }
         }
         const plotData = {
             labels: labels,
-            datasets: [{
-                label: this.worksheet.name,
-                data: data,
-                borderWidth: 1
-            }]
+            datasets: datasets
         };
         const config = {
             type: 'line',
@@ -232,26 +231,44 @@ class PlotInterface extends HTMLElement {
             responsive: true,
             maintainAspectRatio: false,
             options: {
+                plugins: {
+                    colors: {
+                        enabled: true
+                    }
+                },
                 scales: {
                     y: {
                         beginAtZero: true
                     }
-                }
+                },
             },
         };
         this.currentChart = new Chart(plotter, config);
         this.currentChart.render();
     }
 
+    /**
+      * Given the current worksheet selection, I return a list of datasets
+      * one for each column (corresponding to the chartJS format)
+      **/
     getDataSelection(){
         const selectionFrame = this.worksheet.sheet.selector.selectionFrame;
-        const data =  selectionFrame.mapEachPointRow((r) => {
+        // we need one data for each column NOTE: assuming columns!
+        const datasets = [];
+        for (let c = 0; c < selectionFrame.size.x; c++ ){
+            datasets.push({
+                label: `${this.worksheet.name}_${c}`,
+                data: [],
+                borderWidth: 1 // TODO adjust styling options
+            });
+        }
+        selectionFrame.forEachPointRow((r) => {
             // TODO we are assuming columns here!!!
-            let val = this.worksheet.sheet.dataFrame.getAt(r[0])
-            val = parseFloat(val);
-            return val;
+            r.forEach((p, i) => {
+                datasets[i].data.push(this.worksheet.sheet.dataFrame.getAt(p))
+            });
         });
-        return data;
+        return datasets;
     }
 
     onChartButtonClick(event){
