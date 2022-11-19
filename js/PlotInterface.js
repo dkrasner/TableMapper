@@ -226,7 +226,7 @@ class PlotInterface extends HTMLElement {
             datasets: datasets
         };
         const config = {
-            type: 'line',
+            type: type,
             data: plotData,
             responsive: true,
             maintainAspectRatio: false,
@@ -278,17 +278,13 @@ class PlotInterface extends HTMLElement {
         });
 
         const type = event.target.getAttribute("data-plot-type");
-        if (type == "bar") {
-            event.target.classList.add("selected");
-            this.plot(type);
-        } else {
-            alert(`${type} plot is not available at the moment`);
-        }
+        event.target.classList.add("selected");
+        this.plot(type);
     }
 
     onPlotButtonClick(event){
         const type = this.shadowRoot.querySelector(
-            "[data-plot-type]").getAttribute("data-plot-type");
+            "span.selected[data-plot-type]").getAttribute("data-plot-type");
         this.plot(type);
     }
 
