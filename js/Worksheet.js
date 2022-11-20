@@ -306,6 +306,7 @@ class Worksheet extends HTMLElement {
         this.onDragLeave = this.onDragLeave.bind(this);
         this.onDrop = this.onDrop.bind(this);
         this._removeDragDropStyling = this._removeDragDropStyling.bind(this);
+        this.handleSelectionChanged = this.handleSelectionChanged.bind(this);
 
         // Bound serialization methods
         this.toCSV = this.toCSV.bind(this);
@@ -351,6 +352,7 @@ class Worksheet extends HTMLElement {
         this.addEventListener("dragleave", this.onDragLeave);
         this.addEventListener("drop", this.onDrop);
 
+        this.addEventListener("selection-changed", this.handleSelectionChanged);
         // Stash a reference to the underlying ap-sheet
         this.sheet = this.shadowRoot.getElementById("ap-sheet");
 
@@ -370,6 +372,8 @@ class Worksheet extends HTMLElement {
         this.removeEventListener("dragover", this.onDragOver);
         this.removeEventListener("dragleave", this.onDragLeave);
         this.removeEventListener("drop", this.onDrop);
+
+        this.removeEventListener("selection-changed", this.handleSelectionChanged);
         this.contextMenuHandler.removeListeners();
     }
 
@@ -1030,6 +1034,16 @@ class Worksheet extends HTMLElement {
         return iconSpan;
     }
 
+    /**
+      * I handle the 'selection-changed' event
+      * dispatched from sheet. At the moment I simply
+      * pass it onto other handlers if defined
+      **/
+    handleSelectionChanged(event){
+        if (this.plotHandleSelectionChanged){
+            this.plotHandleSelectionChanged(event);
+        }
+    }
     /**
       * I hadle csv files. This is done by iterating over
       * chunks (default size 10MB) and updating the sheet.DataFrame

@@ -186,6 +186,12 @@ class PlotInterface extends HTMLElement {
                     this.plot('bar');
                 }
             })
+            // set the selector-changed handler in Worksheet
+            this.worksheet.plotHandleSelectionChanged = () => {
+                const type = this.shadowRoot.querySelector(
+                    "span.selected[data-plot-type]").getAttribute("data-plot-type");
+                this.plot(type);
+            }
         }
     }
 
@@ -194,6 +200,8 @@ class PlotInterface extends HTMLElement {
         const footer = this.shadowRoot.querySelector("#footer");
         header.removeEventListener("mousedown", this.onMouseDownInHeaderFooter);
         footer.removeEventListener("mousedown", this.onMouseDownInHeaderFooter);
+        // unset the selector-changed handler in Worksheet
+        this.worksheet.plotHandleSelectionChanged = undefined;
     }
 
     addChartButton(name){
