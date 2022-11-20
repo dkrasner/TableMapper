@@ -11,6 +11,17 @@ import { Colors } from 'chart.js';
 Chart.register(...registerables);
 Chart.register(Colors);
 
+const plugin = {
+    id: 'customCanvasBackgroundColor',
+    beforeDraw: (chart, args, options) => {
+        const {ctx} = chart;
+        ctx.save();
+        ctx.globalCompositeOperation = 'destination-over';
+        ctx.fillStyle = options.color || '#99ffff';
+        ctx.fillRect(0, 0, chart.width, chart.height);
+        ctx.restore();
+    }
+};
 
 const templateString = `
 <style>
@@ -125,7 +136,6 @@ const templateString = `
         <canvas id="plot"></canvas>
     </div>
     <div id="footer">
-        <button id="plot-it">Plot it</button>
         <button id="save-it">Save It</button>
     </div>
 </div>
@@ -148,7 +158,8 @@ class PlotInterface extends HTMLElement {
         this.plot = this.plot.bind(this);
         this.getDataSelection = this.getDataSelection.bind(this);
         this.onChartButtonClick = this.onChartButtonClick.bind(this);
-        this.onPlotButtonClick = this.onPlotButtonClick.bind(this);
+        // this.onPlotButtonClick = this.onPlotButtonClick.bind(this);
+        this.onSaveButtonClick = this.onSaveButtonClick.bind(this);
         this.onMouseDownInHeaderFooter = this.onMouseDownInHeaderFooter.bind(this);
         this.onMouseMove = this.onMouseMove.bind(this);
         this.onMouseUpAfterDrag = this.onMouseUpAfterDrag.bind(this);
@@ -165,9 +176,11 @@ class PlotInterface extends HTMLElement {
             footer.addEventListener("mousedown", this.onMouseDownInHeaderFooter);
             // add the plot button callback; TODO this is temp
             // since we'll want it more responsive
-            const plotButton = this.shadowRoot.querySelector("button#plot-it");
-            plotButton.addEventListener("click", this.onPlotButtonClick);
+            //const plotButton = this.shadowRoot.querySelector("button#plot-it");
+            //plotButton.addEventListener("click", this.onPlotButtonClick);
             // add a close button
+            const saveButton = this.shadowRoot.querySelector("button#save-it");
+            saveButton.addEventListener("click", this.onSaveButtonClick);
             const svg = createIconSVGFromString(icons.circleX);
             svg.style.setProperty("width", "15px");
             svg.style.setProperty("height", "15px");
@@ -242,7 +255,7 @@ class PlotInterface extends HTMLElement {
                 plugins: {
                     colors: {
                         enabled: true
-                    }
+                    },
                 },
                 scales: {
                     y: {
@@ -267,7 +280,7 @@ class PlotInterface extends HTMLElement {
             datasets.push({
                 label: `${this.worksheet.name}_${c}`,
                 data: [],
-                borderWidth: 1 // TODO adjust styling options
+                borderWidth: 1, // TODO adjust styling options
             });
         }
         selectionFrame.forEachPointRow((r) => {
@@ -294,6 +307,15 @@ class PlotInterface extends HTMLElement {
         const type = this.shadowRoot.querySelector(
             "span.selected[data-plot-type]").getAttribute("data-plot-type");
         this.plot(type);
+    }
+
+    onSaveButtonClick(event){
+        const link = document.createElement("a");
+        const url = this.currentChart.toBase64Image('image/jpeg', 1); // TODO: only JPEG?
+        link.href = url;
+        link.download = "chart.jpeg";  //TODO
+        link.click();
+        link.remove();
     }
 
     onClose(){
