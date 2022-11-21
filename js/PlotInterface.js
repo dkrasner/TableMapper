@@ -267,6 +267,7 @@ class PlotInterface extends HTMLElement {
       **/
     getDataSelection(){
         const selectionFrame = this.worksheet.sheet.selector.selectionFrame;
+        let invalidData = false;
         // we need one data for each column NOTE: assuming columns!
         const datasets = [];
         for (let c = 0; c < selectionFrame.size.x; c++ ){
@@ -279,9 +280,17 @@ class PlotInterface extends HTMLElement {
         selectionFrame.forEachPointRow((r) => {
             // TODO we are assuming columns here!!!
             r.forEach((p, i) => {
-                datasets[i].data.push(this.worksheet.sheet.dataFrame.getAt(p))
+                const val = this.worksheet.sheet.dataFrame.getAt(p);
+                if (isNaN(val)) {
+                    invalidData = true;
+                }
+                datasets[i].data.push(val)
             });
         });
+        if (invalidData) {
+            alert("please select valid (numeric) data");
+            return [];
+        }
         return datasets;
     }
 
