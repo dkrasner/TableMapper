@@ -26,6 +26,7 @@ const plugin = {
 const templateString = `
 <style>
     :host {
+        --min-height: 400px;
         display: flex;
         flex-direction: column;
         position: absolute;
@@ -35,10 +36,9 @@ const templateString = `
         border-radius: 5px;
         left: 50%;
         top: 30%;
-        resize: both;
         overflow: hidden;
         min-width: 500px;
-        min-height: 400px;
+        min-height: var(--min-height);
     }
 
     div.wrapper {
@@ -47,6 +47,7 @@ const templateString = `
         flex-direction: column;
         justify-content: space-between;
         height: 100% !important;
+        min-height: calc(var(--min-height) - 8px);
     }
 
     #header {
@@ -114,15 +115,13 @@ const templateString = `
     }
 
     #plot-wrapper {
-        height: 100%!important;
-        width: 100!important;
-        resizable: true;
+        position: relative;
+        height: 80%!important;
+        width: 100%!important;
         background-color: var(--palette-white);
     }
 
     #plot {
-        height: 100%!important;
-        resizable: true;
         background-color: var(--palette-white);
     }
 
@@ -250,17 +249,11 @@ class PlotInterface extends HTMLElement {
             type: type,
             data: plotData,
             responsive: true,
-            maintainAspectRatio: false,
             options: {
                 plugins: {
                     colors: {
                         enabled: true
                     },
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true
-                    }
                 },
             },
         };
@@ -310,12 +303,8 @@ class PlotInterface extends HTMLElement {
     }
 
     onSaveButtonClick(event){
-        const link = document.createElement("a");
-        const url = this.currentChart.toBase64Image('image/jpeg', 1); // TODO: only JPEG?
-        link.href = url;
-        link.download = "chart.jpeg";  //TODO
-        link.click();
-        link.remove();
+        const url = this.currentChart.toBase64Image(); // TODO: only JPEG?
+        window.open(url, '_blank');
     }
 
     onClose(){
