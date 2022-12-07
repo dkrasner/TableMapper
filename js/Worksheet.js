@@ -639,7 +639,7 @@ class Worksheet extends HTMLElement {
     }
 
     onErase() {
-        this.sheet.dataFrame.clear();
+        this.sheet.dataStore.clear();
     }
 
     onUpload(event) {
@@ -1023,7 +1023,7 @@ class Worksheet extends HTMLElement {
             worker: true, // run the upload on a Worker not to block things up
             chunk: function(chunk){
                 self._overlay(icon);
-                self.sheet.dataFrame.loadFromArray(chunk.data, [0, rowsProcessed], false);
+                self.sheet.dataStore.loadFromArray(chunk.data, [0, rowsProcessed], false);
                 rowsProcessed += chunk.data.length;
                 if(icon == icons.loader){
                     icon = icons.loaderQuarter;
@@ -1049,8 +1049,9 @@ class Worksheet extends HTMLElement {
     }
 
     toCSV() {
-        const data = this.sheet.dataFrame.getDataArrayForFrame(
-            this.sheet.dataFrame
+        const data = this.sheet.dataStore.getDataArray(
+            this.sheet.baseFrame.origin,
+            this.sheet.baseFrame.corner
         );
         return CSVParser.unparse(data);
     }
@@ -1078,7 +1079,7 @@ class Worksheet extends HTMLElement {
                     {header: 1} // this will give us an nd-array
                 );
                 this.onErase();
-                this.sheet.dataFrame.loadFromArray(wsArray);
+                this.sheet.dataStore.loadFromArray(wsArray);
                 // update the file name to include the sheet/tab
                 fileName = fileName.replace(`.${ftype}`, `[${event.target.value}]`);
                 fileName = fileName.replace(/\[.+\]$/, `[${event.target.value}]`);
@@ -1155,8 +1156,9 @@ class Worksheet extends HTMLElement {
     toExcel(){
         const wb = XLSX.utils.book_new();
         const ws = XLSX.utils.aoa_to_sheet(
-            this.sheet.dataFrame.getDataArrayForFrame(
-                this.sheet.dataFrame
+            this.sheet.dataStore.getDataArray(
+                this.sheet.baseFrame.origin,
+                this.sheet.baseFrame.corner
             )
         )
         // TODO get proper name here for the sheet

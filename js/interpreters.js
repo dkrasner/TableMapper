@@ -80,8 +80,9 @@ const join = (sources, target, s) => {
     const [aWS, aOrigin, aCorner] = getOriginCornerElement(a);
     const [bWS, bOrigin, bCorner] = getOriginCornerElement(b);
     const [targetWS, targetOrigin, _] = getOriginCornerElement(target);
-    const aDF = aWS.sheet.dataFrame.getDataSubFrame(aOrigin, aCorner);
-    const bDF = bWS.sheet.dataFrame.getDataSubFrame(bOrigin, bCorner);
+    // TODO!
+    const aDF = aWS.sheet.dataStore.getDataSubFrame(aOrigin, aCorner);
+    const bDF = bWS.sheet.dataStore.getDataSubFrame(bOrigin, bCorner);
     bDF.apply((entry) => {
         if(entry){
             entry = s + entry;
@@ -91,7 +92,7 @@ const join = (sources, target, s) => {
         return entry;
     });
     aDF.add(bDF);
-    targetWS.sheet.dataFrame.copyFrom(aDF, targetOrigin);
+    targetWS.sheet.dataStore.copyFrom(aDF, targetOrigin);
 }
 
 const replace = (sources, target, d) => {
@@ -100,64 +101,72 @@ const replace = (sources, target, d) => {
     const source = sources[0].slice(1);
     const [sourceWS, sourceOrigin, sourceCorner] = getOriginCornerElement(source);
     const [targetWS, targetOrigin, _] = getOriginCornerElement(target);
-    const sourceDF = sourceWS.sheet.dataFrame.getDataSubFrame(sourceOrigin, sourceCorner);
-    if(d){
-        sourceDF.apply((entry) => {
-            if(entry){
-                d.forEach((item) => {
-                    entry = entry.replaceAll(item[0], item[1]);
+    sourceWS.sheet.dataStore.getDataArray(
+        sourceOrigin,
+        sourceCorner
+    ).then(
+        (resultDataArray) => {
+            resultDataArray.forEach((row, xIndex) => {
+                row.forEach((entry, yIndex) => {
+                    if(entry){
+                        if(d){
+                            d.forEach((item) => {
+                                entry = entry.replaceAll(item[0], item[1]);
+                            })
+                        }
+                        row[yIndex] = entry;
+                    }
                 })
-            }
-            return entry;
-        })
-    }
-
-    // NOTE: this renders right away which we might want to deal with later for
-    // performance reasons
-    targetWS.sheet.dataFrame.copyFrom(sourceDF, targetOrigin);
+                resultDataArray[xIndex] = row;
+            })
+            // NOTE: this renders right away which we might want to deal with later for
+            // performance reasons
+            targetWS.sheet.dataStore.loadFromArray(resultDataArray, targetOrigin);
+        }
+    );
 }
 
 const sum = (sources, target) => {
     const source = sources[0].slice(1);
     const [sourceWS, sourceOrigin, sourceCorner] = getOriginCornerElement(source);
     const [targetWS, targetOrigin, _] = getOriginCornerElement(target);
-    const sourceDF = sourceWS.sheet.dataFrame.getDataSubFrame(sourceOrigin, sourceCorner);
+    const sourceDF = sourceWS.sheet.dataStore.getDataSubFrame(sourceOrigin, sourceCorner);
     const sum = _sum(sourceDF);
-    targetWS.sheet.dataFrame.putAt(targetOrigin, sum);
+    targetWS.sheet.dataStore.putAt(targetOrigin, sum);
 }
 
 const average = (sources, target) => {
     const source = sources[0].slice(1);
     const [sourceWS, sourceOrigin, sourceCorner] = getOriginCornerElement(source);
     const [targetWS, targetOrigin, _] = getOriginCornerElement(target);
-    const sourceDF = sourceWS.sheet.dataFrame.getDataSubFrame(sourceOrigin, sourceCorner);
+    const sourceDF = sourceWS.sheet.dataStore.getDataSubFrame(sourceOrigin, sourceCorner);
     const sum = _sum(sourceDF);
     const ave = sum / ((sourceDF.size.x) * (sourceDF.size.y));
-    targetWS.sheet.dataFrame.putAt(targetOrigin, ave);
+    targetWS.sheet.dataStore.putAt(targetOrigin, ave);
 }
 
 const max = (sources, target) => {
     const source = sources[0].slice(1);
     const [sourceWS, sourceOrigin, sourceCorner] = getOriginCornerElement(source);
     const [targetWS, targetOrigin, _] = getOriginCornerElement(target);
-    const sourceDF = sourceWS.sheet.dataFrame.getDataSubFrame(sourceOrigin, sourceCorner);
-    targetWS.sheet.dataFrame.putAt(targetOrigin, _max_min(sourceDF, ">"));
+    const sourceDF = sourceWS.sheet.dataStore.getDataSubFrame(sourceOrigin, sourceCorner);
+    targetWS.sheet.dataStore.putAt(targetOrigin, _max_min(sourceDF, ">"));
 }
 
 const min = (sources, target) => {
     const source = sources[0].slice(1);
     const [sourceWS, sourceOrigin, sourceCorner] = getOriginCornerElement(source);
     const [targetWS, targetOrigin, _] = getOriginCornerElement(target);
-    const sourceDF = sourceWS.sheet.dataFrame.getDataSubFrame(sourceOrigin, sourceCorner);
-    targetWS.sheet.dataFrame.putAt(targetOrigin, _max_min(sourceDF, "<"));
+    const sourceDF = sourceWS.sheet.dataStore.getDataSubFrame(sourceOrigin, sourceCorner);
+    targetWS.sheet.dataStore.putAt(targetOrigin, _max_min(sourceDF, "<"));
 }
 
 const median = (sources, target) => {
     const source = sources[0].slice(1);
     const [sourceWS, sourceOrigin, sourceCorner] = getOriginCornerElement(source);
     const [targetWS, targetOrigin, _] = getOriginCornerElement(target);
-    const sourceDF = sourceWS.sheet.dataFrame.getDataSubFrame(sourceOrigin, sourceCorner);
-    targetWS.sheet.dataFrame.putAt(targetOrigin, _median(sourceDF));
+    const sourceDF = sourceWS.sheet.dataStore.getDataSubFrame(sourceOrigin, sourceCorner);
+    targetWS.sheet.dataStore.putAt(targetOrigin, _median(sourceDF));
 }
 
 const commandRegistry = {
