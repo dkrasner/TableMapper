@@ -130,43 +130,79 @@ const sum = (sources, target) => {
     const source = sources[0].slice(1);
     const [sourceWS, sourceOrigin, sourceCorner] = getOriginCornerElement(source);
     const [targetWS, targetOrigin, _] = getOriginCornerElement(target);
-    const sourceDF = sourceWS.sheet.dataStore.getDataSubFrame(sourceOrigin, sourceCorner);
-    const sum = _sum(sourceDF);
-    targetWS.sheet.dataStore.putAt(targetOrigin, sum);
+    sourceWS.sheet.dataStore.getDataArray(
+        sourceOrigin,
+        sourceCorner
+    ).then(
+        (resultDataArray) => {
+            const sum = _sum(resultDataArray);
+            targetWS.sheet.dataStore.putAt(targetOrigin, sum);
+        }
+    );
 }
 
 const average = (sources, target) => {
     const source = sources[0].slice(1);
     const [sourceWS, sourceOrigin, sourceCorner] = getOriginCornerElement(source);
+    const sourceSize = (sourceCorner[0] - sourceOrigin[0] + 1) * (sourceCorner[1] - sourceOrigin[1] + 1);
     const [targetWS, targetOrigin, _] = getOriginCornerElement(target);
-    const sourceDF = sourceWS.sheet.dataStore.getDataSubFrame(sourceOrigin, sourceCorner);
-    const sum = _sum(sourceDF);
-    const ave = sum / ((sourceDF.size.x) * (sourceDF.size.y));
-    targetWS.sheet.dataStore.putAt(targetOrigin, ave);
+    sourceWS.sheet.dataStore.getDataArray(
+        sourceOrigin,
+        sourceCorner
+    ).then(
+        (resultDataArray) => {
+            const sum = _sum(resultDataArray);
+            const ave = sum / sourceSize;
+            targetWS.sheet.dataStore.putAt(targetOrigin, ave);
+        }
+    );
 }
 
 const max = (sources, target) => {
     const source = sources[0].slice(1);
     const [sourceWS, sourceOrigin, sourceCorner] = getOriginCornerElement(source);
     const [targetWS, targetOrigin, _] = getOriginCornerElement(target);
-    const sourceDF = sourceWS.sheet.dataStore.getDataSubFrame(sourceOrigin, sourceCorner);
-    targetWS.sheet.dataStore.putAt(targetOrigin, _max_min(sourceDF, ">"));
+    sourceWS.sheet.dataStore.getDataArray(
+        sourceOrigin,
+        sourceCorner
+    ).then(
+        (resultDataArray) => {
+            targetWS.sheet.dataStore.putAt(targetOrigin, _max_min(resultDataArray, ">"));
+        }
+    );
 }
 
 const min = (sources, target) => {
     const source = sources[0].slice(1);
     const [sourceWS, sourceOrigin, sourceCorner] = getOriginCornerElement(source);
     const [targetWS, targetOrigin, _] = getOriginCornerElement(target);
-    const sourceDF = sourceWS.sheet.dataStore.getDataSubFrame(sourceOrigin, sourceCorner);
-    targetWS.sheet.dataStore.putAt(targetOrigin, _max_min(sourceDF, "<"));
+    sourceWS.sheet.dataStore.getDataArray(
+        sourceOrigin,
+        sourceCorner
+    ).then(
+        (resultDataArray) => {
+            targetWS.sheet.dataStore.putAt(targetOrigin, _max_min(resultDataArray, "<"));
+        }
+    );
 }
 
 const median = (sources, target) => {
     const source = sources[0].slice(1);
     const [sourceWS, sourceOrigin, sourceCorner] = getOriginCornerElement(source);
     const [targetWS, targetOrigin, _] = getOriginCornerElement(target);
-    const sourceDF = sourceWS.sheet.dataStore.getDataSubFrame(sourceOrigin, sourceCorner);
-    targetWS.sheet.dataStore.putAt(targetOrigin, _median(sourceDF));
+    const numRows = sourceCorner[1] - sourceOrigin[1] + 1;
+    const numColumns = sourceCorner[0] - sourceOrigin[0] + 1;
+    sourceWS.sheet.dataStore.getDataArray(
+        sourceOrigin,
+        sourceCorner
+    ).then(
+        (resultDataArray) => {
+            targetWS.sheet.dataStore.putAt(
+                targetOrigin,
+                _median(resultDataArray, numRows, numColumns)
+            );
+        }
+    );
 }
 
 const commandRegistry = {
@@ -222,31 +258,31 @@ const commandRegistry = {
 
 // Utils
 // Basic arithmetic utils
-const _sum = (df) => {
+const _sum = (ndarray) => {
     let ret = 0;
-    df.apply((entry) => {
-        if (isNaN(entry)) {
-            ret = NaN;
-        }
-        ret += parseFloat(entry);
+    ndarray.forEach((row) => {
+        row.forEach((entry) => {
+            if (isNaN(entry)) {
+                ret = NaN;
+            }
+            ret += parseFloat(entry);
+        })
     })
     return ret;
 }
 
-const _max_min = (df, which=">") => {
-    let ret = df.getAt(df.origin);
-    if (isNaN(ret)) {
-        return NaN;
-    }
-    df.forEachCoordinate((c) => {
-        let val = df.getAt(c);
-        if (isNaN(val)) {
-            return NaN;
-        }
-        val = parseFloat(val);
-        if (eval(`${val} ${which} ${ret}`)) {
-            ret = val;
-        }
+const _max_min = (ndarray, which=">") => {
+    let ret = ndarray[0][0];
+    ndarray.forEach((row) => {
+        row.forEach((entry) => {
+            if (isNaN(entry)) {
+                ret = NaN;
+            }
+            entry = parseFloat(entry);
+            if (eval(`${entry} ${which} ${ret}`)) {
+                ret = entry;
+            }
+        })
     })
     return ret;
 }
@@ -254,33 +290,35 @@ const _max_min = (df, which=">") => {
 /**
   * I returned the median of the flatted sheet.
   **/
-const _median = (df) => {
+const _median = (ndarray, numRows, numColumns) => {
     // if the numbers of rows is odd, ie df.size.y % 2 == 0
     // then take the middle row
     let m;
     let anyNaN = 0;
-    df.forEachPoint((p) => {
-        if(isNaN(df.getAt(p))){
-            anyNaN = NaN;
-        }
+    ndarray.forEach((row) => {
+        row.forEach((entry) => {
+            if(isNaN(entry)){
+                anyNaN = NaN;
+            }
+        })
     })
     if (isNaN(anyNaN)) {
         return NaN;
     }
-    if (df.size.y % 2 == 1) {
-        const y = df.origin.y + ((df.size.y - 1) / 2);
-        if(df.size.x % 2 == 1) {
-            const x = df.origin.x + ((df.size.x - 1) / 2);
-            m = df.getAt([x, y]);
+    if (numRows % 2 == 1) {
+        const y = (numRows - 1) / 2;
+        if(numColumns % 2 == 1) {
+            const x = (numColumns - 1) / 2;
+            m = ndarray[y][x];
         } else {
-            const x1 = df.origin.x + ((df.size.x) / 2);
+            const x1 = numColumns / 2;
             const x2 = x1 - 1;
-            m = (df.getAt([x1, y]) + df.getAt([x2, y])) / 2;
+            m = (ndarray[y][x1] + ndarray[y][x2]) / 2;
         }
     } else {
-        const y1 = df.origin.y + ((df.size.y) / 2);
+        const y1 = numRows / 2;
         const y2 = y1 - 1;
-        m = (df.getAt([df.origin.x, y1]) + df.getAt([df.corner.x, y2])) / 2;
+        m = (ndarray[y1][0] + ndarray[y2][numColumns - 1]) / 2;
     }
     return parseFloat(m);
 }
