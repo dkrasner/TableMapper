@@ -1050,8 +1050,8 @@ class Worksheet extends HTMLElement {
 
     toCSV() {
         const data = this.sheet.dataStore.getDataArray(
-            this.sheet.baseFrame.origin,
-            this.sheet.baseFrame.corner
+            this.sheet.baseFrame.origin.toCoord(),
+            this.sheet.baseFrame.corner.toCoord()
         );
         return CSVParser.unparse(data);
     }
@@ -1157,8 +1157,8 @@ class Worksheet extends HTMLElement {
         const wb = XLSX.utils.book_new();
         const ws = XLSX.utils.aoa_to_sheet(
             this.sheet.dataStore.getDataArray(
-                this.sheet.baseFrame.origin,
-                this.sheet.baseFrame.corner
+                this.sheet.baseFrame.origin.toCoord(),
+                this.sheet.baseFrame.corner.toCoord()
             )
         )
         // TODO get proper name here for the sheet

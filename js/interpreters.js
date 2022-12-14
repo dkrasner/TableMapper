@@ -74,6 +74,7 @@ const copy = (sources, target) => {
  * join them pairwise, ie. perform [a, b].join(s) for every entry in a and b,
  * respectively and copy the result to the target.
  */
+/**
 const join = (sources, target, s) => {
     const a = sources[0].slice(1);
     const b = sources[1].slice(1);
@@ -94,6 +95,7 @@ const join = (sources, target, s) => {
     aDF.add(bDF);
     targetWS.sheet.dataStore.copyFrom(aDF, targetOrigin);
 }
+**/
 
 const replace = (sources, target, d) => {
     // NOTE: sources is a list but replace assume there is a unique source
@@ -223,11 +225,13 @@ const commandRegistry = {
         ,
         args: true
     },
+    /**
     "join": {
         command: join,
         description: "Join multiple sources using provided string",
         args: true
     },
+    **/
     "sum": {
         command: sum,
         description: "Sum the selected values",
