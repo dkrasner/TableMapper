@@ -10,11 +10,11 @@
 import { labelIndex } from "./interpreters.js";
 import icons from "./utils/icons.js";
 import createIconSVGFromString from "./utils/helpers.js";
-import * as XLSX from 'xlsx';
+import * as XLSX from "xlsx";
 import CSVParser from "papaparse";
-import Papa from 'papaparse';
+import Papa from "papaparse";
 import ContextMenuHandler from "./ContextMenuHandler.js";
-import PlotInterface from './PlotInterface.js';
+import PlotInterface from "./PlotInterface.js";
 
 // Simple grid-based sheet component
 const templateString = `
@@ -31,10 +31,20 @@ const templateString = `
     resize: both;
     --bg-color: var(--palette-lightblue);
     --sheet-bg-color: var(--palette-cyan);
+    --header-bar-display: flex;
+    --footer-bar-display: flex;
 }
 
 :host([minimized]) > div:not(#header-bar){
     display: none;
+}
+
+:host(.hide-header){
+  --header-bar-display: none;
+}
+
+:host(.hide-footer){
+  --footer-bar-display: none;
 }
 
 #header-bar {
@@ -47,7 +57,7 @@ const templateString = `
     padding-right: 4px;
     padding-top: 2px;
     padding-bottom: 2px;
-    display: flex;
+    display: var(--header-bar-display);
     justify-content: space-between;
     align-items: center;
 }
@@ -96,7 +106,7 @@ const templateString = `
     padding-right: 4px;
     padding-top: 5px;
     padding-bottom: 2px;
-    display: flex;
+    display: var(--footer-bar-display);
     justify-content: space-between;
     align-items: center;
 }
@@ -346,8 +356,8 @@ class Worksheet extends HTMLElement {
             this.onMouseDownInHeaderFooter(event);
         });
         name.addEventListener("dblclick", this.onNameDblClick);
-        this.addEventListener("dragstart", this.onDragStart); 
-        this.addEventListener("dragend", this.onDragEnd); 
+        this.addEventListener("dragstart", this.onDragStart);
+        this.addEventListener("dragend", this.onDragEnd);
         this.addEventListener("dragover", this.onDragOver);
         this.addEventListener("dragleave", this.onDragLeave);
         this.addEventListener("drop", this.onDrop);
@@ -373,15 +383,18 @@ class Worksheet extends HTMLElement {
         this.removeEventListener("dragleave", this.onDragLeave);
         this.removeEventListener("drop", this.onDrop);
 
-        this.removeEventListener("selection-changed", this.handleSelectionChanged);
+        this.removeEventListener(
+            "selection-changed",
+            this.handleSelectionChanged
+        );
         this.contextMenuHandler.removeListeners();
     }
 
     /**
-      * Setup the context meny handler. Can be overwritten
-      * by others who want a custom handler
-      **/
-    setupContextMenu(){
+     * Setup the context meny handler. Can be overwritten
+     * by others who want a custom handler
+     **/
+    setupContextMenu() {
         this.contextMenuHandler = new ContextMenuHandler(this);
         this.contextMenuHandler.setupListeners();
     }
@@ -397,7 +410,7 @@ class Worksheet extends HTMLElement {
             const button = header.querySelector("#min-max");
             let title = "minimize this worksheet";
             let svg = createIconSVGFromString(icons.minimize);
-            if(this.hasAttribute("minimized")){
+            if (this.hasAttribute("minimized")) {
                 title = "maximize this worksheet";
                 svg = createIconSVGFromString(icons.maximize);
             }
@@ -434,16 +447,16 @@ class Worksheet extends HTMLElement {
         }
     }
 
-    removeButton(id){
+    removeButton(id) {
         // recall our buttons are not necessary DOM <button> elements
         const button = this.shadowRoot.querySelector(`[id="${id}"]`);
-        if(button){
+        if (button) {
             button.remove();
         }
     }
 
     /* default header/footer buttons */
-    plotButton(){
+    plotButton() {
         const svg = createIconSVGFromString(icons.desktopAnalytics);
         const button = document.createElement("span");
         button.appendChild(svg);
@@ -457,7 +470,9 @@ class Worksheet extends HTMLElement {
         const svg = createIconSVGFromString(icons.minimize);
         const button = document.createElement("span");
         button.appendChild(svg);
-        button.addEventListener("click", () => {this.toggleAttribute("minimized");});
+        button.addEventListener("click", () => {
+            this.toggleAttribute("minimized");
+        });
         button.setAttribute("title", "minimize the worksheet");
         button.setAttribute("data-clickable", true);
         button.setAttribute("id", "min-max");
@@ -539,8 +554,8 @@ class Worksheet extends HTMLElement {
     }
 
     // the callbacks
-    onOpenPlotInterface(){
-        const pi  = new PlotInterface(this);
+    onOpenPlotInterface() {
+        const pi = new PlotInterface(this);
         document.body.append(pi);
     }
 
@@ -548,10 +563,10 @@ class Worksheet extends HTMLElement {
         // drag event propagation can be touchy so make sure we are not clicking or dragging
         // any children of header/footer
         // only left click for the move here
-        if(event.button == 0){
+        if (event.button == 0) {
             if (
                 event.target.id == "footer-bar" ||
-                    event.target.id == "header-bar"
+                event.target.id == "header-bar"
             ) {
                 // dispatch an event to put the sheet in focus
                 const focusEvent = new CustomEvent("newSheetFocus", {
@@ -650,19 +665,19 @@ class Worksheet extends HTMLElement {
             this.remove();
         }
         // tell any connections that I am no longer there
-        document.querySelectorAll('ws-connection').forEach((wsc) => {
-            if(wsc.getAttribute("target") == this.id){
+        document.querySelectorAll("ws-connection").forEach((wsc) => {
+            if (wsc.getAttribute("target") == this.id) {
                 wsc.setAttribute("target", "");
             }
             let sources = wsc.getAttribute("sources");
-            if(sources){
+            if (sources) {
                 sources = sources.split(",");
-                if(sources.indexOf(this.id) > -1 ){
+                if (sources.indexOf(this.id) > -1) {
                     sources.splice(sources.indexOf(this.id), 1);
                     wsc.setAttribute("sources", sources);
                 }
             }
-        })
+        });
     }
 
     onErase() {
@@ -671,38 +686,35 @@ class Worksheet extends HTMLElement {
 
     onUpload(event) {
         // supported file formats
-        const formats = ['csv', 'xlsx', 'xls'];
-        const rexp = new RegExp(`(?:${formats.join('|')})$`);
+        const formats = ["csv", "xlsx", "xls"];
+        const rexp = new RegExp(`(?:${formats.join("|")})$`);
         const file = event.target.files[0];
         const fileName = file.name;
-        if(rexp.test(fileName)){
+        if (rexp.test(fileName)) {
             const ftype = rexp.exec(fileName)[0];
-            if(ftype == 'csv'){
+            if (ftype == "csv") {
                 this.fromCSV(file);
             } else {
                 const reader = new FileReader();
                 const rABS = !!reader.readAsBinaryString;
                 reader.addEventListener("load", (loadEv) => {
-                    this.fromExcel(
-                        loadEv.target.result,
-                        rABS,
-                        fileName,
-                        ftype
-                    );
+                    this.fromExcel(loadEv.target.result, rABS, fileName, ftype);
                 });
                 reader.addEventListener("error", (e) => {
                     console.error(e);
-                    alert("An error occurred reading the xlsx file; try converting to csv first!");
+                    alert(
+                        "An error occurred reading the xlsx file; try converting to csv first!"
+                    );
                     return;
                 });
-                if(rABS){
-                    reader.readAsBinaryString(file)
+                if (rABS) {
+                    reader.readAsBinaryString(file);
                 } else {
                     reader.readAsArrayBuffer(file);
                 }
             }
         } else {
-            alert(`I only support ${formats.join(', ')} type files!`);
+            alert(`I only support ${formats.join(", ")} type files!`);
             // TODO perhaps we should throw an error here
         }
     }
@@ -711,7 +723,7 @@ class Worksheet extends HTMLElement {
         this.openDownloadDialog();
     }
 
-    downloadCSV(){
+    downloadCSV() {
         this.closeDialog();
         const csv = this.toCSV();
         const anchor = document.createElement("a");
@@ -725,7 +737,7 @@ class Worksheet extends HTMLElement {
         window.URL.revokeObjectURL(url);
     }
 
-    downloadExcel(){
+    downloadExcel() {
         this.closeDialog();
         const [wb, fileName] = this.toExcel();
         XLSX.writeFile(wb, `${fileName}.xlsx`);
@@ -806,18 +818,18 @@ class Worksheet extends HTMLElement {
         event.dataTransfer.effectAllowed = "all";
     }
 
-    onDragStart(event){
+    onDragStart(event) {
         // selection drags are handled by ap-sheet but we still need
         // to know which worksheet is the source
         event.dataTransfer.setData("sourceId", this.id);
     }
 
-    onDragEnd(event){
+    onDragEnd(event) {
         // TODO: there must be a better way to highlight dragged over cells
         // without having to remove the class from each one
         this.shadowRoot.querySelectorAll("sheet-cell").forEach((cell) => {
             cell.classList.remove("dragover");
-        })
+        });
     }
 
     onDragOver(event) {
@@ -829,10 +841,10 @@ class Worksheet extends HTMLElement {
         if (event.dataTransfer.types.indexOf("Files") != -1) {
             event.dataTransfer.dropEffect = "copy";
             this._overlay(icons.fileUpload);
-        } else if(event.dataTransfer.getData("worksheet-link")){
+        } else if (event.dataTransfer.getData("worksheet-link")) {
             event.dataTransfer.dropEffect = "link";
             this._overlay(icons.link);
-        } else if(event.dataTransfer.getData("selection-drag")){
+        } else if (event.dataTransfer.getData("selection-drag")) {
             // we need to make sure that three conditions hold for a valid
             // selection drag
             // 1. the sheets are linked, ie a ws-connection element exists
@@ -846,11 +858,17 @@ class Worksheet extends HTMLElement {
             );
             // we need to define the recording bool here otherwise event can
             // loose reference to target inside a condition - wtf?!
-            if(connection && connection.hasAttribute("recording")){
-                if(target.nodeName == "SHEET-CELL"){
+            if (connection && connection.hasAttribute("recording")) {
+                if (target.nodeName == "SHEET-CELL") {
                     target.classList.add("dragover");
-                    target.addEventListener("dragleave", this._removeDragDropStyling);
-                    target.addEventListener("drop", this._removeDragDropStyling);
+                    target.addEventListener(
+                        "dragleave",
+                        this._removeDragDropStyling
+                    );
+                    target.addEventListener(
+                        "drop",
+                        this._removeDragDropStyling
+                    );
                 }
             } else {
                 this._overlay(icons.ban);
@@ -875,8 +893,8 @@ class Worksheet extends HTMLElement {
             const sourceId = event.dataTransfer.getData("id");
             // now create a new WSConnection element if it doesn't exist
             // if it does exist for this target then add the source to it
-            let connection = this._getConnection(this.id); 
-            if(connection){
+            let connection = this._getConnection(this.id);
+            if (connection) {
                 const sources = connection.getAttribute("sources").split(",");
                 if (sources.indexOf(sourceId) == -1) {
                     sources.push(sourceId);
@@ -890,7 +908,7 @@ class Worksheet extends HTMLElement {
                 // add callstack and command related buttons
                 this.addToFooter(this.connectionButton(), "left", true);
             }
-        } else if(event.dataTransfer.getData("selection-drag")){
+        } else if (event.dataTransfer.getData("selection-drag")) {
             // we need to make sure that three conditions hold for a valid
             // selection drag
             // 1. the sheets are linked, ie a ws-connection element exists
@@ -898,40 +916,47 @@ class Worksheet extends HTMLElement {
             // 2. the target sheet is in record mode
             // 3. the target element of the drop is a sheet-cell element
             const cell_target = event.originalTarget;
-            const source_id = event.dataTransfer.getData("sourceId")
-            const target_id= event.target.id
-            const connection = this._getConnection(
-                target_id,
-                source_id
-            );
+            const source_id = event.dataTransfer.getData("sourceId");
+            const target_id = event.target.id;
+            const connection = this._getConnection(target_id, source_id);
             // we need to define the recording bool here otherwise event can
             // loose reference to target inside a condition - wtf?!
-            if(connection && connection.hasAttribute("recording")){
-                if(cell_target.nodeName == "SHEET-CELL"){
-                    const drop_data = JSON.parse(event.dataTransfer.getData("text/json"));
+            if (connection && connection.hasAttribute("recording")) {
+                if (cell_target.nodeName == "SHEET-CELL") {
+                    const drop_data = JSON.parse(
+                        event.dataTransfer.getData("text/json")
+                    );
                     const source_origin = [
                         drop_data.relativeFrameOrigin.x,
-                        drop_data.relativeFrameOrigin.y
-                    ]
+                        drop_data.relativeFrameOrigin.y,
+                    ];
                     const source_corner = [
                         drop_data.relativeFrameCorner.x,
                         drop_data.relativeFrameCorner.y,
-                    ]
+                    ];
                     const target_origin = [
                         parseInt(cell_target.getAttribute("data-relative-x")),
-                        parseInt(cell_target.getAttribute("data-relative-y"))
-                    ]
+                        parseInt(cell_target.getAttribute("data-relative-y")),
+                    ];
                     // TODO: note we handling only one source at a time here
                     // but note source_info is an array so can be multuple sources in the future
                     const source_info = [
-                        {id: source_id, origin: source_origin, corner: source_corner}
+                        {
+                            id: source_id,
+                            origin: source_origin,
+                            corner: source_corner,
+                        },
                     ];
                     // NOTE: for target origin and corner are the same, ie a 1x1 frame, for the moment
-                    const target_info = {id: target_id, origin: target_origin, corner: target_origin};
+                    const target_info = {
+                        id: target_id,
+                        origin: target_origin,
+                        corner: target_origin,
+                    };
                     connection.openCommandInterface(source_info, target_info);
                 }
             }
-        } else if(event.dataTransfer.files) {
+        } else if (event.dataTransfer.files) {
             // set the event.target.files to the dataTransfer.files
             // since that is what this.onUpload() expects
             event.target.files = event.dataTransfer.files;
@@ -943,16 +968,19 @@ class Worksheet extends HTMLElement {
      * I handle adding and removing drag&drop styling for `sheet-cell` elements
      * makign sure to remove the "dragover" css class and event handlers.
      */
-    _removeDragDropStyling(event){
+    _removeDragDropStyling(event) {
         event.target.classList.remove("dragover");
-        event.target.removeEventListener("dragleave", this._removeDragDropStyling);
+        event.target.removeEventListener(
+            "dragleave",
+            this._removeDragDropStyling
+        );
         event.target.removeEventListener("drop", this._removeDragDropStyling);
     }
 
     /**
-      * I unhide the worksheet overlay to display provided svg icon string.
-      */
-    _overlay(iconString){
+     * I unhide the worksheet overlay to display provided svg icon string.
+     */
+    _overlay(iconString) {
         const overlay = this.shadowRoot.querySelector(".overlay");
         overlay.classList.remove("hide");
         const template = document.createElement("template");
@@ -962,22 +990,24 @@ class Worksheet extends HTMLElement {
     }
 
     /**
-      * I find the connection which corresponds to the target and source (if provided).
-      * The assumption is that each sheet can be the source of multiple sheets.
-      * However, there can be **only one** connection between two sheets and each sheet
-      * can be the target of **only one** connection.
-      **/
-    _getConnection(targetId, sourceId){
-        const connections = document.querySelectorAll(`ws-connection[target="${targetId}"]`);
-        if(connections.length == 0){
+     * I find the connection which corresponds to the target and source (if provided).
+     * The assumption is that each sheet can be the source of multiple sheets.
+     * However, there can be **only one** connection between two sheets and each sheet
+     * can be the target of **only one** connection.
+     **/
+    _getConnection(targetId, sourceId) {
+        const connections = document.querySelectorAll(
+            `ws-connection[target="${targetId}"]`
+        );
+        if (connections.length == 0) {
             return;
         }
-        if(connections.length > 1){
+        if (connections.length > 1) {
             throw `Multiple connections found for the target ${targetId}`;
         }
         const wc = connections[0];
-        if(sourceId){
-            if(wc.getAttribute("sources").split(",").indexOf(sourceId) > -1){
+        if (sourceId) {
+            if (wc.getAttribute("sources").split(",").indexOf(sourceId) > -1) {
                 return wc;
             }
         } else {
@@ -1035,22 +1065,22 @@ class Worksheet extends HTMLElement {
     }
 
     /**
-      * I handle the 'selection-changed' event
-      * dispatched from sheet. At the moment I simply
-      * pass it onto other handlers if defined
-      **/
-    handleSelectionChanged(event){
-        if (this.plotHandleSelectionChanged){
+     * I handle the 'selection-changed' event
+     * dispatched from sheet. At the moment I simply
+     * pass it onto other handlers if defined
+     **/
+    handleSelectionChanged(event) {
+        if (this.plotHandleSelectionChanged) {
             this.plotHandleSelectionChanged(event);
         }
     }
     /**
-      * I hadle csv files. This is done by iterating over
-      * chunks (default size 10MB) and updating the sheet.DataFrame
-      * accordigly. This is a bit slower, on small files, than loading in one go
-      * but it allows for dealing with all files uniformly (the different for small
-      * files is unnoticeable).
-      **/
+     * I hadle csv files. This is done by iterating over
+     * chunks (default size 10MB) and updating the sheet.DataFrame
+     * accordigly. This is a bit slower, on small files, than loading in one go
+     * but it allows for dealing with all files uniformly (the different for small
+     * files is unnoticeable).
+     **/
     fromCSV(file) {
         let rowsProcessed = 0;
         // we are not binding the parse callbacks here
@@ -1058,28 +1088,32 @@ class Worksheet extends HTMLElement {
         let icon = icons.loader;
         const parseConfig = {
             worker: true, // run the upload on a Worker not to block things up
-            chunk: function(chunk){
+            chunk: function (chunk) {
                 self._overlay(icon);
-                self.sheet.dataFrame.loadFromArray(chunk.data, [0, rowsProcessed], false);
+                self.sheet.dataFrame.loadFromArray(
+                    chunk.data,
+                    [0, rowsProcessed],
+                    false
+                );
                 rowsProcessed += chunk.data.length;
-                if(icon == icons.loader){
+                if (icon == icons.loader) {
                     icon = icons.loaderQuarter;
                 } else {
                     icon = icons.loader;
                 }
                 console.log("processed:", rowsProcessed);
             },
-            complete: function(){
+            complete: function () {
                 self.sheet.render();
                 console.log("total rows:", rowsProcessed);
                 self.updateName(file.name);
                 const overlay = self.shadowRoot.querySelector(".overlay");
                 overlay.classList.add("hide");
-            }
-        }
+            },
+        };
         try {
             Papa.parse(file, parseConfig);
-        } catch (e){
+        } catch (e) {
             console.log(e);
             alert("I couldn't process the csv; please try again");
         }
@@ -1092,33 +1126,36 @@ class Worksheet extends HTMLElement {
         return CSVParser.unparse(data);
     }
 
-    fromExcel(aString, rABS, fileName, ftype){
+    fromExcel(aString, rABS, fileName, ftype) {
         // TODO: if the field is an excel date field xlsx converts it
         // automatically, to either a numerical value or a date string
         // I can't see a way around this and it might be a by-product of how
         // excel data is actually stored tbd...
-        const wb = XLSX.read(
-            aString,
-            {
-                type: rABS ? "binary" : "array",
-                cellText:false,
-                cellDates:true,
-            }
-        );
+        const wb = XLSX.read(aString, {
+            type: rABS ? "binary" : "array",
+            cellText: false,
+            cellDates: true,
+        });
         // ask which sheet to load since we only do one
         this.openExcelUploadDialog(wb, (event) => {
             const ws = wb.Sheets[event.target.value];
-            if(ws){
+            if (ws) {
                 this._overlay(icons.loader);
                 const wsArray = XLSX.utils.sheet_to_json(
                     ws,
-                    {header: 1} // this will give us an nd-array
+                    { header: 1 } // this will give us an nd-array
                 );
                 this.onErase();
                 this.sheet.dataFrame.loadFromArray(wsArray);
                 // update the file name to include the sheet/tab
-                fileName = fileName.replace(`.${ftype}`, `[${event.target.value}]`);
-                fileName = fileName.replace(/\[.+\]$/, `[${event.target.value}]`);
+                fileName = fileName.replace(
+                    `.${ftype}`,
+                    `[${event.target.value}]`
+                );
+                fileName = fileName.replace(
+                    /\[.+\]$/,
+                    `[${event.target.value}]`
+                );
                 // set the name of the sheet to the file name; TODO: do we want this?
                 this.updateName(fileName);
                 const overlay = this.shadowRoot.querySelector(".overlay");
@@ -1127,7 +1164,7 @@ class Worksheet extends HTMLElement {
         });
     }
 
-    openExcelUploadDialog(workbook, callback){
+    openExcelUploadDialog(workbook, callback) {
         const dialog = this._basicDialog(`${this.id}_excel_dialog`);
         const form = document.createElement("form");
         const select = document.createElement("select");
@@ -1140,14 +1177,14 @@ class Worksheet extends HTMLElement {
             const option = document.createElement("option");
             option.textContent = name;
             select.append(option);
-        })
+        });
         form.append(select);
         dialog.firstChild.append(form);
         select.addEventListener("change", callback);
         dialog.showModal();
     }
 
-    openDownloadDialog(){
+    openDownloadDialog() {
         const dialog = this._basicDialog(`${this.id}_download_dialog`);
         const csvButton = document.createElement("button");
         csvButton.textContent = "CSV";
@@ -1160,7 +1197,7 @@ class Worksheet extends HTMLElement {
         dialog.showModal();
     }
 
-    _basicDialog(id){
+    _basicDialog(id) {
         const dialog = document.createElement("dialog");
         const div = document.createElement("div");
         dialog.append(div);
@@ -1174,34 +1211,28 @@ class Worksheet extends HTMLElement {
         removeButton.setAttribute("data-clickable", true);
         removeButton.setAttribute("id", "remove");
         dialog.append(removeButton);
-        removeButton.addEventListener(
-            "click",
-            () => this.closeDialog(id)
-        );
+        removeButton.addEventListener("click", () => this.closeDialog(id));
         return dialog;
     }
 
-    closeDialog(id){
+    closeDialog(id) {
         const dialog = document.getElementById(id);
-        if(dialog){
+        if (dialog) {
             dialog.remove();
         }
     }
 
-
-    toExcel(){
+    toExcel() {
         const wb = XLSX.utils.book_new();
         const ws = XLSX.utils.aoa_to_sheet(
-            this.sheet.dataFrame.getDataArrayForFrame(
-                this.sheet.dataFrame
-            )
-        )
+            this.sheet.dataFrame.getDataArrayForFrame(this.sheet.dataFrame)
+        );
         // TODO get proper name here for the sheet
         let sheetName = "Sheet1";
         const sheetRE = /\[(.*)\]$/;
         const m = this.name.match(sheetRE);
         let fileName = this.name;
-        if(m){
+        if (m) {
             sheetName = m[1];
             fileName = fileName.replace(sheetRE, "");
         }
