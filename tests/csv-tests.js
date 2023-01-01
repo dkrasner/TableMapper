@@ -1,22 +1,24 @@
-import * as chai from 'chai';
-import fs from 'fs';
-import path from 'path';
-import * as url from 'url';
+import * as chai from "chai";
+import fs from "fs";
+import path from "path";
+import * as url from "url";
 const __filename = url.fileURLToPath(import.meta.url);
-const __dirname = url.fileURLToPath(new URL('.', import.meta.url));
-import Worksheet from '../js/Worksheet.js';
-import '../ap-sheet/src/GridSheet.js';
+const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
+import Worksheet from "../js/Worksheet.js";
+import "../ap-sheet/src/APSheet.js";
 const assert = chai.assert;
 const should = chai.should;
 const expect = chai.expect;
 
 // File Setup
-const exampleInput1 = fs.readFileSync(path.resolve(__dirname, "./sources/example1.csv")).toString();
+const exampleInput1 = fs
+    .readFileSync(path.resolve(__dirname, "./sources/example1.csv"))
+    .toString();
 
 describe("CSV Tests", () => {
     let worksheet;
     before(() => {
-        worksheet = document.createElement('work-sheet');
+        worksheet = document.createElement("work-sheet");
         document.body.append(worksheet);
     });
     describe("CSV Writing Tests", () => {
@@ -53,11 +55,11 @@ describe("CSV Tests", () => {
         });
         it("Worksheet DataFrame has the expected values in the first row", () => {
             let expected = [
-                'Name',
+                "Name",
                 '     "Sex"',
                 ' "Age"',
                 ' "Height (in)"',
-                ' "Weight (lbs)"'
+                ' "Weight (lbs)"',
             ];
             let dataFrameArray = worksheet.sheet.dataFrame.getDataArrayForFrame(
                 worksheet.sheet.dataFrame
@@ -72,12 +74,12 @@ describe("CSV Tests", () => {
 
         it("First row of cells has expected text", () => {
             let expectedRow = [
-                'Name',
+                "Name",
                 '     "Sex"',
                 ' "Age"',
                 ' "Height (in)"',
-                ' "Weight (lbs)"'
-            ].map(item => item.trim());
+                ' "Weight (lbs)"',
+            ].map((item) => item.trim());
             expectedRow.forEach((expectedText, x) => {
                 let element = worksheet.sheet.querySelector(
                     `sheet-cell[data-relative-x="${x}"][data-relative-y="0"]`
