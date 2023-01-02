@@ -243,12 +243,18 @@ class CommandInterface extends HTMLElement {
             origin[0] + size.x,
             origin[1] + size.y
         ];
-        this.cache = targetWS.sheet.dataFrame.getDataSubFrame(
+        // this is async but we are effectively storing all the data locally!
+        targetWS.sheet.dataStore.getDataArray(
             this.target.origin, corner
+        ).then(
+            ((value) => {this.cache = value})
+        ).then(
+            // TODO: we might want to add some sort of staging area to the callstack
+            () => {
+                const executable = this.callStack.interpreter.interpret(instruction);
+                executable();
+            }
         );
-        // TODO: we might want to add some sort of staging area to the callstack
-        const executable = this.callStack.interpreter.interpret(instruction);
-        executable();
     }
 
     /**
@@ -262,7 +268,7 @@ class CommandInterface extends HTMLElement {
             this.target.origin[0],
             this.target.origin[1]
         ]
-        targetWS.sheet.dataFrame.copyFrom(this.cache, origin);
+        targetWS.sheet.dataStore.loadFromArray(this.cache, origin);
     }
 
     onSaveIt(event){

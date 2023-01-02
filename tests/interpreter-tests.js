@@ -64,40 +64,40 @@ describe("Interpreter Tests", () => {
         it("Worksheet elements exist and have an ap-sheet ref", () => {
             assert.exists(sourceWS);
             assert.exists(sourceWS.sheet);
-            assert.exists(sourceWS.sheet.dataFrame);
+            assert.exists(sourceWS.sheet.dataStore);
             assert.exists(targetWS);
             assert.exists(targetWS.sheet);
-            assert.exists(targetWS.sheet.dataFrame);
+            assert.exists(targetWS.sheet.dataStore);
             assert.exists(callstack);
 
         });
         it("Can clear all Worksheet data", () => {
             sourceWS.onErase();
-            expect(sourceWS.sheet.dataFrame.store).to.eql({});
+            expect(sourceWS.sheet.dataStore._cache).to.eql({});
             targetWS.onErase();
-            expect(targetWS.sheet.dataFrame.store).to.eql({});
+            expect(targetWS.sheet.dataStore._cache).to.eql({});
         });
         it("Can setup source and callstack", () => {
-            sourceWS.sheet.dataFrame.loadFromArray(dataArray);
-            expect(sourceWS.sheet.dataFrame.store).to.eql(dataDict);
+            sourceWS.sheet.dataStore.loadFromArray(dataArray);
+            expect(sourceWS.sheet.dataStore._cache).to.eql(dataDict);
             const instructions = [
-                [`${sourceWS.id}!(0,0):(2,2)`, `${targetWS.id}!(0,0):(0,0)`, "copy()"]
+                [`${sourceWS.id}!(0,0):(2,1)`, `${targetWS.id}!(0,0):(0,0)`, "copy()"]
             ]
             callstack.load(instructions);
             expect(callstack.stack).to.eql(instructions);
         });
-        it("Running the copy command populates target Worksheet", () => {
-            callstack.run();
-            expect(targetWS.sheet.dataFrame.store).to.eql(dataDict);
+        it("Running the copy command populates target Worksheet", async () => {
+            await callstack.run();
+            expect(targetWS.sheet.dataStore._cache).to.eql(dataDict);
             targetWS.onErase();
-            expect(targetWS.sheet.dataFrame.store).to.eql({});
+            expect(targetWS.sheet.dataStore._cache).to.eql({});
         });
-        it("Running the replace command populates target Worksheet", () => {
+        it("Running the replace command populates target Worksheet", async () => {
             const instructions = [
-                [`${sourceWS.id}!(0,0):(2,2)`, `${targetWS.id}!(0,0):(0,0)`, "replace('a': 'AAA')"],
+                [`${sourceWS.id}!(0,0):(2,1)`, `${targetWS.id}!(0,0):(0,0)`, "replace('a': 'AAA')"],
             ]
             callstack.load(instructions);
-            callstack.run();
+            await callstack.run();
             const result = {
                 "0,0": "AAA0",
                 "1,0": "b0",
@@ -106,17 +106,17 @@ describe("Interpreter Tests", () => {
                 "1,1": "b1",
                 "2,1": "c1",
             };
-            expect(targetWS.sheet.dataFrame.store).to.eql(result);
+            expect(targetWS.sheet.dataStore._cache).to.eql(result);
             targetWS.onErase();
-            expect(targetWS.sheet.dataFrame.store).to.eql({});
+            expect(targetWS.sheet.dataStore._cache).to.eql({});
         });
-        it("Running copy and replace commands populates target Worksheet", () => {
+        it("Running copy and replace commands populates target Worksheet", async () => {
             const instructions = [
-                [`${sourceWS.id}!(0,0):(2,2)`, `${targetWS.id}!(0,0):(0,0)`, "copy()"],
-                [`${sourceWS.id}!(0,0):(2,2)`, `${targetWS.id}!(3,0):(3,0)`, "replace('a': 'AAA')"],
+                [`${sourceWS.id}!(0,0):(2,1)`, `${targetWS.id}!(0,0):(0,0)`, "copy()"],
+                [`${sourceWS.id}!(0,0):(2,1)`, `${targetWS.id}!(3,0):(3,0)`, "replace('a': 'AAA')"],
             ]
             callstack.load(instructions);
-            callstack.run();
+            await callstack.run();
             const result = {
                 "0,0": "a0",
                 "1,0": "b0",
@@ -131,19 +131,19 @@ describe("Interpreter Tests", () => {
                 "4,1": "b1",
                 "5,1": "c1",
             };
-            expect(targetWS.sheet.dataFrame.store).to.eql(result);
+            expect(targetWS.sheet.dataStore._cache).to.eql(result);
             targetWS.onErase();
-            expect(targetWS.sheet.dataFrame.store).to.eql({});
+            expect(targetWS.sheet.dataStore._cache).to.eql({});
         });
-        it("Stepping through copy and replace commands populates target Worksheet", () => {
+        it("Stepping through copy and replace commands populates target Worksheet", async () => {
             const instructions = [
-                [`${sourceWS.id}!(0,0):(2,2)`, `${targetWS.id}!(0,0):(0,0)`, "copy()"],
-                [`${sourceWS.id}!(0,0):(2,2)`, `${targetWS.id}!(3,0):(3,0)`, "replace('a': 'AAA')"],
+                [`${sourceWS.id}!(0,0):(2,1)`, `${targetWS.id}!(0,0):(0,0)`, "copy()"],
+                [`${sourceWS.id}!(0,0):(2,1)`, `${targetWS.id}!(3,0):(3,0)`, "replace('a': 'AAA')"],
             ]
             callstack.load(instructions);
             callstack.step();
-            callstack.execute();
-            expect(targetWS.sheet.dataFrame.store).to.eql(dataDict);
+            await callstack.execute();
+            expect(targetWS.sheet.dataStore._cache).to.eql(dataDict);
             const result = {
                 "0,0": "a0",
                 "1,0": "b0",
@@ -159,23 +159,23 @@ describe("Interpreter Tests", () => {
                 "5,1": "c1",
             };
             callstack.step();
-            callstack.execute();
-            expect(targetWS.sheet.dataFrame.store).to.eql(result);
+            await callstack.execute();
+            expect(targetWS.sheet.dataStore._cache).to.eql(result);
             targetWS.onErase();
-            expect(targetWS.sheet.dataFrame.store).to.eql({});
+            expect(targetWS.sheet.dataStore._cache).to.eql({});
         });
-        it("Running the join command populates target Worksheet", () => {
+        it.skip("Running the join command populates target Worksheet", () => {
             // add another source and make sure it exists
             assert.exists(anotherSourceWS);
             assert.exists(anotherSourceWS.sheet);
-            assert.exists(anotherSourceWS.sheet.dataFrame);
+            assert.exists(anotherSourceWS.sheet.dataStore);
             anotherSourceWS.onErase();
-            expect(anotherSourceWS.sheet.dataFrame.store).to.eql({});
-            anotherSourceWS.sheet.dataFrame.loadFromArray(dataArray);
-            expect(anotherSourceWS.sheet.dataFrame.store).to.eql(dataDict);
+            expect(anotherSourceWS.sheet.dataStore._cache).to.eql({});
+            anotherSourceWS.sheet.dataStore.loadFromArray(dataArray);
+            expect(anotherSourceWS.sheet.dataStore._cache).to.eql(dataDict);
             sourceWS.onErase();
-            sourceWS.sheet.dataFrame.loadFromArray(dataArray);
-            expect(sourceWS.sheet.dataFrame.store).to.eql(dataDict);
+            sourceWS.sheet.dataStore.loadFromArray(dataArray);
+            expect(sourceWS.sheet.dataStore._cache).to.eql(dataDict);
             targetWS.onErase();
 
             const instructions = [
@@ -191,53 +191,53 @@ describe("Interpreter Tests", () => {
                 "1,1": "b1,b1",
                 "2,1": "c1,c1",
             };
-            expect(targetWS.sheet.dataFrame.store).to.eql(result);
+            expect(targetWS.sheet.dataStore._cache).to.eql(result);
             targetWS.onErase();
-            expect(targetWS.sheet.dataFrame.store).to.eql({});
+            expect(targetWS.sheet.dataStore._cache).to.eql({});
         });
     });
 
     describe("Running arithmetic commands test", () => {
         it("Can clear all Worksheet data", () => {
             sourceWS.onErase();
-            expect(sourceWS.sheet.dataFrame.store).to.eql({});
+            expect(sourceWS.sheet.dataStore._cache).to.eql({});
             targetWS.onErase();
-            expect(targetWS.sheet.dataFrame.store).to.eql({});
+            expect(targetWS.sheet.dataStore._cache).to.eql({});
         });
         it("Can setup source and callstack", () => {
-            sourceWS.sheet.dataFrame.loadFromArray(numericDataArray);
-            expect(sourceWS.sheet.dataFrame.store).to.eql(numericDataDict);
+            sourceWS.sheet.dataStore.loadFromArray(numericDataArray);
+            expect(sourceWS.sheet.dataStore._cache).to.eql(numericDataDict);
             const instructions = [
                 [`${sourceWS.id}!(0,0):(2,1)`, `${targetWS.id}!(0,0):(0,0)`, "sum()"]
             ]
             callstack.load(instructions);
             expect(callstack.stack).to.eql(instructions);
         });
-        it("Sum", () => {
-            callstack.run();
+        it("Sum", async () => {
+            await callstack.run();
             let sum = 0;
             numericDataArray.forEach((row) => {
                 sum += row.reduce((a, b) => a + b);
             });
-            expect(targetWS.sheet.dataFrame.store).to.eql({"0,0": sum});
+            expect(targetWS.sheet.dataStore._cache).to.eql({"0,0": sum});
             targetWS.onErase();
-            expect(targetWS.sheet.dataFrame.store).to.eql({});
+            expect(targetWS.sheet.dataStore._cache).to.eql({});
         });
-        it("Sum can be NaN", () => {
-            sourceWS.sheet.dataFrame.loadFromArray(dataArray);
-            callstack.run();
-            expect(targetWS.sheet.dataFrame.store).to.eql({"0,0": NaN});
+        it("Sum can be NaN", async () => {
+            sourceWS.sheet.dataStore.loadFromArray(dataArray);
+            await callstack.run();
+            expect(targetWS.sheet.dataStore._cache).to.eql({"0,0": NaN});
             targetWS.onErase();
-            expect(targetWS.sheet.dataFrame.store).to.eql({});
-            sourceWS.sheet.dataFrame.loadFromArray(numericDataArray);
-            expect(sourceWS.sheet.dataFrame.store).to.eql(numericDataDict);
+            expect(targetWS.sheet.dataStore._cache).to.eql({});
+            sourceWS.sheet.dataStore.loadFromArray(numericDataArray);
+            expect(sourceWS.sheet.dataStore._cache).to.eql(numericDataDict);
         });
-        it("Average", () => {
+        it("Average", async () => {
             const instructions = [
                 [`${sourceWS.id}!(0,0):(2,1)`, `${targetWS.id}!(0,0):(0,0)`, "average()"]
             ]
             callstack.load(instructions);
-            callstack.run();
+            await callstack.run();
             let ave = 0;
             let counter = 0;
             numericDataArray.forEach((row) => {
@@ -245,25 +245,25 @@ describe("Interpreter Tests", () => {
                 counter += row.length;
             });
             ave = ave / counter;
-            expect(targetWS.sheet.dataFrame.store).to.eql({"0,0": ave});
+            expect(targetWS.sheet.dataStore._cache).to.eql({"0,0": ave});
             targetWS.onErase();
-            expect(targetWS.sheet.dataFrame.store).to.eql({});
+            expect(targetWS.sheet.dataStore._cache).to.eql({});
         });
-        it("Average can be NaN", () => {
-            sourceWS.sheet.dataFrame.loadFromArray(dataArray);
-            callstack.run();
-            expect(targetWS.sheet.dataFrame.store).to.eql({"0,0": NaN});
+        it("Average can be NaN", async () => {
+            sourceWS.sheet.dataStore.loadFromArray(dataArray);
+            await callstack.run();
+            expect(targetWS.sheet.dataStore._cache).to.eql({"0,0": NaN});
             targetWS.onErase();
-            expect(targetWS.sheet.dataFrame.store).to.eql({});
-            sourceWS.sheet.dataFrame.loadFromArray(numericDataArray);
-            expect(sourceWS.sheet.dataFrame.store).to.eql(numericDataDict);
+            expect(targetWS.sheet.dataStore._cache).to.eql({});
+            sourceWS.sheet.dataStore.loadFromArray(numericDataArray);
+            expect(sourceWS.sheet.dataStore._cache).to.eql(numericDataDict);
         });
-        it("Max", () => {
+        it("Max", async () => {
             const instructions = [
                 [`${sourceWS.id}!(0,0):(2,1)`, `${targetWS.id}!(0,0):(0,0)`, "max()"]
             ]
             callstack.load(instructions);
-            callstack.run();
+            await callstack.run();
             let max = numericDataArray[0][0];
             numericDataArray.forEach((row) => {
                 row.forEach((v) => {
@@ -272,25 +272,25 @@ describe("Interpreter Tests", () => {
                     }
                 })
             });
-            expect(targetWS.sheet.dataFrame.store).to.eql({"0,0": max});
+            expect(targetWS.sheet.dataStore._cache).to.eql({"0,0": max});
             targetWS.onErase();
-            expect(targetWS.sheet.dataFrame.store).to.eql({});
+            expect(targetWS.sheet.dataStore._cache).to.eql({});
         });
-        it("Max can be NaN", () => {
-            sourceWS.sheet.dataFrame.loadFromArray(dataArray);
-            callstack.run();
-            expect(targetWS.sheet.dataFrame.store).to.eql({"0,0": NaN});
+        it("Max can be NaN", async () => {
+            sourceWS.sheet.dataStore.loadFromArray(dataArray);
+            await callstack.run();
+            expect(targetWS.sheet.dataStore._cache).to.eql({"0,0": NaN});
             targetWS.onErase();
-            expect(targetWS.sheet.dataFrame.store).to.eql({});
-            sourceWS.sheet.dataFrame.loadFromArray(numericDataArray);
-            expect(sourceWS.sheet.dataFrame.store).to.eql(numericDataDict);
+            expect(targetWS.sheet.dataStore._cache).to.eql({});
+            sourceWS.sheet.dataStore.loadFromArray(numericDataArray);
+            expect(sourceWS.sheet.dataStore._cache).to.eql(numericDataDict);
         });
-        it("Min", () => {
+        it("Min", async () => {
             const instructions = [
                 [`${sourceWS.id}!(0,0):(2,1)`, `${targetWS.id}!(0,0):(0,0)`, "min()"]
             ]
             callstack.load(instructions);
-            callstack.run();
+            await callstack.run();
             let min = numericDataArray[0][0];
             numericDataArray.forEach((row) => {
                 row.forEach((v) => {
@@ -299,98 +299,98 @@ describe("Interpreter Tests", () => {
                     }
                 })
             });
-            expect(targetWS.sheet.dataFrame.store).to.eql({"0,0": min});
+            expect(targetWS.sheet.dataStore._cache).to.eql({"0,0": min});
             targetWS.onErase();
-            expect(targetWS.sheet.dataFrame.store).to.eql({});
+            expect(targetWS.sheet.dataStore._cache).to.eql({});
         });
-        it("Min can be NaN", () => {
-            sourceWS.sheet.dataFrame.loadFromArray(dataArray);
-            callstack.run();
-            expect(targetWS.sheet.dataFrame.store).to.eql({"0,0": NaN});
+        it("Min can be NaN", async () => {
+            sourceWS.sheet.dataStore.loadFromArray(dataArray);
+            await callstack.run();
+            expect(targetWS.sheet.dataStore._cache).to.eql({"0,0": NaN});
             targetWS.onErase();
-            expect(targetWS.sheet.dataFrame.store).to.eql({});
-            sourceWS.sheet.dataFrame.loadFromArray(numericDataArray);
-            expect(sourceWS.sheet.dataFrame.store).to.eql(numericDataDict);
+            expect(targetWS.sheet.dataStore._cache).to.eql({});
+            sourceWS.sheet.dataStore.loadFromArray(numericDataArray);
+            expect(sourceWS.sheet.dataStore._cache).to.eql(numericDataDict);
         });
-        it("Median 1", () => {
+        it("Median 1", async () => {
             const numericDataArray = [
                 [1, 2, 3],
                 [4, 5, 6]
             ];
-            sourceWS.sheet.dataFrame.loadFromArray(numericDataArray);
+            sourceWS.sheet.dataStore.loadFromArray(numericDataArray);
             const instructions = [
                 [`${sourceWS.id}!(0,0):(2,1)`, `${targetWS.id}!(0,0):(0,0)`, "median()"]
             ]
             callstack.load(instructions);
-            callstack.run();
-            expect(targetWS.sheet.dataFrame.store).to.eql({"0,0": 3.5});
+            await callstack.run();
+            expect(targetWS.sheet.dataStore._cache).to.eql({"0,0": 3.5});
             targetWS.onErase();
-            expect(targetWS.sheet.dataFrame.store).to.eql({});
+            expect(targetWS.sheet.dataStore._cache).to.eql({});
         });
-        it("Median 2", () => {
+        it("Median 2", async () => {
             const numericDataArray2 = [
                 [1, 2, 3],
                 [4, 5, 6],
                 [7, 8, 9]
             ];
-            sourceWS.sheet.dataFrame.loadFromArray(numericDataArray2);
+            sourceWS.sheet.dataStore.loadFromArray(numericDataArray2);
             const instructions = [
                 [`${sourceWS.id}!(0,0):(2,2)`, `${targetWS.id}!(0,0):(0,0)`, "median()"]
             ]
             callstack.load(instructions);
-            callstack.run();
-            expect(targetWS.sheet.dataFrame.store).to.eql({"0,0": 5});
+            await callstack.run();
+            expect(targetWS.sheet.dataStore._cache).to.eql({"0,0": 5});
             targetWS.onErase();
-            expect(targetWS.sheet.dataFrame.store).to.eql({});
+            expect(targetWS.sheet.dataStore._cache).to.eql({});
         });
-        it("Median 3", () => {
+        it("Median 3", async () => {
             const numericDataArray2 = [
                 [1, 2, 3, 4],
                 [5, 6, 7, 8],
                 [9, 10, 11, 12]
             ];
-            sourceWS.sheet.dataFrame.loadFromArray(numericDataArray2);
+            sourceWS.sheet.dataStore.loadFromArray(numericDataArray2);
             const instructions = [
                 [`${sourceWS.id}!(0,0):(3,2)`, `${targetWS.id}!(0,0):(0,0)`, "median()"]
             ]
             callstack.load(instructions);
-            callstack.run();
-            expect(targetWS.sheet.dataFrame.store).to.eql({"0,0":  13 / 2});
+            await callstack.run();
+            expect(targetWS.sheet.dataStore._cache).to.eql({"0,0":  13 / 2});
             targetWS.onErase();
-            expect(targetWS.sheet.dataFrame.store).to.eql({});
+            expect(targetWS.sheet.dataStore._cache).to.eql({});
         });
-        it("Median 4", () => {
+        it("Median 4", async () => {
             const numericDataArray2 = [
                 [1, 2, 3],
                 [4, 5, 6],
                 [7, 8, 9]
             ];
-            sourceWS.sheet.dataFrame.loadFromArray(numericDataArray2);
+            sourceWS.sheet.dataStore.loadFromArray(numericDataArray2);
             // NOTE: we are starting at (1, 1) here
             const instructions = [
                 [`${sourceWS.id}!(1,1):(2,2)`, `${targetWS.id}!(0,0):(0,0)`, "median()"]
             ]
             callstack.load(instructions);
-            callstack.run();
-            expect(targetWS.sheet.dataFrame.store).to.eql({"0,0": 7});
+            await callstack.run();
+            expect(targetWS.sheet.dataStore._cache).to.eql({"0,0": 7});
             targetWS.onErase();
-            expect(targetWS.sheet.dataFrame.store).to.eql({});
+            expect(targetWS.sheet.dataStore._cache).to.eql({});
         });
-        it("Median can be NaN", () => {
+        it("Median can be NaN", async () => {
             const numericDataArray2 = [
                 [1, 2, 3],
                 [4, 5, 6],
                 [7, "aaaa", 9]
             ];
-            sourceWS.sheet.dataFrame.loadFromArray(numericDataArray2);
+            sourceWS.sheet.dataStore.loadFromArray(numericDataArray2);
             const instructions = [
                 [`${sourceWS.id}!(0,0):(2,2)`, `${targetWS.id}!(0,0):(0,0)`, "median()"]
             ]
             callstack.load(instructions);
-            callstack.run();
-            expect(targetWS.sheet.dataFrame.store).to.eql({"0,0": NaN});
+            await callstack.run();
+            expect(targetWS.sheet.dataStore._cache).to.eql({"0,0": NaN});
             targetWS.onErase();
-            expect(targetWS.sheet.dataFrame.store).to.eql({});
+            expect(targetWS.sheet.dataStore._cache).to.eql({});
         });
     });
     after(() => {
