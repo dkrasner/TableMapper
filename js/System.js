@@ -6,7 +6,6 @@
   */
 
 import icons from './utils/icons.js';
-import * as worksheet from './worksheet.js';
 
 class System extends Object {
     constructor(){
@@ -55,17 +54,6 @@ class System extends Object {
             }
         }
     }
-}
-
-
-// helper so I don't have to populate the editor sheet by hand each time
-function prepopulateEditor(editor){
-    editor.dataFrame.store["0,1"] = "(2,0):(2,10)";
-    editor.dataFrame.store["1,1"] = "(3,0)";
-    editor.dataFrame.store["2,1"] = "replace";
-    editor.dataFrame.store["3,1"] = "1:ONE; 2:TWO";
-    editor.dataFrame.store["0,2"] = "(0,2):(3,4)";
-    editor.dataFrame.store["1,2"] = "(0,3)";
 }
 
 export {

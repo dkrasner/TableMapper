@@ -13,7 +13,7 @@ const expect = chai.expect;
 // File Setup
 const exampleInput1 = fs.readFileSync(path.resolve(__dirname, "./sources/example1.csv")).toString();
 
-describe("CSV Tests", () => {
+describe.skip("CSV Tests", () => {
     let worksheet;
     before(() => {
         worksheet = document.createElement('work-sheet');

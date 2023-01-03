@@ -71,6 +71,7 @@ class CallStack extends Object {
             this.execute();
             this.step();
         }
+        return true;
     }
 
     /* I reset the counter */

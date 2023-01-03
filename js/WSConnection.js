@@ -317,7 +317,7 @@ class WSConnection extends HTMLElement {
             document.body.append(inspector);
             inspector.updateName("The Commands");
             inspector.setAttribute("ws-connector-id", this.id);
-            inspector.sheet.dataFrame.clear();
+            inspector.sheet.dataStore.clear();
             this.loadInspector(inspector);
         }
     }
@@ -429,7 +429,7 @@ class WSConnection extends HTMLElement {
     }
 
     loadInspector(inspector){
-        inspector.sheet.dataFrame.clear();
+        inspector.sheet.dataStore.clear();
         // add columns names and lock the name row
         let data = [
             ["Sources", "Target", "Command"]
@@ -439,7 +439,7 @@ class WSConnection extends HTMLElement {
         if(this.callStack.stack.length > 0){
             data = data.concat(this.callStack.stack);
         }
-        inspector.sheet.dataFrame.loadFromArray(data);
+        inspector.sheet.dataStore.loadFromArray(data);
     }
 
     setupInspectorContextMenu(event, inspector){
@@ -462,7 +462,7 @@ class WSConnection extends HTMLElement {
         const y = parseInt(tab.dataset.relativeY);
         // make sure there is a command there to do something with
         // and we are not clicking on the name row
-        if(y > 0 && inspector.sheet.dataFrame.getAt([0,y])){
+        if(y > 0 && inspector.sheet.dataStore.getAt([0,y])){
             // NOTE: the inspectorhas a fixed column name row, and the callstack
             // commands count from 0, so the corresponding command is tabIndexName - 1
             const commandIndex = y - 1;
