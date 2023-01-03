@@ -196,12 +196,45 @@ const loaderQuarter = `<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-
   <line x1="7.75" y1="7.75" x2="5.6" y2="5.6" />
 </svg>`;
 
+const desktopAnalytics = `<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-device-desktop-analytics" width="44" height="44" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <rect x="3" y="4" width="18" height="12" rx="1" />
+  <path d="M7 20h10" />
+  <path d="M9 16v4" />
+  <path d="M15 16v4" />
+  <path d="M9 12v-4" />
+  <path d="M12 12v-1" />
+  <path d="M15 12v-2" />
+  <path d="M12 12v-1" />
+</svg>`;
+
+const barChart = `<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-chart-bar" width="44" height="44" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <rect x="3" y="12" width="6" height="8" rx="1" />
+  <rect x="9" y="8" width="6" height="12" rx="1" />
+  <rect x="15" y="4" width="6" height="16" rx="1" />
+  <line x1="4" y1="20" x2="18" y2="20" />
+</svg>`;
+
+const lineChart = `<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-chart-line" width="44" height="44" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <line x1="4" y1="19" x2="20" y2="19" />
+  <polyline points="4 15 8 9 12 11 16 6 20 10" />
+</svg>`;
+
+const pieChart = `<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-chart-pie-2" width="44" height="44" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M12 3v9h9" />
+  <circle cx="12" cy="12" r="9" />
+</svg>`;
+
 const icons = {
     affiliate: affiliate,
     ban: ban,
     command: command,
     eraser: eraser,
     circleX: circleX,
+    desktopAnalytics: desktopAnalytics,
     record: record,
     remove: remove,
     sheet: sheet,
@@ -220,6 +253,9 @@ const icons = {
     loaderQuarter: loaderQuarter,
     maximize: maximize,
     minimize: minimize,
+    barChart: barChart,
+    lineChart: lineChart,
+    pieChart: pieChart
 };
 
 
