@@ -711,9 +711,9 @@ class Worksheet extends HTMLElement {
         this.openDownloadDialog();
     }
 
-    downloadCSV(){
+    async downloadCSV(){
         this.closeDialog();
-        const csv = this.toCSV();
+        const csv = await this.toCSV();
         const anchor = document.createElement("a");
         anchor.style.display = "none";
         const blob = new Blob([csv], { type: "text/csv" });
@@ -725,9 +725,9 @@ class Worksheet extends HTMLElement {
         window.URL.revokeObjectURL(url);
     }
 
-    downloadExcel(){
+    async downloadExcel(){
         this.closeDialog();
-        const [wb, fileName] = this.toExcel();
+        const [wb, fileName] = await this.toExcel();
         XLSX.writeFile(wb, `${fileName}.xlsx`);
     }
 
@@ -1089,8 +1089,8 @@ class Worksheet extends HTMLElement {
         }
     }
 
-    toCSV() {
-        const data = this.sheet.dataStore.getDataArray(
+    async toCSV() {
+        const data = await this.sheet.dataStore.getDataArray(
             this.sheet.baseFrame.origin.toCoord(),
             this.sheet.baseFrame.corner.toCoord()
         );
@@ -1196,14 +1196,15 @@ class Worksheet extends HTMLElement {
     }
 
 
-    toExcel(){
+    async toExcel(){
         const wb = XLSX.utils.book_new();
+        const data = await this.sheet.dataStore.getDataArray(
+            this.sheet.baseFrame.origin.toCoord(),
+            this.sheet.baseFrame.corner.toCoord()
+        );
         const ws = XLSX.utils.aoa_to_sheet(
-            this.sheet.dataStore.getDataArray(
-                this.sheet.baseFrame.origin.toCoord(),
-                this.sheet.baseFrame.corner.toCoord()
-            )
-        )
+            data
+        );
         // TODO get proper name here for the sheet
         let sheetName = "Sheet1";
         const sheetRE = /\[(.*)\]$/;
