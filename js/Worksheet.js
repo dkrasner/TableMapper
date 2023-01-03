@@ -1058,16 +1058,20 @@ class Worksheet extends HTMLElement {
         let icon = icons.loader;
         const parseConfig = {
             worker: true, // run the upload on a Worker not to block things up
-            chunk: function(chunk){
-                self._overlay(icon);
-                self.sheet.dataStore.loadFromArray(chunk.data, [0, rowsProcessed], false);
-                rowsProcessed += chunk.data.length;
-                if(icon == icons.loader){
-                    icon = icons.loaderQuarter;
+            chunk: async function(chunk){
+                if (chunk.data.length) {
+                    self._overlay(icon);
+                    await self.sheet.dataStore.loadFromArray(chunk.data, [0, rowsProcessed]);
+                    rowsProcessed += chunk.data.length;
+                    if(icon == icons.loader){
+                        icon = icons.loaderQuarter;
+                    } else {
+                        icon = icons.loader;
+                    }
+                    console.log("processed:", rowsProcessed);
                 } else {
-                    icon = icons.loader;
+                    self.onErase();
                 }
-                console.log("processed:", rowsProcessed);
             },
             complete: function(){
                 self.sheet.render();
@@ -1107,7 +1111,7 @@ class Worksheet extends HTMLElement {
             }
         );
         // ask which sheet to load since we only do one
-        this.openExcelUploadDialog(wb, (event) => {
+        this.openExcelUploadDialog(wb, async (event) => {
             const ws = wb.Sheets[event.target.value];
             if(ws){
                 this._overlay(icons.loader);
@@ -1116,11 +1120,13 @@ class Worksheet extends HTMLElement {
                     {header: 1} // this will give us an nd-array
                 );
                 this.onErase();
-                this.sheet.dataStore.loadFromArray(wsArray);
-                // update the file name to include the sheet/tab
-                fileName = fileName.replace(`.${ftype}`, `[${event.target.value}]`);
-                fileName = fileName.replace(/\[.+\]$/, `[${event.target.value}]`);
-                // set the name of the sheet to the file name; TODO: do we want this?
+                if (wsArray.length) {
+                    await this.sheet.dataStore.loadFromArray(wsArray);
+                    // update the file name to include the sheet/tab
+                    fileName = fileName.replace(`.${ftype}`, `[${event.target.value}]`);
+                    fileName = fileName.replace(/\[.+\]$/, `[${event.target.value}]`);
+                    // set the name of the sheet to the file name; TODO: do we want this?
+                }
                 this.updateName(fileName);
                 const overlay = this.shadowRoot.querySelector(".overlay");
                 overlay.classList.add("hide");
