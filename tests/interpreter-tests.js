@@ -10,7 +10,7 @@ import crypto from 'crypto';
 import Worksheet from '../js/Worksheet.js';
 import BasicInterpreter from "../js/interpreters.js";
 import { EndOfStackError, CallStack } from "../js/callStack.js";
-import '../ap-sheet/src/GridSheet.js';
+import '../ap-sheet/src/APSheet.js';
 
 describe("Interpreter Tests", () => {
     let sourceWS;

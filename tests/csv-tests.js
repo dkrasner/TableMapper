@@ -5,7 +5,7 @@ import * as url from 'url';
 const __filename = url.fileURLToPath(import.meta.url);
 const __dirname = url.fileURLToPath(new URL('.', import.meta.url));
 import Worksheet from '../js/Worksheet.js';
-import '../ap-sheet/src/GridSheet.js';
+import '../ap-sheet/src/APSheet.js';
 const assert = chai.assert;
 const should = chai.should;
 const expect = chai.expect;

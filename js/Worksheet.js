@@ -132,7 +132,7 @@ input[type="file"]{
     border: 1px solid var(--palette-orange);
 }
 
-my-grid {
+ap-sheet {
     background-color: var(--palette-beige);
     z-index: 3;
     width: max-content; 
@@ -242,7 +242,7 @@ my-grid {
     </span>
 </div>
 <div id="sheet-container">
-    <my-grid id="ap-sheet" expands="both" columns=5 rows=10></my-grid>
+    <ap-sheet id="ap-sheet" expands="both" columns=5 rows=10></ap-sheet>
 </div>
 <div id="footer-bar">
     <span id="footer-left">
