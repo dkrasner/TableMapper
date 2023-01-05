@@ -132,7 +132,7 @@ input[type="file"]{
     border: 1px solid var(--palette-orange);
 }
 
-my-grid {
+ap-sheet {
     background-color: var(--palette-beige);
     z-index: 3;
     width: max-content; 
@@ -242,7 +242,7 @@ my-grid {
     </span>
 </div>
 <div id="sheet-container">
-    <my-grid id="ap-sheet" expands="both" columns=5 rows=10></my-grid>
+    <ap-sheet id="ap-sheet" expands="both" columns=5 rows=10></ap-sheet>
 </div>
 <div id="footer-bar">
     <span id="footer-left">
@@ -711,9 +711,9 @@ class Worksheet extends HTMLElement {
         this.openDownloadDialog();
     }
 
-    downloadCSV(){
+    async downloadCSV(){
         this.closeDialog();
-        const csv = this.toCSV();
+        const csv = await this.toCSV();
         const anchor = document.createElement("a");
         anchor.style.display = "none";
         const blob = new Blob([csv], { type: "text/csv" });
@@ -725,9 +725,9 @@ class Worksheet extends HTMLElement {
         window.URL.revokeObjectURL(url);
     }
 
-    downloadExcel(){
+    async downloadExcel(){
         this.closeDialog();
-        const [wb, fileName] = this.toExcel();
+        const [wb, fileName] = await this.toExcel();
         XLSX.writeFile(wb, `${fileName}.xlsx`);
     }
 
@@ -1058,16 +1058,20 @@ class Worksheet extends HTMLElement {
         let icon = icons.loader;
         const parseConfig = {
             worker: true, // run the upload on a Worker not to block things up
-            chunk: function(chunk){
-                self._overlay(icon);
-                self.sheet.dataStore.loadFromArray(chunk.data, [0, rowsProcessed], false);
-                rowsProcessed += chunk.data.length;
-                if(icon == icons.loader){
-                    icon = icons.loaderQuarter;
+            chunk: async function(chunk){
+                if (chunk.data.length) {
+                    self._overlay(icon);
+                    await self.sheet.dataStore.loadFromArray(chunk.data, [0, rowsProcessed]);
+                    rowsProcessed += chunk.data.length;
+                    if(icon == icons.loader){
+                        icon = icons.loaderQuarter;
+                    } else {
+                        icon = icons.loader;
+                    }
+                    console.log("processed:", rowsProcessed);
                 } else {
-                    icon = icons.loader;
+                    self.onErase();
                 }
-                console.log("processed:", rowsProcessed);
             },
             complete: function(){
                 self.sheet.render();
@@ -1085,8 +1089,8 @@ class Worksheet extends HTMLElement {
         }
     }
 
-    toCSV() {
-        const data = this.sheet.dataStore.getDataArray(
+    async toCSV() {
+        const data = await this.sheet.dataStore.getDataArray(
             this.sheet.baseFrame.origin.toCoord(),
             this.sheet.baseFrame.corner.toCoord()
         );
@@ -1107,7 +1111,7 @@ class Worksheet extends HTMLElement {
             }
         );
         // ask which sheet to load since we only do one
-        this.openExcelUploadDialog(wb, (event) => {
+        this.openExcelUploadDialog(wb, async (event) => {
             const ws = wb.Sheets[event.target.value];
             if(ws){
                 this._overlay(icons.loader);
@@ -1116,11 +1120,13 @@ class Worksheet extends HTMLElement {
                     {header: 1} // this will give us an nd-array
                 );
                 this.onErase();
-                this.sheet.dataStore.loadFromArray(wsArray);
-                // update the file name to include the sheet/tab
-                fileName = fileName.replace(`.${ftype}`, `[${event.target.value}]`);
-                fileName = fileName.replace(/\[.+\]$/, `[${event.target.value}]`);
-                // set the name of the sheet to the file name; TODO: do we want this?
+                if (wsArray.length) {
+                    await this.sheet.dataStore.loadFromArray(wsArray);
+                    // update the file name to include the sheet/tab
+                    fileName = fileName.replace(`.${ftype}`, `[${event.target.value}]`);
+                    fileName = fileName.replace(/\[.+\]$/, `[${event.target.value}]`);
+                    // set the name of the sheet to the file name; TODO: do we want this?
+                }
                 this.updateName(fileName);
                 const overlay = this.shadowRoot.querySelector(".overlay");
                 overlay.classList.add("hide");
@@ -1190,14 +1196,15 @@ class Worksheet extends HTMLElement {
     }
 
 
-    toExcel(){
+    async toExcel(){
         const wb = XLSX.utils.book_new();
+        const data = await this.sheet.dataStore.getDataArray(
+            this.sheet.baseFrame.origin.toCoord(),
+            this.sheet.baseFrame.corner.toCoord()
+        );
         const ws = XLSX.utils.aoa_to_sheet(
-            this.sheet.dataStore.getDataArray(
-                this.sheet.baseFrame.origin.toCoord(),
-                this.sheet.baseFrame.corner.toCoord()
-            )
-        )
+            data
+        );
         // TODO get proper name here for the sheet
         let sheetName = "Sheet1";
         const sheetRE = /\[(.*)\]$/;
