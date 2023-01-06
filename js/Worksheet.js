@@ -883,10 +883,7 @@ class Worksheet extends HTMLElement {
                     connection.setAttribute("sources", sources);
                 }
             } else {
-                connection = document.createElement("ws-connection");
-                document.body.append(connection);
-                connection.setAttribute("target", this.id);
-                connection.setAttribute("sources", [sourceId]);
+                this.createConnection(sourceId, targetId);
                 // add callstack and command related buttons
                 this.addToFooter(this.connectionButton(), "left", true);
             }
@@ -937,6 +934,13 @@ class Worksheet extends HTMLElement {
             event.target.files = event.dataTransfer.files;
             this.onUpload(event);
         }
+    }
+
+    this.createConnection(sourceId, targetId){
+        connection = document.createElement("ws-connection");
+        document.body.append(connection);
+        connection.setAttribute("target", targetId);
+        connection.setAttribute("sources", [sourceId]);
     }
 
     /**
