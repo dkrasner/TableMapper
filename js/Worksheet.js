@@ -31,13 +31,23 @@ const templateString = `
     resize: both;
     --bg-color: var(--palette-lightblue);
     --sheet-bg-color: var(--palette-cyan);
+    --header-bar-display: flex;
+    --footer-bar-display: flex;
 }
 
 :host([minimized]) > div:not(#header-bar){
     display: none;
 }
 
+:host(.hide-header){
+  --header-bar-display: none;
+}
+:host(.hide-footer){
+  --footer-bar-display: none;
+}
+
 #header-bar {
+    display: var(--header-bar-display);
     cursor: grab;
     width: 100%;
     text-align: center;
@@ -47,7 +57,6 @@ const templateString = `
     padding-right: 4px;
     padding-top: 2px;
     padding-bottom: 2px;
-    display: flex;
     justify-content: space-between;
     align-items: center;
 }
@@ -90,13 +99,13 @@ const templateString = `
 }
 
 #footer-bar {
+    display: var(--footer-bar-display);
     cursor: grab;
     width: 100%;
     padding-left: 3px;
     padding-right: 4px;
     padding-top: 5px;
     padding-bottom: 2px;
-    display: flex;
     justify-content: space-between;
     align-items: center;
 }
@@ -936,7 +945,7 @@ class Worksheet extends HTMLElement {
         }
     }
 
-    this.createConnection(sourceId, targetId){
+    createConnection(sourceId, targetId){
         connection = document.createElement("ws-connection");
         document.body.append(connection);
         connection.setAttribute("target", targetId);
