@@ -29,11 +29,21 @@ const templateString = `
     z-index: 1;
     overflow: hidden; /* to make resize work */
     resize: both;
+    --cell-border-right: 2px solid rgba(200, 200, 200, 0.5);
+    --cell-border-bottom: 2px solid rgba(200, 200, 200, 0.5);
+    --cell-border-top: 2px solid transparent;
+    --cell-border-left: 2px solid transparent;
     --bg-color: var(--palette-lightblue);
     --sheet-bg-color: var(--palette-cyan);
+    --sheet-edit-bar-border-radius: 1px solid rgba(100, 100, 100, 0.4);
+    --sheet-edit-bar-border: var(--cell-border-right);
+    --sheet-cursor-border: 3px solid black;
+    --sheet-selection-background-color: rgba(0, 0, 100, 0.5);
     --header-bar-display: flex;
     --footer-bar-display: flex;
 }
+
+
 
 :host([minimized]) > div:not(#header-bar){
     display: none;
@@ -144,7 +154,19 @@ input[type="file"]{
 ap-sheet {
     background-color: var(--palette-beige);
     z-index: 3;
-    width: max-content; 
+    width: max-content;
+    --edit-bar-border-radius: var(--sheet-edit-bar-border-radius);
+    --edit-bar-border: var(--sheet-edit-bar-border);
+    --tab-cell-border-radius: var(--sheet-tab-cell-border-radius);
+    --tab-cell-border: var(--sheet-tab-cell-border);
+    --cursor-border: var(--sheet-cursor-border);
+    --selection-background-color: var(--sheet-selection-background-color);
+}
+
+ap-sheet:not(:focus) {
+    --selection-background-color: var(--sheet-selection-not-focus-background-color);
+    --cursor-border: var(--sheet-cursor-not-focus-border);
+
 }
 
 #sheet-container {
@@ -192,14 +214,17 @@ ap-sheet {
 .view-cell {
     background-color: transparent;
     color: var(--palette-black);
-    border-right: 2px solid rgba(200, 200, 200, 0.5);
-    border-bottom: 2px solid rgba(200, 200, 200, 0.5);
-    border-top: 2px solid transparent;
-    border-left: 2px solid transparent;
+    border-right: var(--cell-border-right);
+    border-bottom: var(--cell-border-bottom);
+    border-top: var(--cell-border-top);
+    border-left: var(--cell-border-left);
 }
 
 .view-cell:last-child {
-    border: 2px solid transparent;
+    border-right: var(--cell-border-right);
+    border-bottom: var(--cell-border-bottom);
+    border-top: var(--cell-border-top);
+    border-left: var(--cell-border-left);
 }
 
 #button-area {
