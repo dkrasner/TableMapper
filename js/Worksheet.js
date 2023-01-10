@@ -29,6 +29,10 @@ const templateString = `
     z-index: 1;
     overflow: hidden; /* to make resize work */
     resize: both;
+    --cell-border-right: 2px solid rgba(200, 200, 200, 0.5);
+    --cell-border-bottom: 2px solid rgba(200, 200, 200, 0.5);
+    --cell-border-top: 2px solid transparent;
+    --cell-border-left: 2px solid transparent;
     --bg-color: var(--palette-lightblue);
     --sheet-bg-color: var(--palette-cyan);
     --header-bar-display: flex;
@@ -192,10 +196,10 @@ ap-sheet {
 .view-cell {
     background-color: transparent;
     color: var(--palette-black);
-    border-right: 2px solid rgba(200, 200, 200, 0.5);
-    border-bottom: 2px solid rgba(200, 200, 200, 0.5);
-    border-top: 2px solid transparent;
-    border-left: 2px solid transparent;
+    border-right: var(--cell-border-right);
+    border-bottom: var(--cell-border-bottom);
+    border-top: var(--cell-border-top);
+    border-left: var(--cell-border-left);
 }
 
 .view-cell:last-child {
