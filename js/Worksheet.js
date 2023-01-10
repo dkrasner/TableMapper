@@ -163,6 +163,12 @@ ap-sheet {
     --selection-background-color: var(--sheet-selection-background-color);
 }
 
+ap-sheet:not(:focus) {
+    --selection-background-color: var(--sheet-selection-not-focus-background-color);
+    --cursor-border: var(--sheet-cursor-not-focus-border);
+
+}
+
 #sheet-container {
     flex: 1;
     overflow: hidden;
@@ -215,7 +221,10 @@ ap-sheet {
 }
 
 .view-cell:last-child {
-    border: 2px solid transparent;
+    border-right: var(--cell-border-right);
+    border-bottom: var(--cell-border-bottom);
+    border-top: var(--cell-border-top);
+    border-left: var(--cell-border-left);
 }
 
 #button-area {
